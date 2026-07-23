@@ -1,0 +1,13 @@
+# Gradle and compiled output
+.gradle/
+build/
+bin/
+
+# Runtime-generated cache and logs
+cache/
+*.log
+
+# IDE metadata
+.vscode/
+.idea/
+*.iml
