@@ -421,9 +421,25 @@ implements IChickenPhien {
             this.tacVuGiuKetNoi = this.kenh.eventLoop().scheduleAtFixedRate(() -> {
                 if (this.dangKetNoi()) {
                     this.guiTin(new ChickenTinNhan(-102));
+                    this.dongBoThanhTrangThai();
                 }
             }, 2L, 2L, TimeUnit.SECONDS);
         }
+    }
+
+    /**
+     * Client JavaME cÃ³ thá»ƒ khá»Ÿi táº¡o láº¡i MenuScr sau gÃ³i Ä‘Äƒng nháº­p vÃ  lÃ m
+     * hai thanh sá»©c máº¡nh/nÄƒng lÆ°á»£ng AVG trá»Ÿ vá» 0. Äá»“ng bá»™ cÃ¹ng nhá»‹p
+     * keep-alive Ä‘á»ƒ giao diá»‡n luÃ´n pháº£n Ã¡nh giÃ¡ trá»‹ tháº­t trÃªn server.
+     */
+    private void dongBoThanhTrangThai() {
+        if (this.user == null
+                || this.user.nguoiChoi == null
+                || this.user.dichVu == null) {
+            return;
+        }
+        this.user.dichVu.capNhatAvenger();
+        this.user.dichVu.capNhatSucManh();
     }
 
     public void taiDuLieuXong() throws IOException {

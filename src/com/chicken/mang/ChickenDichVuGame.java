@@ -8,7 +8,9 @@ import com.chicken.chien.ChickenChienBinh;
 import com.chicken.chien.ChickenQuanLyDanSung;
 import com.chicken.chien.ChickenQuanLyDanSung.DuLieuSung;
 import com.chicken.chien.ChickenKetQuaDan;
+import com.chicken.chien.ChickenSieuCao;
 import com.chicken.avg.ChickenThanhDiChuyenAVG;
+import com.chicken.avg.ChickenQuanLyNangLuongAVG;
 import com.chicken.mohinh.ChickenNguoiChoi;
 import com.chicken.mang.IChickenDichVuGame;
 import com.chicken.mang.ChickenTinNhan;
@@ -21,6 +23,10 @@ import com.chicken.tienich.ChickenTienIch;
 import com.chicken.npc.chihuy.XuLyMenuChiHuy;
 import com.chicken.phong.boss.sanhcho.DebugSanhBoss;
 import com.chicken.phong.boss.sanhcho.QuanLySanhChoBoss;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -30,9 +36,14 @@ import java.util.ArrayList;
 import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 
 public class ChickenDichVuGame
 implements IChickenDichVuGame {
+    /** Tỉ lệ hiển thị đạn luyện tập; giữ nét pixel, không đổi loại ảnh đạn. */
+    private static final int TY_LE_PHONG_TO_DAN_LUYEN_TAP = 2;
+    /** Độ rơi từ đỉnh quỹ đạo để client bật hiệu ứng đạn siêu cao màu đỏ. */
+
     private ChickenPhien khach;
     private ChickenNguoiChoi nguoiChoi;
 
@@ -523,7 +534,7 @@ implements IChickenDichVuGame {
             ChickenTinNhan ms = new ChickenTinNhan(-59);
             DataOutputStream ds = ms.boGhi();
             ds.writeByte(1);
-            ds.writeByte(this.nguoiChoi.powerAvenger);
+            ds.writeByte(ChickenQuanLyNangLuongAVG.layNangLuong(this.nguoiChoi));
             ds.flush();
             this.guiTin(ms);
         }
@@ -949,7 +960,7 @@ implements IChickenDichVuGame {
             ds.writeShort(ketQua.duongX[i]);
             ds.writeShort(ketQua.duongY[i]);
         }
-        ds.writeByte(0);
+        this.ghiDuLieuSieuCao(ds, ketQua.loaiDan, ketQua.duongX, ketQua.duongY);
         ds.flush();
         this.guiTin(ms);
     }
@@ -974,7 +985,7 @@ implements IChickenDichVuGame {
             ds.writeShort(ketQua.duongX[i]);
             ds.writeShort(ketQua.duongY[i]);
         }
-        ds.writeByte(0);
+        this.ghiDuLieuSieuCao(ds, ketQua.loaiDan, ketQua.duongX, ketQua.duongY);
         ds.flush();
         this.guiTin(ms);
     }
@@ -1044,6 +1055,30 @@ implements IChickenDichVuGame {
         this.guiTin(ms);
     }
 
+    /**
+     * Ghi phần cuối packet CMD 22/84 mà client dùng để bật sprite /eff/no.png.
+     * Tọa độ phải trùng chính xác một điểm trên quỹ đạo, nên dùng điểm cao nhất.
+     */
+    private void ghiDuLieuSieuCao(
+            DataOutputStream ds,
+            byte loaiDan,
+            short[] duongX,
+            short[] duongY
+    ) throws IOException {
+        int chiSoDinh = ChickenSieuCao.timChiSoDinh(loaiDan, duongX, duongY);
+        if (chiSoDinh < 0) {
+            ds.writeByte(0);
+            return;
+        }
+        ds.writeByte(1);
+        ds.writeShort(duongX[chiSoDinh]);
+        ds.writeShort(duongY[chiSoDinh]);
+    }
+
+    /**
+     * Quy tắc gốc: chỉ các loại đạn đạo thông thường được tính siêu cao; sau
+     * khi qua đỉnh, viên đạn phải rơi xuống hơn 350 px.
+     */
     /**
      * Gửi hiệu ứng Bắn x3 của Ultron trong trận thường.
      *
@@ -1382,14 +1417,14 @@ implements IChickenDichVuGame {
     }
 
     public void guiNguoiChoiLuyenTap(byte chiSo, int ma, String ten, short head, short leg, short body,
-            short hat, short wing, short wp, byte avenger, int ownerId) throws IOException {
+            short hat, short wing, short wp, byte avenger, int ownerId, int clan, int kinhNghiem) throws IOException {
         ChickenTinNhan ms = new ChickenTinNhan(8);
         DataOutputStream ds = ms.boGhi();
         ds.writeByte(chiSo);
         ds.writeInt(ma);
         ds.writeUTF(ten);
-        ds.writeShort(-1);
-        ds.writeInt(0);
+        ds.writeShort(clan);
+        ds.writeInt(Math.max(0, kinhNghiem));
         ds.writeShort(head);
         ds.writeShort(leg);
         ds.writeShort(body);
@@ -1400,7 +1435,10 @@ implements IChickenDichVuGame {
         ds.writeInt(ownerId);
         ds.writeByte(0);
         ds.writeByte(0);
-        ds.writeInt(-1);
+        ds.writeInt(clan);
+        if (clan != -1) {
+            ds.writeShort(0);
+        }
         ds.writeByte(chiSo);
         ds.flush();
         this.guiTin(ms);
@@ -1462,7 +1500,8 @@ implements IChickenDichVuGame {
         byte loaiHinhDan = duLieuDan == null ? (byte) 0 : duLieuDan.getLoaiHinhDan();
         ChickenTinNhan mss = new ChickenTinNhan(-40);
         DataOutputStream ds = mss.boGhi();
-        byte[] img = this.layAnhDanLuyenTap(mauVuKhi, maHinhVuKhi);
+        byte[] img = this.phongToAnhDanLuyenTap(
+                this.layAnhDanLuyenTap(mauVuKhi, maHinhVuKhi));
         ds.writeShort(maHinhVuKhi);
         ds.writeByte(loaiHinhDan);
         ds.writeShort(img.length);
@@ -1511,6 +1550,43 @@ implements IChickenDichVuGame {
             4, 2, 74, 56, 83, 55, 0, 0, 0, 0, 73, 69, 78, 68, -82, 66,
             96, -126
         };
+    }
+
+    /**
+     * Client vẽ ảnh đạn theo đúng kích thước pixel của PNG nhận từ CMD -40.
+     * Phóng ảnh ở đây giúp mọi súng giữ nguyên sprite hiện có nhưng dễ nhìn hơn.
+     */
+    private byte[] phongToAnhDanLuyenTap(byte[] anhGoc) {
+        if (anhGoc == null || anhGoc.length == 0 || TY_LE_PHONG_TO_DAN_LUYEN_TAP <= 1) {
+            return anhGoc;
+        }
+        try (ByteArrayInputStream input = new ByteArrayInputStream(anhGoc);
+                ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            BufferedImage goc = ImageIO.read(input);
+            if (goc == null || goc.getWidth() <= 0 || goc.getHeight() <= 0) {
+                return anhGoc;
+            }
+            int rong = Math.min(512, goc.getWidth() * TY_LE_PHONG_TO_DAN_LUYEN_TAP);
+            int cao = Math.min(512, goc.getHeight() * TY_LE_PHONG_TO_DAN_LUYEN_TAP);
+            BufferedImage phongTo = new BufferedImage(rong, cao, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D ve = phongTo.createGraphics();
+            try {
+                ve.setRenderingHint(
+                        RenderingHints.KEY_INTERPOLATION,
+                        RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+                ve.drawImage(goc, 0, 0, rong, cao, null);
+            } finally {
+                ve.dispose();
+            }
+            if (!ImageIO.write(phongTo, "png", output)) {
+                return anhGoc;
+            }
+            byte[] ketQua = output.toByteArray();
+            // CMD -40 ghi độ dài PNG bằng short có dấu.
+            return ketQua.length <= Short.MAX_VALUE ? ketQua : anhGoc;
+        } catch (Exception ignored) {
+            return anhGoc;
+        }
     }
 
     private byte[] docTepNeuCo(String duongDan) {
@@ -1574,7 +1650,7 @@ implements IChickenDichVuGame {
                 ds.writeShort(duongY[i]);
             }
         }
-        ds.writeByte(0);
+        this.ghiDuLieuSieuCao(ds, loaiDan, cacDuongX[0], cacDuongY[0]);
         ds.flush();
         this.guiTin(ms);
     }

@@ -22,6 +22,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.LinkedHashMap;
 
@@ -47,6 +49,8 @@ public class ChickenQuanLyChien {
     });
     private static final int MAX_FIGHTERS = 8;
     private static final int TURN_SECONDS = 8;
+    /** Plugin PC coi điểm chạm đất trong vòng 24 px quanh chân là bắn trúng dưới chân. */
+    private static final int BAN_KINH_TRUNG_DUOI_CHAN_CAPTAIN = 24;
     private final ChickenChoDau wait;
     private final ChickenChienBinh[] chienBinhs = new ChickenChienBinh[MAX_FIGHTERS];
     private final ChickenQuanLyBanDo map;
@@ -334,9 +338,7 @@ public class ChickenQuanLyChien {
                     luc
             );
             this.phatBan(shooter, ketQua, numShoot);
-            if (ketQua.mucTieu != null && ketQua.satThuong > 0) {
-                this.satThuong(ketQua.mucTieu, ketQua.satThuong);
-            }
+            this.apDungSatThuongKetQua(ketQua);
         }
         this.kyNangHawk.sauKhiBanThuong(shooter);
         if (!this.daKetThuc) {
@@ -644,6 +646,15 @@ public class ChickenQuanLyChien {
                             shooter.x, shooter.y, goc, kiemTraBanDo);
         }
 
+        ChickenQuanLyDanSung.DuLieuSung duLieuSungMayChu =
+                ChickenQuanLyDanSung.theoPartSung(shooter.maVuKhi);
+        int idSungMayChu = duLieuSungMayChu == null
+                ? -1
+                : duLieuSungMayChu.getIdSung();
+        if (duLieuSungMayChu != null) {
+            // Loại đạn là thuộc tính súng đang trang bị; byte client gửi chỉ là intent cũ.
+            loaiDan = duLieuSungMayChu.getLoaiDan();
+        }
         short[] hienThiX;
         short[] hienThiY;
         short[] vaChamX;
@@ -682,10 +693,10 @@ public class ChickenQuanLyChien {
                             shooter.maVuKhi,
                             ChickenHeThongGio.layWindXChoSung(
                                     this.gioHienTai,
-                                    this.layIdSung(shooter.maVuKhi)),
+                                    idSungMayChu),
                             ChickenHeThongGio.layWindYChoSung(
                                     this.gioHienTai,
-                                    this.layIdSung(shooter.maVuKhi)),
+                                    idSungMayChu),
                             kiemTraBanDo
                     );
             hienThiX = quyDao.getHienThiX();
@@ -694,6 +705,8 @@ public class ChickenQuanLyChien {
             vaChamY = quyDao.getVaChamY();
         }
 
+        Map<ChickenChienBinh, Integer> satThuongTheoMucTieu =
+                new LinkedHashMap<ChickenChienBinh, Integer>();
         ChickenChienBinh mucTieu;
         if (shooter.avenger == ChickenKyNangDacBietUltron.AVG_ULTRON) {
             VaChamTiaUltron vaCham = this.timVaChamTiaUltron(
@@ -713,6 +726,41 @@ public class ChickenQuanLyChien {
             } else {
                 mucTieu = null;
             }
+        } else if (idSungMayChu == ChickenQuanLyCongThucSung.ID_SUNG_CAPTAIN) {
+            /*
+             * Khiên Captain xuyên qua thân người: mỗi nhân vật bị quỹ đạo lướt
+             * qua nhận đúng 50% damage. Viên đạn vẫn bay tiếp tới địa hình; nếu
+             * điểm nổ nằm dưới chân thì mục tiêu nhận damage đầy đủ, không cộng
+             * chồng thêm 50% của lần lướt qua.
+             */
+            List<ChickenChienBinh> cacMucTieuBiLuotQua =
+                    this.timTatCaMucTieuXuyenQua(shooter, vaChamX, vaChamY);
+            boolean noTrenDiaHinh = this.diemCuoiLaDiaHinh(vaChamX, vaChamY);
+            int xNo = this.layGiaTriCuoi(vaChamX, dauNong[0]);
+            int yNo = this.layGiaTriCuoi(vaChamY, dauNong[1]);
+
+            for (ChickenChienBinh doiThu : this.chienBinhs) {
+                if (doiThu == null || doiThu == shooter || doiThu.chet) {
+                    continue;
+                }
+                int satThuongDayDu = this.tinhSatThuongPhatBan(
+                        shooter, doiThu, loaiDan, hienThiX, hienThiY, luc);
+                int satThuongThucTe = 0;
+                if (cacMucTieuBiLuotQua.contains(doiThu)) {
+                    satThuongThucTe = Math.max(1, satThuongDayDu / 2);
+                }
+                if (noTrenDiaHinh
+                        && Math.hypot(xNo - doiThu.x, yNo - doiThu.y)
+                                <= BAN_KINH_TRUNG_DUOI_CHAN_CAPTAIN) {
+                    satThuongThucTe = Math.max(satThuongThucTe, satThuongDayDu);
+                }
+                if (satThuongThucTe > 0) {
+                    satThuongTheoMucTieu.put(doiThu, satThuongThucTe);
+                }
+            }
+            mucTieu = satThuongTheoMucTieu.isEmpty()
+                    ? null
+                    : satThuongTheoMucTieu.keySet().iterator().next();
         } else {
             mucTieu = this.timMucTieuTrung(
                     shooter,
@@ -721,12 +769,10 @@ public class ChickenQuanLyChien {
             );
         }
 
-        int satThuong = 0;
-        if (mucTieu != null) {
-            int tanCong = shooter.tanCong > 0
-                    ? shooter.tanCong
-                    : 20 + luc / 2;
-            satThuong = Math.max(1, tanCong - mucTieu.giap);
+        if (mucTieu != null && satThuongTheoMucTieu.isEmpty()) {
+            int satThuong = this.tinhSatThuongPhatBan(
+                    shooter, mucTieu, loaiDan, hienThiX, hienThiY, luc);
+            satThuongTheoMucTieu.put(mucTieu, satThuong);
         }
 
         return new ChickenKetQuaDan(
@@ -737,9 +783,27 @@ public class ChickenQuanLyChien {
                 luc,
                 hienThiX,
                 hienThiY,
-                mucTieu,
-                satThuong
+                satThuongTheoMucTieu
         );
+    }
+
+    private int tinhSatThuongPhatBan(
+            ChickenChienBinh shooter,
+            ChickenChienBinh mucTieu,
+            byte loaiDan,
+            short[] duongX,
+            short[] duongY,
+            byte luc
+    ) {
+        int tanCong = shooter.tanCong > 0
+                ? shooter.tanCong
+                : 20 + luc / 2;
+        int satThuong = Math.max(1, tanCong - mucTieu.giap);
+        if (!shooter.bot) {
+            satThuong = ChickenSieuCao.tangNeuSieuCao(
+                    loaiDan, duongX, duongY, satThuong);
+        }
+        return satThuong;
     }
 
     private int layIdSung(short partSung) {
@@ -802,9 +866,7 @@ public class ChickenQuanLyChien {
                 short goc = this.gocToiMucTieu(turn, mucTieu);
                 ChickenKetQuaDan ketQua = this.xuLyPhatBan(turn, (byte)0, goc, (byte)18);
                 this.phatBan(turn, ketQua, (byte)1);
-                if (ketQua.mucTieu != null && ketQua.satThuong > 0) {
-                    this.satThuong(ketQua.mucTieu, ketQua.satThuong);
-                }
+                this.apDungSatThuongKetQua(ketQua);
             }
             if (!this.daKetThuc) {
                 this.sangLuot();
@@ -1052,6 +1114,77 @@ public class ChickenQuanLyChien {
             }
         }
         return null;
+    }
+
+    private List<ChickenChienBinh> timTatCaMucTieuXuyenQua(
+            ChickenChienBinh shooter,
+            short[] xs,
+            short[] ys
+    ) {
+        List<ChickenChienBinh> ketQua = new ArrayList<ChickenChienBinh>();
+        if (xs == null || ys == null) {
+            return ketQua;
+        }
+        int soDiem = Math.min(xs.length, ys.length);
+        for (int i = 1; i < soDiem; i++) {
+            int x1 = xs[i - 1];
+            int y1 = ys[i - 1];
+            int x2 = xs[i];
+            int y2 = ys[i];
+            int soBuoc = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1));
+            for (int buoc = 1; buoc <= soBuoc; buoc++) {
+                double tiLe = (double) buoc / (double) soBuoc;
+                int danX = (int) Math.round(x1 + (x2 - x1) * tiLe);
+                int danY = (int) Math.round(y1 + (y2 - y1) * tiLe);
+                for (ChickenChienBinh mucTieu : this.chienBinhs) {
+                    if (mucTieu == null
+                            || mucTieu == shooter
+                            || mucTieu.chet
+                            || ketQua.contains(mucTieu)) {
+                        continue;
+                    }
+                    boolean trung = mucTieu.bot
+                            ? ChickenKichThuocNhanVat.trungBoss(
+                                    danX, danY, mucTieu.x, mucTieu.y)
+                            : ChickenKichThuocNhanVat.trungNguoiChoi(
+                                    danX, danY, mucTieu.x, mucTieu.y);
+                    if (trung) {
+                        ketQua.add(mucTieu);
+                    }
+                }
+            }
+        }
+        return ketQua;
+    }
+
+    private boolean diemCuoiLaDiaHinh(short[] xs, short[] ys) {
+        if (xs == null || ys == null) {
+            return false;
+        }
+        int soDiem = Math.min(xs.length, ys.length);
+        if (soDiem <= 0) {
+            return false;
+        }
+        short x = xs[soDiem - 1];
+        short y = ys[soDiem - 1];
+        return x >= 0 && y >= 0
+                && x < this.map.getWidth()
+                && y < this.map.getHeight()
+                && this.map.coVaCham(x, y);
+    }
+
+    private void apDungSatThuongKetQua(ChickenKetQuaDan ketQua) throws IOException {
+        if (ketQua == null) {
+            return;
+        }
+        for (Map.Entry<ChickenChienBinh, Integer> entry
+                : ketQua.satThuongTheoMucTieu.entrySet()) {
+            ChickenChienBinh mucTieu = entry.getKey();
+            int satThuong = entry.getValue();
+            if (mucTieu != null && !mucTieu.chet && satThuong > 0) {
+                this.satThuong(mucTieu, satThuong);
+            }
+        }
     }
 
     private void satThuong(ChickenChienBinh mucTieu, int satThuong) throws IOException {

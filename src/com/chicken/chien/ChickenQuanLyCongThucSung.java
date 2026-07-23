@@ -18,6 +18,9 @@ import java.util.Map;
  */
 public final class ChickenQuanLyCongThucSung {
 
+    public static final int ID_SUNG_CAPTAIN = 395;
+    public static final int ID_SUNG_WINTER_SOLDIER = 396;
+
     public enum KieuCongThuc {
         DAN_THUONG,
         BOOMERANG_QUAY_VE,
@@ -52,6 +55,10 @@ public final class ChickenQuanLyCongThucSung {
         public int getTrongLuc() { return this.trongLuc; }
         public int getLucCongThem() { return this.lucCongThem; }
         public int getSoBuocToiDa() { return this.soBuocToiDa; }
+        /** Khiên Captain vẫn chạm đất nhưng không bị nhân vật chặn đường bay. */
+        public boolean xuyenNguoi() { return this.idSung == ID_SUNG_CAPTAIN; }
+        /** Đạn Winter Soldier bỏ qua toàn bộ pixel địa hình. */
+        public boolean xuyenBanDo() { return this.idSung == ID_SUNG_WINTER_SOLDIER; }
     }
 
     public static final class KetQuaQuyDao {
@@ -82,6 +89,11 @@ public final class ChickenQuanLyCongThucSung {
 
     private static final int FIXED_TRIG = 1024;
     private static final int MAX_STEPS = 200;
+    /** Khớp biên mô phỏng client/plugin: đạn được bay ngoài cạnh map rồi có thể vòng lại. */
+    public static final int BIEN_NGANG_NGOAI_MAP = 120;
+    /** Độ sâu an toàn dưới đáy map dành cho quỹ đạo đạn thông thường. */
+    public static final int BIEN_DUOI_NGOAI_MAP = 80;
+    private static final int BIEN_NGANG_LAZER = 100;
     private static final Map<Integer, CongThucSung> THEO_ID_SUNG = new LinkedHashMap<>();
 
     private static final CongThucSung MAC_DINH =
@@ -115,8 +127,8 @@ public final class ChickenQuanLyCongThucSung {
         dangKy(392, (byte) 0, KieuCongThuc.DAN_THUONG, 80, 100, 0);
         dangKy(393, (byte) 0, KieuCongThuc.DAN_THUONG, 80, 100, 0);
         dangKy(394, (byte) 1, KieuCongThuc.DAN_THUONG, 50, 50, 0);
-        dangKy(395, (byte) 7, KieuCongThuc.BOOMERANG_QUAY_VE, 10, 50, 0);
-        dangKy(396, (byte) 1, KieuCongThuc.DAN_THUONG, 50, 50, 0);
+        dangKy(ID_SUNG_CAPTAIN, (byte) 7, KieuCongThuc.BOOMERANG_QUAY_VE, 10, 50, 0);
+        dangKy(ID_SUNG_WINTER_SOLDIER, (byte) 1, KieuCongThuc.DAN_THUONG, 50, 50, 0);
         dangKy(397, (byte) 3, KieuCongThuc.DAN_THUONG, 40, 90, 0);
         dangKy(398, (byte) 0, KieuCongThuc.ULTRON_LAZER_THANG, 0, 0, 0);
         dangKy(400, (byte) 3, KieuCongThuc.DAN_THUONG, 40, 90, 0);
@@ -250,7 +262,7 @@ public final class ChickenQuanLyCongThucSung {
             short px = (short) nx;
             short py = (short) ny;
 
-            if (raNgoai(px, py, banDo)) {
+            if (raNgoaiLazer(nx, ny, banDo)) {
                 break;
             }
 
@@ -333,10 +345,6 @@ public final class ChickenQuanLyCongThucSung {
             short px = (short) Math.round(hienTaiX);
             short py = (short) Math.round(hienTaiY);
 
-            if (raNgoai(px, py, banDo)) {
-                break;
-            }
-
             short[] vaCham = timVaChamDauTienTrenDoan(
                     truocX, truocY, px, py, banDo);
             if (vaCham != null) {
@@ -344,6 +352,10 @@ public final class ChickenQuanLyCongThucSung {
                 tiaBeY.add(vaCham[1]);
                 vaChamBeX.add(vaCham[0]);
                 vaChamBeY.add(vaCham[1]);
+                break;
+            }
+
+            if (raNgoaiLazer((int) Math.round(hienTaiX), (int) Math.round(hienTaiY), banDo)) {
                 break;
             }
 
@@ -394,14 +406,16 @@ public final class ChickenQuanLyCongThucSung {
             short px = (short) nx;
             short py = (short) ny;
 
-            if (raNgoai(px, py, banDo)) {
-                break;
-            }
-
-            short[] vaCham = timVaChamDauTienTrenDoan((short)x, (short)y, px, py, banDo);
+            short[] vaCham = congThuc.xuyenBanDo()
+                    ? null
+                    : timVaChamDauTienTrenDoan((short)x, (short)y, px, py, banDo);
             if (vaCham != null) {
                 xs.add(vaCham[0]);
                 ys.add(vaCham[1]);
+                break;
+            }
+
+            if (daRaKhoiBienMoPhong(nx, ny, banDo.getWidth(), banDo.getHeight())) {
                 break;
             }
 
@@ -526,14 +540,20 @@ public final class ChickenQuanLyCongThucSung {
         return (int) Math.round(Math.sin(Math.toRadians(angle)) * FIXED_TRIG);
     }
 
-    private static boolean raNgoai(short x, short y, KiemTraBanDo banDo) {
+    public static boolean daRaKhoiBienMoPhong(int x, int y, int chieuRong, int chieuCao) {
         /*
-         * Y âm chỉ có nghĩa là viên đạn đang bay phía trên phần ảnh map.
-         * Không được kết thúc quỹ đạo tại mép trên vì client sẽ coi điểm cuối
-         * đó là một va chạm/nổ giữa không trung. Chỉ kết thúc khi đạn ra khỏi
-         * cạnh trái/phải hoặc rơi xuống dưới map.
+         * Ngoài phần ảnh map không phải terrain. Tiếp tục mô phỏng trong một
+         * khoảng đệm để gió/boomerang có thể đưa đạn quay lại bản đồ.
          */
-        return x < 0 || x >= banDo.getWidth() || y >= banDo.getHeight();
+        return x < -BIEN_NGANG_NGOAI_MAP
+                || x > chieuRong + BIEN_NGANG_NGOAI_MAP
+                || y > chieuCao + BIEN_DUOI_NGOAI_MAP;
+    }
+
+    private static boolean raNgoaiLazer(int x, int y, KiemTraBanDo banDo) {
+        return x < -BIEN_NGANG_LAZER
+                || x > banDo.getWidth() + BIEN_NGANG_LAZER
+                || y > banDo.getHeight();
     }
 
     private static int chuanHoaGoc(short goc) {

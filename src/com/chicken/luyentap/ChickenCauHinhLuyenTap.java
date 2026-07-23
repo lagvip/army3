@@ -42,9 +42,10 @@ public final class ChickenCauHinhLuyenTap {
     public static final int TRAINING_BOSS_MAX_RETREAT_STEPS = 40;
 
     // Điểm xoay và chiều dài nòng súng
-    public static final int TRAINING_PLAYER_GUN_PIVOT_Y = 32;
+    // Khớp công thức CPlayer của client: sourceY - 12, đầu nòng cách 40 px.
+    public static final int TRAINING_PLAYER_GUN_PIVOT_Y = 12;
     public static final int TRAINING_BOSS_GUN_PIVOT_Y = 30;
-    public static final int TRAINING_PLAYER_BARREL_LENGTH = 18;
+    public static final int TRAINING_PLAYER_BARREL_LENGTH = 40;
     public static final int TRAINING_BOSS_BARREL_LENGTH = 18;
 
     // Vùng va chạm nhân vật
@@ -57,7 +58,6 @@ public final class ChickenCauHinhLuyenTap {
     public static final int TRAINING_BOSS_BODY_BOTTOM_OFFSET = 8;
     public static final int TRAINING_SPLASH_RADIUS_PX = 8;
     public static final int TRAINING_SPLASH_MIN_PERCENT = 20;
-    public static final int TRAINING_OUT_OF_MAP_EFFECT_MARGIN = 96;
     public static final int TRAINING_MULTI_BULLET_DELAY_POINTS = 2;
 
     // Súng và ngoại hình boss. Súng dùng ID template; các món còn lại dùng part.

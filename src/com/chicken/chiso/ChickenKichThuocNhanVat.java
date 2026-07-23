@@ -9,15 +9,17 @@ package com.chicken.chiso;
  */
 public final class ChickenKichThuocNhanVat {
 
-    public static final int NGUOI_CHOI_NUA_RONG = 8;
-    public static final int NGUOI_CHOI_LECH_TREN = 30;
-    public static final int NGUOI_CHOI_LECH_DUOI = 2;
+    // CPlayer của client PC: Rectangle(x - 12, y - 36, 24, 36).
+    // Giữ toàn bộ phía server cùng một hệ toạ độ để đạn, nổ và va chạm khớp nhau.
+    public static final int NGUOI_CHOI_NUA_RONG = 12;
+    public static final int NGUOI_CHOI_LECH_TREN = 36;
+    public static final int NGUOI_CHOI_LECH_DUOI = 0;
     public static final int NGUOI_CHOI_RONG = NGUOI_CHOI_NUA_RONG * 2 + 1;
     public static final int NGUOI_CHOI_CAO = NGUOI_CHOI_LECH_TREN - NGUOI_CHOI_LECH_DUOI + 1;
 
-    public static final int BOSS_NUA_RONG = 13;
-    public static final int BOSS_LECH_TREN = 40;
-    public static final int BOSS_LECH_DUOI = 8;
+    public static final int BOSS_NUA_RONG = 12;
+    public static final int BOSS_LECH_TREN = 36;
+    public static final int BOSS_LECH_DUOI = 0;
     public static final int BOSS_RONG = BOSS_NUA_RONG * 2 + 1;
     public static final int BOSS_CAO = BOSS_LECH_TREN - BOSS_LECH_DUOI + 1;
 

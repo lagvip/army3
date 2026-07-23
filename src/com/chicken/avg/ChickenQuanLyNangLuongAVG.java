@@ -16,6 +16,8 @@ import com.chicken.mohinh.ChickenNguoiChoi;
 public final class ChickenQuanLyNangLuongAVG {
 
     public static final int NANG_LUONG_TOI_DA = 100;
+    /** Bản local: thanh năng lượng AVG luôn đầy, không có cơ chế tiêu hao. */
+    public static final boolean LUON_DAY_NANG_LUONG = true;
     // Tạm tắt chặn vào trận do hết năng lượng AVG. Đổi lại 5 để bật.
     public static final int TIEU_HAO_MOI_TRAN = 0;
     public static final int HOI_KHI_THANG_BOSS = 5;
@@ -27,10 +29,17 @@ public final class ChickenQuanLyNangLuongAVG {
         if (nguoiChoi == null) {
             return 0;
         }
+        if (LUON_DAY_NANG_LUONG) {
+            nguoiChoi.powerAvenger = (byte) NANG_LUONG_TOI_DA;
+            return NANG_LUONG_TOI_DA;
+        }
         return gioiHan(nguoiChoi.powerAvenger & 0xFF);
     }
 
     public static byte chuanHoaGiaTri(int giaTri) {
+        if (LUON_DAY_NANG_LUONG) {
+            return (byte) NANG_LUONG_TOI_DA;
+        }
         return (byte) gioiHan(giaTri);
     }
 

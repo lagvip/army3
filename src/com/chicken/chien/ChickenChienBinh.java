@@ -107,15 +107,19 @@ public class ChickenChienBinh {
     }
 
     private static short layVuKhiHienThiTrongTran(ChickenNguoiChoi nguoiChoi) {
-        if (nguoiChoi != null
-                && nguoiChoi.avenger == 8
-                && nguoiChoi.itemBody != null
-                && nguoiChoi.itemBody.length > 5
-                && nguoiChoi.itemBody[5] != null
-                && nguoiChoi.itemBody[5].mau != null) {
-            return nguoiChoi.itemBody[5].mau.part;
+        if (nguoiChoi == null) {
+            return (short) -1;
         }
-        return nguoiChoi == null ? (short) -1 : nguoiChoi.wp;
+        /*
+         * Mọi bộ AVG (391-398), không riêng Ultron, đều ẩn sprite súng bằng
+         * cách đặt wp=-1. ID vật lý/collision vẫn phải lấy từ itemBody[5];
+         * nếu dùng wp thì Captain thành súng -1 và không bao giờ vào nhánh
+         * xuyên người, Winter Soldier cũng không vào nhánh xuyên địa hình.
+         */
+        short partSungDangTrangBi = nguoiChoi.layMaHinhSungDangTrangBi();
+        return partSungDangTrangBi >= 0
+                ? partSungDangTrangBi
+                : nguoiChoi.wp;
     }
 
     public boolean coPhien() {
