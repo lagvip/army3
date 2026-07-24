@@ -62,6 +62,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ChickenNguoiChoi {
+    public static final int SO_O_TUI_DO = 100;
+    public static final int SO_O_RUONG_DO = 100;
     private static final ScheduledExecutorService TRAINING_BOT_EXECUTOR = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread thread = new Thread(r, "training-bot");
         thread.setDaemon(true);
@@ -145,10 +147,10 @@ public class ChickenNguoiChoi {
     public short leg;
     public short wp;
     public short wing;
-    public ChickenVatPham[] itemBag = new ChickenVatPham[20];
+    public ChickenVatPham[] itemBag = new ChickenVatPham[SO_O_TUI_DO];
     public ChickenVatPham[] itemBody = new ChickenVatPham[6];
     public int[] itemBalo = new int[0];
-    public ChickenVatPham[] itemBox = new ChickenVatPham[20];
+    public ChickenVatPham[] itemBox = new ChickenVatPham[SO_O_RUONG_DO];
     public boolean isReady;
     public byte pointSeat;
     public int chiSo = -1;
@@ -248,6 +250,22 @@ public class ChickenNguoiChoi {
         return number;
     }
 
+    private boolean chiSoTuiDoHopLe(int chiSo) {
+        return chiSo >= 0 && chiSo < this.itemBag.length;
+    }
+
+    private boolean chiSoRuongDoHopLe(int chiSo) {
+        return chiSo >= 0 && chiSo < this.itemBox.length;
+    }
+
+    private boolean chiSoTrangBiHopLe(int chiSo) {
+        return chiSo >= 0 && chiSo < this.itemBody.length;
+    }
+
+    private boolean chiSoBaloHopLe(int chiSo) {
+        return chiSo >= 0 && chiSo < this.itemBalo.length;
+    }
+
     public int layOTrongBalo() {
         int number = 0;
         for (int chiSo : this.itemBalo) {
@@ -267,10 +285,16 @@ public class ChickenNguoiChoi {
     }
 
     public void thucHien(ChickenTinNhan ms) throws IOException {
+        if (ms == null || ms.boDoc().available() < 5) {
+            return;
+        }
         byte action = ms.boDoc().readByte();
         int ma = ms.boDoc().readInt();
         if (ma >= 11000) {
             int chiSo = ma - 11000;
+            if (!this.chiSoTuiDoHopLe(chiSo)) {
+                return;
+            }
             ChickenVatPham vatPham = this.itemBag[chiSo];
             if (vatPham != null) {
                 int vang = 0;
@@ -287,7 +311,13 @@ public class ChickenNguoiChoi {
     }
 
     public void yeuCauBanVatPham(ChickenTinNhan ms) throws IOException {
-        byte chiSo = ms.boDoc().readByte();
+        if (ms == null || ms.boDoc().available() < 1) {
+            return;
+        }
+        int chiSo = ms.boDoc().readUnsignedByte();
+        if (!this.chiSoTuiDoHopLe(chiSo)) {
+            return;
+        }
         ChickenVatPham vatPham = this.itemBag[chiSo];
         if (vatPham != null) {
             if (this.vatPhamCoTrongBalo(vatPham)) {
@@ -442,10 +472,16 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
     }
 
     public void dungVatPham(ChickenTinNhan ms) throws IOException {
-        byte chiSo = ms.boDoc().readByte();
+        if (ms == null || ms.boDoc().available() < 1) {
+            return;
+        }
+        int chiSo = ms.boDoc().readUnsignedByte();
         if (ms.boDoc().available() > 0) {
             byte loai = ms.boDoc().readByte();
             if (loai == 1) {
+                if (!this.chiSoTuiDoHopLe(chiSo)) {
+                    return;
+                }
                 ChickenVatPham vatPham = this.itemBag[chiSo];
                 if (vatPham != null && vatPham.soLuong > 0) {
                     byte t = vatPham.mau.loai;
@@ -479,6 +515,9 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
                     this.startOKDlg2("Không tìm thấy vật phẩm này. Vui lòng đăng nhập lại để kiểm tra.");
                 }
             } else {
+                if (!this.chiSoTrangBiHopLe(chiSo)) {
+                    return;
+                }
                 ChickenVatPham vatPham = this.itemBody[chiSo];
                 if (vatPham != null) {
                     Vector<String> vector = new Vector<String>();
@@ -504,11 +543,15 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
      * Enabled aggressive block sorting
      */
     public void chuyenVatPham(ChickenTinNhan ms) throws IOException {
+        if (ms == null || ms.boDoc().available() < 2) {
+            return;
+        }
         ChickenVatPham vatPham;
         byte loai = ms.boDoc().readByte();
-        byte chiSo = ms.boDoc().readByte();
+        int chiSo = ms.boDoc().readUnsignedByte();
         System.out.println("type: " + loai);
         if (loai == 4) {
+            if (!this.chiSoTuiDoHopLe(chiSo)) return;
             ChickenVatPham item2 = this.itemBag[chiSo];
             if (item2 == null) return;
             if (this.vatPhamCoTrongBalo(item2)) {
@@ -574,6 +617,7 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
             return;
         }
         if (loai == 5) {
+            if (!this.chiSoTrangBiHopLe(chiSo)) return;
             int param2;
             ChickenVatPham item4 = this.itemBody[chiSo];
             if (item4 == null) return;
@@ -616,6 +660,7 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
             return;
         }
         if (loai == 1) {
+            if (!this.chiSoTuiDoHopLe(chiSo)) return;
             ChickenVatPham item5 = this.itemBag[chiSo];
             if (item5 == null) return;
             if (this.vatPhamCoTrongBalo(item5)) {
@@ -633,6 +678,7 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
             return;
         }
         if (loai == 6) {
+            if (!this.chiSoTuiDoHopLe(chiSo)) return;
             vatPham = this.itemBag[chiSo];
             if (vatPham == null) return;
             byte t = vatPham.mau.loai;
@@ -648,10 +694,12 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
         } else {
             if (loai != 0) {
                 if (loai != 7) return;
+                if (!this.chiSoBaloHopLe(chiSo)) return;
                 this.itemBalo[chiSo] = -1;
                 this.dichVu.guiBalo();
                 return;
             }
+            if (!this.chiSoRuongDoHopLe(chiSo)) return;
             ChickenVatPham item6 = this.itemBox[chiSo];
             if (item6 == null) return;
             byte t = item6.mau.loai;
@@ -783,6 +831,9 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
     }
 
     public void removeItem(int chiSo, int soLuong) {
+        if (!this.chiSoTuiDoHopLe(chiSo) || soLuong <= 0) {
+            return;
+        }
         try {
             ChickenVatPham vatPham = this.itemBag[chiSo];
             if (vatPham != null) {

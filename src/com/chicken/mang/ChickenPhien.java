@@ -220,7 +220,11 @@ implements IChickenPhien {
 
     public void datLoaiKhach(ChickenTinNhan mss) throws IOException {
         this.loaiKhach = mss.boDoc().readByte();
-        this.mucPhong = mss.boDoc().readByte();
+        byte mucPhongYeuCau = mss.boDoc().readByte();
+        if (mucPhongYeuCau < 1 || mucPhongYeuCau > 4) {
+            throw new IOException("Muc phong client khong hop le: " + mucPhongYeuCau);
+        }
+        this.mucPhong = mucPhongYeuCau;
         System.out.println(mucPhong);
         this.phienBan = mss.boDoc().readUTF();
         ((ChickenDichVuGame)this.dichVu).hienTaiXuong();

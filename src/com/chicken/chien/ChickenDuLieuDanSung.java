@@ -21,7 +21,7 @@ public final class ChickenDuLieuDanSung {
     private static final ChickenDuLieuDanSung BANANA =
             new ChickenDuLieuDanSung((byte) 3, (byte) 9, (byte) 4);
     private static final ChickenDuLieuDanSung SHOTGUN =
-            new ChickenDuLieuDanSung((byte) 4, (byte) 10, (byte) 1);
+            new ChickenDuLieuDanSung((byte) 2, (byte) 2, (byte) 3);
     private static final ChickenDuLieuDanSung MORTAR =
             new ChickenDuLieuDanSung((byte) 5, (byte) 11, (byte) 1);
     private static final ChickenDuLieuDanSung CHICKEN =

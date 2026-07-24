@@ -19,123 +19,123 @@ import java.util.Map;
  */
 public final class ChickenQuanLyDanSung {
     /*
-     * Ảnh đạn chính lấy theo part ảnh của từng súng trong res/icon/item/1/.
-     * Tên file có dạng Small<idAnhDan>.png để khớp đúng dữ liệu client.
+     * Bảng súng chỉ lưu ID sprite. Đường dẫn 1/2/3/4 luôn được tạo tập trung
+     * theo mức phóng đã xác thực của từng client.
      */
     private static final Map<Integer, DuLieuSung> THEO_ID_SUNG = new LinkedHashMap<>();
 
     static {
-        dangKy(110, "AT4", (byte) 0, (short) 57, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 57, "res/icon/item/1/Small839.png");
-        dangKy(111, "M72 LAW", (byte) 0, (short) 31, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 31, "res/icon/item/1/Small840.png");
-        dangKy(112, "RPG-7", (byte) 0, (short) 5, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 5, "res/icon/item/1/Small841.png");
-        dangKy(113, "Javelin", (byte) 0, (short) 134, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 134, "res/icon/item/1/Small842.png");
-        dangKy(114, "FIM-92 Stinger", (byte) 0, (short) 135, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 135, "res/icon/item/1/Small843.png");
-        dangKy(115, "[AT6]", (byte) 0, (short) 135, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 135, "res/icon/item/1/Small844.png");
-        dangKy(116, "[AT7]", (byte) 0, (short) 135, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 135, "res/icon/item/1/Small135.png");
-        dangKy(117, "[AT8]", (byte) 0, (short) 135, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 135, "res/icon/item/1/Small135.png");
-        dangKy(118, "[AT9]", (byte) 0, (short) 135, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 135, "res/icon/item/1/Small135.png");
-        dangKy(119, "[AT10]", (byte) 0, (short) 135, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 135, "res/icon/item/1/Small135.png");
-        dangKy(120, "K98", (byte) 1, (short) 27, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 27, "res/icon/item/1/Small848.png");
-        dangKy(121, "M1 Garand", (byte) 1, (short) 37, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 37, "res/icon/item/1/Small849.png");
-        dangKy(122, "M1 Carbine", (byte) 1, (short) 156, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 156, "res/icon/item/1/Small156.png");
-        dangKy(123, "Dragunov SVU", (byte) 1, (short) 132, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 132, "res/icon/item/1/Small850.png");
-        dangKy(124, "MG36", (byte) 1, (short) 133, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 133, "res/icon/item/1/Small855.png");
-        dangKy(125, "[AR6]", (byte) 1, (short) 133, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 133, "res/icon/item/1/Small133.png");
-        dangKy(126, "[AR7]", (byte) 1, (short) 133, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 133, "res/icon/item/1/Small133.png");
-        dangKy(127, "[AR8]", (byte) 1, (short) 133, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 133, "res/icon/item/1/Small133.png");
-        dangKy(128, "[AR9]", (byte) 1, (short) 133, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 133, "res/icon/item/1/Small133.png");
-        dangKy(129, "[AR10]", (byte) 1, (short) 133, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 133, "res/icon/item/1/Small133.png");
-        dangKy(130, "MG42", (byte) 5, (short) 54, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 54, "res/icon/item/1/Small931.png");
-        dangKy(131, "MG60", (byte) 5, (short) 28, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 28, "res/icon/item/1/Small932.png");
-        dangKy(132, "M134 Mini", (byte) 5, (short) 143, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 143, "res/icon/item/1/Small933.png");
-        dangKy(133, "M61 Vulcan", (byte) 5, (short) 145, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 145, "res/icon/item/1/Small934.png");
-        dangKy(134, "XM196", (byte) 5, (short) 144, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 144, "res/icon/item/1/Small935.png");
-        dangKy(135, "[MG6]", (byte) 5, (short) 144, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 144, "res/icon/item/1/Small936.png");
-        dangKy(136, "[MG7]", (byte) 5, (short) 144, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 144, "res/icon/item/1/Small937.png");
-        dangKy(137, "[MG8]", (byte) 5, (short) 144, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 144, "res/icon/item/1/Small938.png");
-        dangKy(138, "[MG9]", (byte) 5, (short) 144, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 144, "res/icon/item/1/Small939.png");
-        dangKy(139, "[MG10]", (byte) 5, (short) 144, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 144, "res/icon/item/1/Small939.png");
-        dangKy(140, "Súng chuối cau", (byte) 3, (short) 58, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 58, "res/icon/item/1/Small58.png");
-        dangKy(141, "Súng chuối xanh", (byte) 3, (short) 140, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 140, "res/icon/item/1/Small140.png");
-        dangKy(142, "Súng chuối sáp", (byte) 3, (short) 32, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 32, "res/icon/item/1/Small32.png");
-        dangKy(143, "Súng chuối sứ", (byte) 3, (short) 141, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 141, "res/icon/item/1/Small141.png");
-        dangKy(144, "Súng chuối 5", (byte) 3, (short) 142, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 142, "res/icon/item/1/Small142.png");
-        dangKy(145, "Súng chuối 6", (byte) 3, (short) 142, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 142, "res/icon/item/1/Small142.png");
-        dangKy(146, "Súng chuối 7", (byte) 3, (short) 142, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 142, "res/icon/item/1/Small142.png");
-        dangKy(147, "Súng chuối 8", (byte) 3, (short) 142, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 142, "res/icon/item/1/Small142.png");
-        dangKy(148, "Súng chuối 9", (byte) 3, (short) 142, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 142, "res/icon/item/1/Small142.png");
-        dangKy(149, "Súng chuối 10", (byte) 3, (short) 142, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 142, "res/icon/item/1/Small142.png");
-        dangKy(150, "Flint locks 1612", (byte) 2, (short) 123, (byte) 4, (byte) 10, (byte) 3, (short) 0, (short) 123, "res/icon/item/1/Small857.png");
-        dangKy(151, "RM-870", (byte) 2, (short) 124, (byte) 4, (byte) 10, (byte) 1, (short) 0, (short) 124, "res/icon/item/1/Small858.png");
-        dangKy(152, "Leone 12 Gauge", (byte) 2, (short) 125, (byte) 4, (byte) 10, (byte) 1, (short) 0, (short) 125, "res/icon/item/1/Small859.png");
-        dangKy(153, "GP-30 40 mm", (byte) 2, (short) 126, (byte) 4, (byte) 10, (byte) 1, (short) 0, (short) 126, "res/icon/item/1/Small860.png");
-        dangKy(154, "M1216 SA 12 Gauge", (byte) 2, (short) 127, (byte) 4, (byte) 10, (byte) 1, (short) 0, (short) 127, "res/icon/item/1/Small861.png");
-        dangKy(155, "[SG6]", (byte) 2, (short) 127, (byte) 4, (byte) 10, (byte) 1, (short) 0, (short) 127, "res/icon/item/1/Small127.png");
-        dangKy(156, "[SG7]", (byte) 2, (short) 127, (byte) 4, (byte) 10, (byte) 1, (short) 0, (short) 127, "res/icon/item/1/Small127.png");
-        dangKy(157, "[SG8]", (byte) 2, (short) 127, (byte) 4, (byte) 10, (byte) 1, (short) 0, (short) 127, "res/icon/item/1/Small127.png");
-        dangKy(158, "[SG9]", (byte) 2, (short) 127, (byte) 4, (byte) 10, (byte) 1, (short) 0, (short) 127, "res/icon/item/1/Small127.png");
-        dangKy(159, "[SG10]", (byte) 2, (short) 127, (byte) 4, (byte) 10, (byte) 1, (short) 0, (short) 127, "res/icon/item/1/Small127.png");
-        dangKy(160, "Súng cối 60mm", (byte) 4, (short) 56, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 56, "res/icon/item/1/Small886.png");
-        dangKy(161, "Súng cối 70mm", (byte) 4, (short) 30, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 30, "res/icon/item/1/Small887.png");
-        dangKy(162, "Súng cối 80mm", (byte) 4, (short) 146, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 146, "res/icon/item/1/Small888.png");
-        dangKy(163, "Súng cối 90mm", (byte) 4, (short) 147, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 147, "res/icon/item/1/Small889.png");
-        dangKy(164, "Rocket 5", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, "res/icon/item/1/Small890.png");
-        dangKy(165, "Rocket 6", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, "res/icon/item/1/Small148.png");
-        dangKy(166, "Rocket 7", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, "res/icon/item/1/Small148.png");
-        dangKy(167, "Rocket 8", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, "res/icon/item/1/Small148.png");
-        dangKy(168, "Rocket 9", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, "res/icon/item/1/Small148.png");
-        dangKy(169, "Rocket 10", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, "res/icon/item/1/Small148.png");
-        dangKy(170, "Gà con", (byte) 6, (short) 55, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 55, "res/icon/item/1/Small895.png");
-        dangKy(171, "Gà choai", (byte) 6, (short) 29, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 29, "res/icon/item/1/Small896.png");
-        dangKy(172, "Gà chọi", (byte) 6, (short) 153, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 153, "res/icon/item/1/Small897.png");
-        dangKy(173, "Gà sắt", (byte) 6, (short) 154, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 154, "res/icon/item/1/Small898.png");
-        dangKy(174, "Gà 5", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, "res/icon/item/1/Small155.png");
-        dangKy(175, "Gà 6", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, "res/icon/item/1/Small155.png");
-        dangKy(176, "Gà 7", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, "res/icon/item/1/Small155.png");
-        dangKy(177, "Gà 8", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, "res/icon/item/1/Small155.png");
-        dangKy(178, "Gà 9", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, "res/icon/item/1/Small155.png");
-        dangKy(179, "Gà 10", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, "res/icon/item/1/Small155.png");
-        dangKy(180, "Rìu gỗ", (byte) 8, (short) 121, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 121, "res/icon/item/1/Small121.png");
-        dangKy(181, "Rìu đồng", (byte) 8, (short) 128, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 128, "res/icon/item/1/Small128.png");
-        dangKy(182, "Rìu sắt", (byte) 8, (short) 129, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 129, "res/icon/item/1/Small129.png");
-        dangKy(183, "Rìu bạc", (byte) 8, (short) 130, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 130, "res/icon/item/1/Small130.png");
-        dangKy(184, "Apache 5", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, "res/icon/item/1/Small131.png");
-        dangKy(185, "Apache 6", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, "res/icon/item/1/Small131.png");
-        dangKy(186, "Apache 7", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, "res/icon/item/1/Small131.png");
-        dangKy(187, "Apache 8", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, "res/icon/item/1/Small131.png");
-        dangKy(188, "Apache 9", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, "res/icon/item/1/Small131.png");
-        dangKy(189, "Apache 10", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, "res/icon/item/1/Small131.png");
-        dangKy(190, "Boomerang gỗ", (byte) 7, (short) 120, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 120, "res/icon/item/1/Small904.png");
-        dangKy(191, "Boomerang đồng", (byte) 7, (short) 136, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 136, "res/icon/item/1/Small905.png");
-        dangKy(192, "Boomerang sắt", (byte) 7, (short) 137, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 137, "res/icon/item/1/Small906.png");
-        dangKy(193, "Boomerang vàng", (byte) 7, (short) 138, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 138, "res/icon/item/1/Small907.png");
-        dangKy(194, "Boomerang 5", (byte) 7, (short) 139, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 139, "res/icon/item/1/Small908.png");
-        dangKy(195, "Boomerang 6", (byte) 7, (short) 139, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 139, "res/icon/item/1/Small909.png");
-        dangKy(196, "Boomerang 7", (byte) 7, (short) 139, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 139, "res/icon/item/1/Small910.png");
-        dangKy(197, "Boomerang 8", (byte) 7, (short) 139, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 139, "res/icon/item/1/Small911.png");
-        dangKy(198, "Boomerang 9", (byte) 7, (short) 139, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 139, "res/icon/item/1/Small912.png");
-        dangKy(199, "Boomerang 10", (byte) 7, (short) 139, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 139, "res/icon/item/1/Small912.png");
-        dangKy(200, "Lazer Alpha", (byte) 9, (short) 122, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 122, "res/icon/item/1/Small922.png");
-        dangKy(201, "Lazer Beta", (byte) 9, (short) 149, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 149, "res/icon/item/1/Small923.png");
-        dangKy(202, "Lazer Gamma", (byte) 9, (short) 150, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 150, "res/icon/item/1/Small926.png");
-        dangKy(203, "Lazer Delta", (byte) 9, (short) 151, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 151, "res/icon/item/1/Small930.png");
-        dangKy(204, "Lazer 5", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, "res/icon/item/1/Small927.png");
-        dangKy(205, "Lazer 6", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, "res/icon/item/1/Small152.png");
-        dangKy(206, "Lazer 7", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, "res/icon/item/1/Small152.png");
-        dangKy(207, "Lazer 8", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, "res/icon/item/1/Small152.png");
-        dangKy(208, "Lazer 9", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, "res/icon/item/1/Small152.png");
-        dangKy(209, "Laze 10", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, "res/icon/item/1/Small152.png");
-        dangKy(295, "Bom", (byte) 10, (short) 193, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 193, "res/icon/item/1/Small193.png");
-        dangKy(391, "Iron Man", (byte) 1, (short) 223, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 223, "res/icon/item/1/Small1883.png");
-        dangKy(392, "Hulk", (byte) 0, (short) 224, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 224, "res/icon/item/1/Small224.png");
-        dangKy(393, "Thor", (byte) 0, (short) 225, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 225, "res/icon/item/1/Small1880.png");
-        dangKy(394, "Loki", (byte) 1, (short) 226, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 226, "res/icon/item/1/Small226.png");
-        dangKy(395, "Captain", (byte) 7, (short) 227, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 227, "res/icon/item/1/Small227.png");
-        dangKy(396, "Winter Soldier", (byte) 1, (short) 228, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 228, "res/icon/item/1/Small1881.png");
-        dangKy(397, "Hawk Eyes", (byte) 3, (short) 229, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 229, "res/icon/item/1/Small1879.png");
-        dangKy(398, "Ultron", (byte) 0, (short) 230, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 1888, "res/icon/item/1/Small1888.png");
-        dangKy(400, "Khỉ đỏ", (byte) 3, (short) 249, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 249, "res/icon/item/1/Small249.png");
-        dangKy(401, "Khỉ vàng", (byte) 3, (short) 249, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 249, "res/icon/item/1/Small249.png");
+        dangKy(110, "AT4", (byte) 0, (short) 57, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 57, 839);
+        dangKy(111, "M72 LAW", (byte) 0, (short) 31, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 31, 840);
+        dangKy(112, "RPG-7", (byte) 0, (short) 5, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 5, 841);
+        dangKy(113, "Javelin", (byte) 0, (short) 134, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 134, 842);
+        dangKy(114, "FIM-92 Stinger", (byte) 0, (short) 135, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 135, 843);
+        dangKy(115, "[AT6]", (byte) 0, (short) 135, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 135, 844);
+        dangKy(116, "[AT7]", (byte) 0, (short) 135, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 135, 135);
+        dangKy(117, "[AT8]", (byte) 0, (short) 135, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 135, 135);
+        dangKy(118, "[AT9]", (byte) 0, (short) 135, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 135, 135);
+        dangKy(119, "[AT10]", (byte) 0, (short) 135, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 135, 135);
+        dangKy(120, "K98", (byte) 1, (short) 27, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 27, 848);
+        dangKy(121, "M1 Garand", (byte) 1, (short) 37, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 37, 849);
+        dangKy(122, "M1 Carbine", (byte) 1, (short) 156, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 156, 850);
+        dangKy(123, "Dragunov SVU", (byte) 1, (short) 132, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 132, 851);
+        dangKy(124, "MG36", (byte) 1, (short) 133, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 133, 855);
+        dangKy(125, "[AR6]", (byte) 1, (short) 133, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 133, 133);
+        dangKy(126, "[AR7]", (byte) 1, (short) 133, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 133, 133);
+        dangKy(127, "[AR8]", (byte) 1, (short) 133, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 133, 133);
+        dangKy(128, "[AR9]", (byte) 1, (short) 133, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 133, 133);
+        dangKy(129, "[AR10]", (byte) 1, (short) 133, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 133, 133);
+        dangKy(130, "MG42", (byte) 5, (short) 54, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 54, 931);
+        dangKy(131, "MG60", (byte) 5, (short) 28, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 28, 932);
+        dangKy(132, "M134 Mini", (byte) 5, (short) 143, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 143, 933);
+        dangKy(133, "M61 Vulcan", (byte) 5, (short) 145, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 145, 934);
+        dangKy(134, "XM196", (byte) 5, (short) 144, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 144, 935);
+        dangKy(135, "[MG6]", (byte) 5, (short) 144, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 144, 936);
+        dangKy(136, "[MG7]", (byte) 5, (short) 144, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 144, 937);
+        dangKy(137, "[MG8]", (byte) 5, (short) 144, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 144, 938);
+        dangKy(138, "[MG9]", (byte) 5, (short) 144, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 144, 939);
+        dangKy(139, "[MG10]", (byte) 5, (short) 144, (byte) 5, (byte) 11, (byte) 5, (short) 10, (short) 144, 939);
+        dangKy(140, "Súng chuối cau", (byte) 3, (short) 58, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 58, 877);
+        dangKy(141, "Súng chuối xanh", (byte) 3, (short) 140, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 140, 878);
+        dangKy(142, "Súng chuối sáp", (byte) 3, (short) 32, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 32, 879);
+        dangKy(143, "Súng chuối sứ", (byte) 3, (short) 141, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 141, 1968);
+        dangKy(144, "Súng chuối 5", (byte) 3, (short) 142, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 142, 142);
+        dangKy(145, "Súng chuối 6", (byte) 3, (short) 142, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 142, 142);
+        dangKy(146, "Súng chuối 7", (byte) 3, (short) 142, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 142, 142);
+        dangKy(147, "Súng chuối 8", (byte) 3, (short) 142, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 142, 142);
+        dangKy(148, "Súng chuối 9", (byte) 3, (short) 142, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 142, 142);
+        dangKy(149, "Súng chuối 10", (byte) 3, (short) 142, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 142, 142);
+        dangKy(150, "Flint locks 1612", (byte) 2, (short) 123, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 123, 857);
+        dangKy(151, "RM-870", (byte) 2, (short) 124, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 124, 858);
+        dangKy(152, "Leone 12 Gauge", (byte) 2, (short) 125, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 125, 859);
+        dangKy(153, "GP-30 40 mm", (byte) 2, (short) 126, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 126, 860);
+        dangKy(154, "M1216 SA 12 Gauge", (byte) 2, (short) 127, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 127, 861);
+        dangKy(155, "[SG6]", (byte) 2, (short) 127, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 127, 127);
+        dangKy(156, "[SG7]", (byte) 2, (short) 127, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 127, 127);
+        dangKy(157, "[SG8]", (byte) 2, (short) 127, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 127, 127);
+        dangKy(158, "[SG9]", (byte) 2, (short) 127, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 127, 127);
+        dangKy(159, "[SG10]", (byte) 2, (short) 127, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 127, 127);
+        dangKy(160, "Súng cối 60mm", (byte) 4, (short) 56, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 56, 886);
+        dangKy(161, "Súng cối 70mm", (byte) 4, (short) 30, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 30, 887);
+        dangKy(162, "Súng cối 80mm", (byte) 4, (short) 146, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 146, 888);
+        dangKy(163, "Súng cối 90mm", (byte) 4, (short) 147, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 147, 889);
+        dangKy(164, "Rocket 5", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, 890);
+        dangKy(165, "Rocket 6", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, 148);
+        dangKy(166, "Rocket 7", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, 148);
+        dangKy(167, "Rocket 8", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, 148);
+        dangKy(168, "Rocket 9", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, 148);
+        dangKy(169, "Rocket 10", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, 148);
+        dangKy(170, "Gà con", (byte) 6, (short) 55, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 55, 895);
+        dangKy(171, "Gà choai", (byte) 6, (short) 29, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 29, 896);
+        dangKy(172, "Gà chọi", (byte) 6, (short) 153, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 153, 897);
+        dangKy(173, "Gà sắt", (byte) 6, (short) 154, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 154, 898);
+        dangKy(174, "Gà 5", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, 155);
+        dangKy(175, "Gà 6", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, 155);
+        dangKy(176, "Gà 7", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, 155);
+        dangKy(177, "Gà 8", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, 155);
+        dangKy(178, "Gà 9", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, 155);
+        dangKy(179, "Gà 10", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, 155);
+        dangKy(180, "Rìu gỗ", (byte) 8, (short) 121, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 121, 121);
+        dangKy(181, "Rìu đồng", (byte) 8, (short) 128, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 128, 128);
+        dangKy(182, "Rìu sắt", (byte) 8, (short) 129, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 129, 129);
+        dangKy(183, "Rìu bạc", (byte) 8, (short) 130, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 130, 130);
+        dangKy(184, "Apache 5", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, 131);
+        dangKy(185, "Apache 6", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, 131);
+        dangKy(186, "Apache 7", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, 131);
+        dangKy(187, "Apache 8", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, 131);
+        dangKy(188, "Apache 9", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, 131);
+        dangKy(189, "Apache 10", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, 131);
+        dangKy(190, "Boomerang gỗ", (byte) 7, (short) 120, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 120, 904);
+        dangKy(191, "Boomerang đồng", (byte) 7, (short) 136, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 136, 905);
+        dangKy(192, "Boomerang sắt", (byte) 7, (short) 137, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 137, 906);
+        dangKy(193, "Boomerang vàng", (byte) 7, (short) 138, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 138, 907);
+        dangKy(194, "Boomerang 5", (byte) 7, (short) 139, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 139, 908);
+        dangKy(195, "Boomerang 6", (byte) 7, (short) 139, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 139, 909);
+        dangKy(196, "Boomerang 7", (byte) 7, (short) 139, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 139, 910);
+        dangKy(197, "Boomerang 8", (byte) 7, (short) 139, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 139, 911);
+        dangKy(198, "Boomerang 9", (byte) 7, (short) 139, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 139, 912);
+        dangKy(199, "Boomerang 10", (byte) 7, (short) 139, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 139, 912);
+        dangKy(200, "Lazer Alpha", (byte) 9, (short) 122, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 122, 922);
+        dangKy(201, "Lazer Beta", (byte) 9, (short) 149, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 149, 923);
+        dangKy(202, "Lazer Gamma", (byte) 9, (short) 150, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 150, 926);
+        dangKy(203, "Lazer Delta", (byte) 9, (short) 151, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 151, 930);
+        dangKy(204, "Lazer 5", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, 927);
+        dangKy(205, "Lazer 6", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, 152);
+        dangKy(206, "Lazer 7", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, 152);
+        dangKy(207, "Lazer 8", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, 152);
+        dangKy(208, "Lazer 9", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, 152);
+        dangKy(209, "Laze 10", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, 152);
+        dangKy(295, "Bom", (byte) 10, (short) 193, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 193, 193);
+        dangKy(391, "Iron Man", (byte) 1, (short) 223, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 223, 1883);
+        dangKy(392, "Hulk", (byte) 0, (short) 224, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 224, 224);
+        dangKy(393, "Thor", (byte) 0, (short) 225, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 225, 1880);
+        dangKy(394, "Loki", (byte) 1, (short) 226, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 226, 226);
+        dangKy(395, "Captain", (byte) 7, (short) 227, (byte) 7, (byte) 21, (byte) 1, (short) 0, (short) 227, 227);
+        dangKy(396, "Winter Soldier", (byte) 1, (short) 228, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 228, 1881);
+        dangKy(397, "Hawk Eyes", (byte) 3, (short) 229, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 229, 1879);
+        dangKy(398, "Ultron", (byte) 0, (short) 230, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 1888, 1888);
+        dangKy(400, "Khỉ đỏ", (byte) 3, (short) 249, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 249, 249);
+        dangKy(401, "Khỉ vàng", (byte) 3, (short) 249, (byte) 3, (byte) 9, (byte) 4, (short) 100, (short) 249, 249);
     }
 
     private ChickenQuanLyDanSung() {
@@ -151,7 +151,7 @@ public final class ChickenQuanLyDanSung {
             byte soVienMoiLoat,
             short khoangCachVienMs,
             short idAnhDan,
-            String duongDanAnhChinh
+            int idAnhChinh
     ) {
         THEO_ID_SUNG.put(idSung, new DuLieuSung(
                 idSung,
@@ -163,7 +163,7 @@ public final class ChickenQuanLyDanSung {
                 soVienMoiLoat,
                 khoangCachVienMs,
                 idAnhDan,
-                duongDanAnhChinh
+                idAnhChinh
         ));
     }
 
@@ -206,8 +206,9 @@ public final class ChickenQuanLyDanSung {
     public static String[] layDanhSachAnhDanTuClientJar() {
         ArrayList<String> danhSach = new ArrayList<>();
         for (DuLieuSung duLieu : THEO_ID_SUNG.values()) {
-            if (!danhSach.contains(duLieu.getDuongDanAnhChinh())) {
-                danhSach.add(duLieu.getDuongDanAnhChinh());
+            String duongDan = taoDuongDanAnhItem(1, duLieu.getIdAnhChinh());
+            if (!danhSach.contains(duongDan)) {
+                danhSach.add(duongDan);
             }
         }
         return danhSach.toArray(new String[0]);
@@ -238,9 +239,11 @@ public final class ChickenQuanLyDanSung {
     /**
      * Lấy file PNG chính của viên đạn theo đúng ID súng.
      */
-    public static String layDuongDanAnhDanTheoIdSung(int idSung) {
+    public static String layDuongDanAnhDanTheoIdSung(int idSung, int mucPhong) {
         DuLieuSung duLieu = theoIdSung(idSung);
-        return duLieu == null ? null : duLieu.getDuongDanAnhChinh();
+        return duLieu == null
+                ? null
+                : taoDuongDanAnhItem(mucPhong, duLieu.getIdAnhChinh());
     }
 
     /**
@@ -255,22 +258,40 @@ public final class ChickenQuanLyDanSung {
     public static List<String> layThuTuDuongDanAnh(
             DuLieuSung duLieu,
             ChickenMauVatPham mauSung,
-            short partClientYeuCau
+            short partClientYeuCau,
+            int mucPhong
     ) {
         ArrayList<String> ketQua = new ArrayList<>();
+        int mucPhongHopLe = chuanHoaMucPhong(mucPhong);
         if (duLieu != null) {
-            themNeuChuaCo(ketQua, duLieu.getDuongDanAnhChinh());
-            themNeuChuaCo(ketQua, "res/icon/item/1/Small" + duLieu.getIdAnhDan() + ".png");
+            themNeuChuaCo(ketQua,
+                    taoDuongDanAnhItem(mucPhongHopLe, duLieu.getIdAnhChinh()));
+            themNeuChuaCo(ketQua,
+                    taoDuongDanAnhItem(1, duLieu.getIdAnhChinh()));
+            themNeuChuaCo(ketQua,
+                    taoDuongDanAnhItem(mucPhongHopLe, duLieu.getIdAnhDan()));
+            themNeuChuaCo(ketQua,
+                    taoDuongDanAnhItem(1, duLieu.getIdAnhDan()));
             themNeuChuaCo(ketQua, "res/training/bullet/" + duLieu.getIdSung() + ".png");
             themNeuChuaCo(ketQua, "res/training/bullet/" + duLieu.getIdAnhDan() + ".png");
             themNeuChuaCo(ketQua, "res/training/bullet/gun_" + duLieu.getNhomSung() + ".png");
         }
         short part = mauSung != null ? mauSung.part : partClientYeuCau;
-        themNeuChuaCo(ketQua, "res/icon/item/1/Small" + part + ".png");
+        themNeuChuaCo(ketQua,
+                taoDuongDanAnhItem(mucPhongHopLe, part));
+        themNeuChuaCo(ketQua, taoDuongDanAnhItem(1, part));
         themNeuChuaCo(ketQua, "res/training/bullet/" + part + ".png");
         themNeuChuaCo(ketQua, "res/icon/bullet/" + part + ".png");
         themNeuChuaCo(ketQua, "res/bullet/" + part + ".png");
         return ketQua;
+    }
+
+    private static String taoDuongDanAnhItem(int mucPhong, int idAnh) {
+        return "res/icon/item/" + chuanHoaMucPhong(mucPhong) + "/Small" + idAnh + ".png";
+    }
+
+    private static int chuanHoaMucPhong(int mucPhong) {
+        return mucPhong >= 1 && mucPhong <= 4 ? mucPhong : 1;
     }
 
     private static void themNeuChuaCo(List<String> danhSach, String giaTri) {
@@ -290,7 +311,7 @@ public final class ChickenQuanLyDanSung {
         private final byte soVienMoiLoat;
         private final short khoangCachVienMs;
         private final short idAnhDan;
-        private final String duongDanAnhChinh;
+        private final int idAnhChinh;
 
         private DuLieuSung(
                 int idSung,
@@ -302,7 +323,7 @@ public final class ChickenQuanLyDanSung {
                 byte soVienMoiLoat,
                 short khoangCachVienMs,
                 short idAnhDan,
-                String duongDanAnhChinh
+                int idAnhChinh
         ) {
             this.idSung = idSung;
             this.tenSung = tenSung;
@@ -313,7 +334,7 @@ public final class ChickenQuanLyDanSung {
             this.soVienMoiLoat = soVienMoiLoat;
             this.khoangCachVienMs = khoangCachVienMs;
             this.idAnhDan = idAnhDan;
-            this.duongDanAnhChinh = duongDanAnhChinh;
+            this.idAnhChinh = idAnhChinh;
         }
 
         public int getIdSung() { return this.idSung; }
@@ -325,6 +346,6 @@ public final class ChickenQuanLyDanSung {
         public byte getSoVienMoiLoat() { return this.soVienMoiLoat; }
         public short getKhoangCachVienMs() { return this.khoangCachVienMs; }
         public short getIdAnhDan() { return this.idAnhDan; }
-        public String getDuongDanAnhChinh() { return this.duongDanAnhChinh; }
+        public int getIdAnhChinh() { return this.idAnhChinh; }
     }
 }

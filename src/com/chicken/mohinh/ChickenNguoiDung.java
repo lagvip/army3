@@ -342,11 +342,31 @@ public class ChickenNguoiDung {
                 JSONArray bags = (JSONArray)JSON.parse(res.getString("inventory_json"));
                 for (int i = 0; i < bags.size(); ++i) {
                     ChickenVatPham vatPham = new ChickenVatPham((JSONObject)bags.get(i));
-                    this.nguoiChoi.itemBag[vatPham.chiSo] = vatPham;
+                    if (vatPham.chiSo >= 0
+                            && vatPham.chiSo < this.nguoiChoi.itemBag.length
+                            && this.nguoiChoi.itemBag[vatPham.chiSo] == null) {
+                        this.nguoiChoi.itemBag[vatPham.chiSo] = vatPham;
+                    } else {
+                        Logger.getLogger(ChickenNguoiDung.class.getName()).log(
+                                Level.WARNING,
+                                "Bo qua vat pham tui co chi so khong hop le/bi trung: player={0}, index={1}",
+                                new Object[]{this.nguoiChoi.ma, vatPham.chiSo}
+                        );
+                    }
                 }
                 JSONArray bodys = (JSONArray)JSON.parse(res.getString("equipped_json"));
                 for (int i = 0; i < bodys.size(); ++i) {
                     ChickenVatPham vatPham = new ChickenVatPham((JSONObject)bodys.get(i));
+                    if (vatPham.chiSo < 0
+                            || vatPham.chiSo >= this.nguoiChoi.itemBody.length
+                            || this.nguoiChoi.itemBody[vatPham.chiSo] != null) {
+                        Logger.getLogger(ChickenNguoiDung.class.getName()).log(
+                                Level.WARNING,
+                                "Bo qua trang bi co chi so khong hop le/bi trung: player={0}, index={1}",
+                                new Object[]{this.nguoiChoi.ma, vatPham.chiSo}
+                        );
+                        continue;
+                    }
                     this.nguoiChoi.itemBody[vatPham.chiSo] = vatPham;
                     this.nguoiChoi.datTrangBiChoNhanVat(vatPham);
                     if (vatPham.mau.loai == 4) {
@@ -358,16 +378,28 @@ public class ChickenNguoiDung {
                     }
                 }
                 JSONArray balos = (JSONArray)JSON.parse(res.getString("pocket_json"));
-                for (int i = 0; i < balos.size(); ++i) {
+                for (int i = 0; i < balos.size() && i < this.nguoiChoi.itemBalo.length; ++i) {
                     int chiSo = Integer.parseInt(balos.get(i).toString());
-                    if (chiSo != -1 && this.nguoiChoi.itemBag[chiSo] != null) {
+                    if (chiSo >= 0
+                            && chiSo < this.nguoiChoi.itemBag.length
+                            && this.nguoiChoi.itemBag[chiSo] != null) {
                         this.nguoiChoi.itemBalo[i] = chiSo;
                     }
                 }
                 JSONArray box = (JSONArray)JSON.parse(res.getString("storage_json"));
                 for (int i = 0; i < box.size(); ++i) {
                     ChickenVatPham vatPham = new ChickenVatPham((JSONObject)box.get(i));
-                    this.nguoiChoi.itemBox[vatPham.chiSo] = vatPham;
+                    if (vatPham.chiSo >= 0
+                            && vatPham.chiSo < this.nguoiChoi.itemBox.length
+                            && this.nguoiChoi.itemBox[vatPham.chiSo] == null) {
+                        this.nguoiChoi.itemBox[vatPham.chiSo] = vatPham;
+                    } else {
+                        Logger.getLogger(ChickenNguoiDung.class.getName()).log(
+                                Level.WARNING,
+                                "Bo qua vat pham ruong co chi so khong hop le/bi trung: player={0}, index={1}",
+                                new Object[]{this.nguoiChoi.ma, vatPham.chiSo}
+                        );
+                    }
                 }
                 res.close();
                 ChickenQuanLyBietDoi.taiClan(this.nguoiChoi);
