@@ -75,16 +75,18 @@ public final class ChickenQuanLyDanSung {
         dangKy(157, "[SG8]", (byte) 2, (short) 127, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 127, 127);
         dangKy(158, "[SG9]", (byte) 2, (short) 127, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 127, 127);
         dangKy(159, "[SG10]", (byte) 2, (short) 127, (byte) 2, (byte) 2, (byte) 3, (short) 0, (short) 127, 127);
-        dangKy(160, "Súng cối 60mm", (byte) 4, (short) 56, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 56, 886);
-        dangKy(161, "Súng cối 70mm", (byte) 4, (short) 30, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 30, 887);
-        dangKy(162, "Súng cối 80mm", (byte) 4, (short) 146, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 146, 888);
-        dangKy(163, "Súng cối 90mm", (byte) 4, (short) 147, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 147, 889);
-        dangKy(164, "Rocket 5", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, 890);
-        dangKy(165, "Rocket 6", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, 148);
-        dangKy(166, "Rocket 7", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, 148);
-        dangKy(167, "Rocket 8", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, 148);
-        dangKy(168, "Rocket 9", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, 148);
-        dangKy(169, "Rocket 10", (byte) 4, (short) 148, (byte) 5, (byte) 11, (byte) 1, (short) 0, (short) 148, 148);
+        // Nhóm cối/rocket dùng type 10: ba viên nối tiếp trên cùng góc và lực.
+        // Type 11 thuộc nhóm MG năm viên, không được dùng chung cho nhóm này.
+        dangKy(160, "Súng cối 60mm", (byte) 4, (short) 56, (byte) 4, (byte) 10, (byte) 3, (short) 0, (short) 56, 886);
+        dangKy(161, "Súng cối 70mm", (byte) 4, (short) 30, (byte) 4, (byte) 10, (byte) 3, (short) 0, (short) 30, 887);
+        dangKy(162, "Súng cối 80mm", (byte) 4, (short) 146, (byte) 4, (byte) 10, (byte) 3, (short) 0, (short) 146, 888);
+        dangKy(163, "Súng cối 90mm", (byte) 4, (short) 147, (byte) 4, (byte) 10, (byte) 3, (short) 0, (short) 147, 889);
+        dangKy(164, "Rocket 5", (byte) 4, (short) 148, (byte) 4, (byte) 10, (byte) 3, (short) 0, (short) 148, 890);
+        dangKy(165, "Rocket 6", (byte) 4, (short) 148, (byte) 4, (byte) 10, (byte) 3, (short) 0, (short) 148, 148);
+        dangKy(166, "Rocket 7", (byte) 4, (short) 148, (byte) 4, (byte) 10, (byte) 3, (short) 0, (short) 148, 148);
+        dangKy(167, "Rocket 8", (byte) 4, (short) 148, (byte) 4, (byte) 10, (byte) 3, (short) 0, (short) 148, 148);
+        dangKy(168, "Rocket 9", (byte) 4, (short) 148, (byte) 4, (byte) 10, (byte) 3, (short) 0, (short) 148, 148);
+        dangKy(169, "Rocket 10", (byte) 4, (short) 148, (byte) 4, (byte) 10, (byte) 3, (short) 0, (short) 148, 148);
         dangKy(170, "Gà con", (byte) 6, (short) 55, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 55, 895);
         dangKy(171, "Gà choai", (byte) 6, (short) 29, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 29, 896);
         dangKy(172, "Gà chọi", (byte) 6, (short) 153, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 153, 897);
@@ -95,10 +97,10 @@ public final class ChickenQuanLyDanSung {
         dangKy(177, "Gà 8", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, 155);
         dangKy(178, "Gà 9", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, 155);
         dangKy(179, "Gà 10", (byte) 6, (short) 155, (byte) 6, (byte) 19, (byte) 1, (short) 0, (short) 155, 155);
-        dangKy(180, "Rìu gỗ", (byte) 8, (short) 121, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 121, 121);
-        dangKy(181, "Rìu đồng", (byte) 8, (short) 128, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 128, 128);
-        dangKy(182, "Rìu sắt", (byte) 8, (short) 129, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 129, 129);
-        dangKy(183, "Rìu bạc", (byte) 8, (short) 130, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 130, 130);
+        dangKy(180, "Rìu gỗ", (byte) 8, (short) 121, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 121, 913);
+        dangKy(181, "Rìu đồng", (byte) 8, (short) 128, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 128, 914);
+        dangKy(182, "Rìu sắt", (byte) 8, (short) 129, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 129, 915);
+        dangKy(183, "Rìu bạc", (byte) 8, (short) 130, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 130, 916);
         dangKy(184, "Apache 5", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, 131);
         dangKy(185, "Apache 6", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, 131);
         dangKy(186, "Apache 7", (byte) 8, (short) 131, (byte) 8, (byte) 17, (byte) 1, (short) 0, (short) 131, 131);
@@ -127,6 +129,9 @@ public final class ChickenQuanLyDanSung {
         dangKy(209, "Laze 10", (byte) 9, (short) 152, (byte) 9, (byte) 49, (byte) 1, (short) 0, (short) 152, 152);
         dangKy(295, "Bom", (byte) 10, (short) 193, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 193, 193);
         dangKy(391, "Iron Man", (byte) 1, (short) 223, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 223, 1883);
+        // Client dung gun 12 chi de ve duong ngam cho Hulk. Packet ket qua
+        // van phai la bullet type 0; Bullet.update() tu nhan avenger=2 va keo
+        // Hulk di theo quy dao. Gui type 12 se vao nhanh grenade va treo client.
         dangKy(392, "Hulk", (byte) 0, (short) 224, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 224, 224);
         dangKy(393, "Thor", (byte) 0, (short) 225, (byte) 0, (byte) 0, (byte) 1, (short) 0, (short) 225, 1880);
         dangKy(394, "Loki", (byte) 1, (short) 226, (byte) 1, (byte) 1, (byte) 2, (short) 100, (short) 226, 226);

@@ -1,5 +1,7 @@
 package com.chicken.chien;
 
+import com.chicken.chiso.ChickenKichThuocNhanVat;
+
 /**
  * Quy tac sieu cao dung chung cho ca sat thuong phia server va hieu ung client.
  */
@@ -11,12 +13,57 @@ public final class ChickenSieuCao {
     private ChickenSieuCao() {
     }
 
-    public static boolean laPhatSieuCao(
+    /**
+     * Danh gia sieu cao tren quy dao hinh hoc khong bi dia hinh cat ngan.
+     * Duong dan phai cat dung hitbox muc tieu sau khi da roi hon 350 px tu
+     * dinh; chi bay cao hoac no gan muc tieu khong duoc tinh.
+     */
+    public static boolean laPhatSieuCaoTrungMucTieu(
             byte loaiDan,
-            short[] duongX,
-            short[] duongY
+            short[] duongXKhongDiaHinh,
+            short[] duongYKhongDiaHinh,
+            int mucTieuX,
+            int mucTieuY,
+            boolean mucTieuLaBoss
     ) {
-        return timChiSoDinh(loaiDan, duongX, duongY) >= 0;
+        int chiSoDinh = timChiSoDinhHinhHoc(
+                loaiDan, duongXKhongDiaHinh, duongYKhongDiaHinh);
+        if (chiSoDinh < 0) {
+            return false;
+        }
+
+        int soDiem = Math.min(
+                duongXKhongDiaHinh.length,
+                duongYKhongDiaHinh.length
+        );
+        int yDinh = duongYKhongDiaHinh[chiSoDinh];
+        for (int i = chiSoDinh + 1; i < soDiem; i++) {
+            int x1 = duongXKhongDiaHinh[i - 1];
+            int y1 = duongYKhongDiaHinh[i - 1];
+            int x2 = duongXKhongDiaHinh[i];
+            int y2 = duongYKhongDiaHinh[i];
+            int soBuoc = Math.max(
+                    1,
+                    Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1))
+            );
+            for (int buoc = 1; buoc <= soBuoc; buoc++) {
+                double tiLe = (double) buoc / (double) soBuoc;
+                int danX = (int) Math.round(x1 + (x2 - x1) * tiLe);
+                int danY = (int) Math.round(y1 + (y2 - y1) * tiLe);
+                if (danY - yDinh <= DO_ROI_TOI_THIEU) {
+                    continue;
+                }
+                boolean trung = mucTieuLaBoss
+                        ? ChickenKichThuocNhanVat.trungBoss(
+                                danX, danY, mucTieuX, mucTieuY)
+                        : ChickenKichThuocNhanVat.trungNguoiChoi(
+                                danX, danY, mucTieuX, mucTieuY);
+                if (trung) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public static int tangSatThuong(int satThuong) {
@@ -27,19 +74,8 @@ public final class ChickenSieuCao {
         return (int) Math.min(Integer.MAX_VALUE, Math.max(satThuong, daTang));
     }
 
-    public static int tangNeuSieuCao(
-            byte loaiDan,
-            short[] duongX,
-            short[] duongY,
-            int satThuong
-    ) {
-        if (!laPhatSieuCao(loaiDan, duongX, duongY)) {
-            return satThuong;
-        }
-        return tangSatThuong(satThuong);
-    }
-
-    public static int timChiSoDinh(
+    /** Tim dinh de dat hieu ung; khong tu ket luan day la phat sieu cao. */
+    public static int timChiSoDinhHinhHoc(
             byte loaiDan,
             short[] duongX,
             short[] duongY
@@ -60,15 +96,9 @@ public final class ChickenSieuCao {
                 chiSoDinh = i;
             }
         }
-        if (chiSoDinh <= 0 || chiSoDinh >= soDiem - 1) {
-            return -1;
-        }
-        for (int i = chiSoDinh + 1; i < soDiem; i++) {
-            if ((int) duongY[i] - yDinh > DO_ROI_TOI_THIEU) {
-                return chiSoDinh;
-            }
-        }
-        return -1;
+        return chiSoDinh <= 0 || chiSoDinh >= soDiem - 1
+                ? -1
+                : chiSoDinh;
     }
 
     private static boolean laLoaiDanSieuCao(byte loaiDan) {

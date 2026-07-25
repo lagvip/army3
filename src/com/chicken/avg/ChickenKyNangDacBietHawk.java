@@ -1,5 +1,6 @@
 package com.chicken.avg;
 
+import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.chien.ChickenChienBinh;
 import com.chicken.mang.ChickenTinNhan;
 import java.io.IOException;
@@ -15,7 +16,7 @@ import java.util.concurrent.TimeUnit;
  * - Client trả đúng 2 byte: action 1 và battleIndex của mục tiêu.
  *
  * Hoạt ảnh skill:
- * - Bắn 4 mũi tên Small1879 nối đuôi theo góc 90 độ lên trời.
+ * - Bắn 4 sprite /eff/muiten.png của client nối đuôi theo góc 90 độ lên trời.
  * - Sau khi loạt đầu bay khỏi màn hình, tạo 4 mũi tên trên đầu mục tiêu.
  * - 4 mũi tên lao xuống nối đuôi, sau mũi cuối mới trừ một lần sát thương cộng dồn.
  */
@@ -42,11 +43,17 @@ public final class ChickenKyNangDacBietHawk {
     }
 
     private final ChickenChienBinh[] chienBinhs;
+    private final ChickenQuanLyBanDo map;
     private final DieuKhienTranDau dieuKhien;
     private long maKyNang;
 
-    public ChickenKyNangDacBietHawk(ChickenChienBinh[] chienBinhs, DieuKhienTranDau dieuKhien) {
+    public ChickenKyNangDacBietHawk(
+            ChickenChienBinh[] chienBinhs,
+            ChickenQuanLyBanDo map,
+            DieuKhienTranDau dieuKhien
+    ) {
         this.chienBinhs = chienBinhs;
+        this.map = map;
         this.dieuKhien = dieuKhien;
     }
 
@@ -69,7 +76,9 @@ public final class ChickenKyNangDacBietHawk {
                 || hawk.chet
                 || !hawk.coPhien()
                 || hawk.avenger != AVG_HAWK
-                || hawk.hawkDaDungKyNang) {
+                || hawk.hawkDaDungKyNang
+                || this.dieuKhien.daKetThuc()
+                || hawk.chiSo != this.dieuKhien.luotHienTai()) {
             return;
         }
 
@@ -91,7 +100,11 @@ public final class ChickenKyNangDacBietHawk {
                     "avenger=" + nguoiDung.avenger);
             return;
         }
-        if (nguoiDung.chet || nguoiDung.hawkDaDungKyNang || this.dieuKhien.daKetThuc()) {
+        if (nguoiDung.chet
+                || nguoiDung.hawkDaDungKyNang
+                || !nguoiDung.hawkDaGuiChonMucTieu
+                || nguoiDung.chiSo != this.dieuKhien.luotHienTai()
+                || this.dieuKhien.daKetThuc()) {
             log("CMD_-91_BO_QUA", nguoiDung,
                     "chet=" + nguoiDung.chet
                     + ", dangDungSkill=" + nguoiDung.hawkDaDungKyNang
@@ -100,8 +113,8 @@ public final class ChickenKyNangDacBietHawk {
         }
 
         int soByte = ms.boDoc().available();
-        if (soByte < 2) {
-            System.out.println("[HAWK] PACKET_THIEU bytes=" + soByte);
+        if (soByte != 2) {
+            System.out.println("[HAWK] PACKET_SAI_DO_DAI bytes=" + soByte);
             return;
         }
 
@@ -174,10 +187,8 @@ public final class ChickenKyNangDacBietHawk {
         }
 
         hawk.hawkDaDungKyNang = true;
+        hawk.hawkDaGuiChonMucTieu = false;
         final long skillId = ++this.maKyNang;
-        final int satThuongMoiMuiTen = Math.max(1, hawk.tanCong - mucTieu.giap);
-        final int tongSatThuong = tinhTongSatThuongBonMui(satThuongMoiMuiTen);
-
         short dauNongX = hawk.x;
         short dauNongY = (short)Math.max(Short.MIN_VALUE, hawk.y - 24);
         ChickenHoatAnhHawk.DuongDan bayLen =
@@ -193,8 +204,7 @@ public final class ChickenKyNangDacBietHawk {
                 () -> this.batDauLoatRoiXuong(
                         skillId,
                         hawk,
-                        mucTieu,
-                        tongSatThuong
+                        mucTieu
                 ),
                 ChickenHoatAnhHawk.THOI_GIAN_BAY_LEN_MS,
                 TimeUnit.MILLISECONDS
@@ -206,8 +216,7 @@ public final class ChickenKyNangDacBietHawk {
     private synchronized void batDauLoatRoiXuong(
             long skillId,
             ChickenChienBinh hawk,
-            ChickenChienBinh mucTieu,
-            int tongSatThuong
+            ChickenChienBinh mucTieu
     ) {
         if (!conHieuLuc(skillId, hawk) || mucTieu == null || mucTieu.chet) {
             ketThucSkill(skillId, hawk);
@@ -233,8 +242,7 @@ public final class ChickenKyNangDacBietHawk {
                     () -> this.xuLySatThuongCongDon(
                             skillId,
                             hawk,
-                            mucTieu,
-                            tongSatThuong
+                            mucTieu
                     ),
                     thoiDiemMuiCuoiCham,
                     TimeUnit.MILLISECONDS
@@ -252,8 +260,7 @@ public final class ChickenKyNangDacBietHawk {
     private synchronized void xuLySatThuongCongDon(
             long skillId,
             ChickenChienBinh hawk,
-            ChickenChienBinh mucTieu,
-            int tongSatThuong
+            ChickenChienBinh mucTieu
     ) {
         if (!conHieuLuc(skillId, hawk)) {
             return;
@@ -261,22 +268,40 @@ public final class ChickenKyNangDacBietHawk {
 
         try {
             if (mucTieu != null && !mucTieu.chet && !this.dieuKhien.daKetThuc()) {
-                log("DAME_CONG_DON", hawk,
-                        "soMui=" + SO_MUI_TEN
-                        + ", mucTieu=" + mucTieu.ten
-                        + ", tongSatThuong=" + tongSatThuong);
-                this.dieuKhien.gaySatThuong(mucTieu, tongSatThuong);
+                int tamNoX = mucTieu.x;
+                int tamNoY = (short) Math.max(Short.MIN_VALUE, mucTieu.y - 18);
+                for (ChickenChienBinh biAnhHuong : this.chienBinhs) {
+                    if (biAnhHuong == null
+                            || biAnhHuong == hawk
+                            || biAnhHuong.chet
+                            || this.dieuKhien.daKetThuc()) {
+                        continue;
+                    }
+                    int satThuong = ChickenSatThuongLanKyNang.tinhHawk(
+                            hawk.tanCong,
+                            biAnhHuong.giap,
+                            tamNoX,
+                            tamNoY,
+                            biAnhHuong.x,
+                            biAnhHuong.y,
+                            biAnhHuong.bot,
+                            this.map
+                    );
+                    if (satThuong <= 0) {
+                        continue;
+                    }
+                    log("DAME_NO_LAN", hawk,
+                            "soMui=" + SO_MUI_TEN
+                            + ", target=" + biAnhHuong.ten
+                            + ", damage=" + satThuong);
+                    this.dieuKhien.gaySatThuong(biAnhHuong, satThuong);
+                }
             }
         } catch (Exception ex) {
             System.out.println("[HAWK] LOI_SAT_THUONG " + ex.getMessage());
         } finally {
             ketThucSkill(skillId, hawk);
         }
-    }
-
-    private static int tinhTongSatThuongBonMui(int satThuongMoiMuiTen) {
-        long tong = (long)Math.max(1, satThuongMoiMuiTen) * SO_MUI_TEN;
-        return tong > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int)tong;
     }
 
     private boolean conHieuLuc(long skillId, ChickenChienBinh hawk) {

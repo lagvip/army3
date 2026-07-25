@@ -22,13 +22,53 @@ function Get-SourceStamp {
     return ($files | Measure-Object -Property LastWriteTimeUtc -Maximum).Maximum
 }
 
+function Test-DatabasePort {
+    $client = [System.Net.Sockets.TcpClient]::new()
+    try {
+        $connectTask = $client.ConnectAsync('127.0.0.1', 3306)
+        if (-not $connectTask.Wait(1000)) {
+            return $false
+        }
+        return $client.Connected
+    }
+    catch {
+        return $false
+    }
+    finally {
+        $client.Dispose()
+    }
+}
+
+function Assert-DatabaseReady {
+    if (-not (Test-DatabasePort)) {
+        throw 'MySQL/MariaDB is not listening on 127.0.0.1:3306. Start MySQL in XAMPP, then run this script again.'
+    }
+}
+
 function Start-Server {
+    Assert-DatabaseReady
     Write-Host "`n[DEV] Starting server..." -ForegroundColor Cyan
     return Start-Process -FilePath 'cmd.exe' `
         -ArgumentList '/d', '/c', 'call .\gradlew.bat run --no-daemon' `
         -WorkingDirectory $projectRoot `
         -NoNewWindow `
         -PassThru
+}
+
+function Test-ProjectBuild {
+    Write-Host "[DEV] Checking source before restart..." -ForegroundColor Cyan
+    Push-Location $projectRoot
+    try {
+        & (Join-Path $projectRoot 'gradlew.bat') compileJava --no-daemon
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[DEV] Build failed; keeping the current server alive. Save the fixed source to retry." -ForegroundColor Red
+            return $false
+        }
+        return $true
+    }
+    finally {
+        Pop-Location
+    }
 }
 
 function Stop-Server([System.Diagnostics.Process]$serverProcess) {
@@ -46,6 +86,10 @@ if ($null -ne $portInUse) {
 }
 
 $lastSourceStamp = Get-SourceStamp
+$buildOk = Test-ProjectBuild
+if (-not $buildOk) {
+    throw 'Initial build failed. Fix the compiler errors, then run this script again.'
+}
 $server = Start-Server
 
 try {
@@ -54,17 +98,25 @@ try {
         $newSourceStamp = Get-SourceStamp
 
         if ($newSourceStamp -gt $lastSourceStamp) {
-            # Give the editor time to finish writing all files before compiling.
-            Start-Sleep -Milliseconds 500
+            # Editors may save related Java files one by one. Debounce, then
+            # compile before stopping the healthy server so a partial save
+            # cannot kill development mode.
+            Start-Sleep -Milliseconds 900
             $lastSourceStamp = Get-SourceStamp
-            Write-Host "[DEV] Change detected; restarting..." -ForegroundColor Green
-            Stop-Server $server
-            $server = Start-Server
+            if (Test-ProjectBuild) {
+                Write-Host "[DEV] Build passed; restarting..." -ForegroundColor Green
+                Stop-Server $server
+                $server = Start-Server
+            }
         }
 
         if ($server.HasExited) {
-            Write-Host '[DEV] Server stopped; starting again...' -ForegroundColor Yellow
-            $server = Start-Server
+            $server.WaitForExit()
+            $exitCode = $server.ExitCode
+            if ($null -eq $exitCode) {
+                $exitCode = 'unknown'
+            }
+            throw "Server exited unexpectedly with code $exitCode. Automatic crash restart was stopped to avoid an error loop."
         }
     }
 }

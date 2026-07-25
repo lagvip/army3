@@ -12,3 +12,4 @@ cache/
 .idea/
 *.iml
 *.before-inventory-100.bak
+*.bak

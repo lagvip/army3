@@ -23,7 +23,7 @@ public final class ChickenDuLieuDanSung {
     private static final ChickenDuLieuDanSung SHOTGUN =
             new ChickenDuLieuDanSung((byte) 2, (byte) 2, (byte) 3);
     private static final ChickenDuLieuDanSung MORTAR =
-            new ChickenDuLieuDanSung((byte) 5, (byte) 11, (byte) 1);
+            new ChickenDuLieuDanSung((byte) 4, (byte) 10, (byte) 3);
     private static final ChickenDuLieuDanSung CHICKEN =
             new ChickenDuLieuDanSung((byte) 6, (byte) 19, (byte) 1);
     private static final ChickenDuLieuDanSung BOOMERANG =

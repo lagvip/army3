@@ -2,7 +2,6 @@ package com.chicken.avg;
 
 import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.chien.ChickenChienBinh;
-import com.chicken.chiso.ChickenKichThuocNhanVat;
 import com.chicken.mang.ChickenTinNhan;
 import java.io.IOException;
 import java.util.concurrent.Executors;
@@ -22,7 +21,6 @@ public final class ChickenKyNangDacBietThor {
     private static final byte LOAI_HIEU_UNG_SET = 0;
     private static final int LECH_TIA_GAN = 40;
     private static final int LECH_TIA_XA = 80;
-    private static final double BAN_KINH_TRUNG = 16.0D;
     private static final long THOI_GIAN_HIEU_UNG_MS = 650L;
 
     private static final ScheduledExecutorService THOR_EXECUTOR =
@@ -88,6 +86,7 @@ public final class ChickenKyNangDacBietThor {
         if (thor.avenger != AVG_THOR
                 || thor.chet
                 || thor.thorDaDungKyNang
+                || !thor.thorDaGuiMenu
                 || thor.chiSo != this.dieuKhien.luotHienTai()
                 || this.dieuKhien.daKetThuc()) {
             log("CMD_-91_BO_QUA", thor,
@@ -99,8 +98,8 @@ public final class ChickenKyNangDacBietThor {
         }
 
         int soByte = ms.boDoc().available();
-        if (soByte < 2) {
-            System.out.println("[THOR] PACKET_THIEU bytes=" + soByte);
+        if (soByte != 2) {
+            System.out.println("[THOR] PACKET_SAI_DO_DAI bytes=" + soByte);
             return;
         }
 
@@ -174,40 +173,25 @@ public final class ChickenKyNangDacBietThor {
                 continue;
             }
 
-            int soTiaTrung = demSoTiaTrung(mucTieu, cacX, cacY);
-            if (soTiaTrung <= 0) {
+            int tongSatThuong = ChickenSatThuongLanKyNang.tinhThor(
+                    thor.tanCong,
+                    mucTieu.giap,
+                    cacX,
+                    cacY,
+                    mucTieu.x,
+                    mucTieu.y,
+                    mucTieu.bot,
+                    this.map
+            );
+            if (tongSatThuong <= 0) {
                 continue;
             }
 
-            int satThuongMoiTia = Math.max(1, thor.tanCong - mucTieu.giap);
-            int tongSatThuong = nhanAnToan(satThuongMoiTia, soTiaTrung);
-            log("TRUNG_SET", thor,
+            log("NO_LAN_SET", thor,
                     "target=" + mucTieu.ten
-                    + ", soTia=" + soTiaTrung
                     + ", damage=" + tongSatThuong);
             this.dieuKhien.gaySatThuong(mucTieu, tongSatThuong);
         }
-    }
-
-    private int demSoTiaTrung(
-            ChickenChienBinh mucTieu,
-            short[] cacX,
-            short[] cacY
-    ) {
-        int soTia = Math.min(cacX.length, cacY.length);
-        int trung = 0;
-        for (int i = 0; i < soTia; i++) {
-            double khoangCach = ChickenKichThuocNhanVat.khoangCachDenNguoiChoi(
-                    cacX[i],
-                    cacY[i],
-                    mucTieu.x,
-                    mucTieu.y
-            );
-            if (khoangCach <= BAN_KINH_TRUNG) {
-                trung++;
-            }
-        }
-        return trung;
     }
 
     private synchronized void ketThucKyNang(long skillId, ChickenChienBinh thor) {
@@ -310,15 +294,6 @@ public final class ChickenKyNangDacBietThor {
             }
             map.phaDiaHinh(x, y, LOAI_HIEU_UNG_SET);
         }
-    }
-
-    public static double getBanKinhTrung() {
-        return BAN_KINH_TRUNG;
-    }
-
-    private static int nhanAnToan(int giaTri, int soLan) {
-        long ketQua = (long)Math.max(0, giaTri) * Math.max(0, soLan);
-        return ketQua > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int)ketQua;
     }
 
     private static short kepShort(int giaTri) {

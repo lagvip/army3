@@ -3,12 +3,12 @@ package com.chicken.avg;
 /**
  * Chỉ tạo quỹ đạo hiển thị cho kỹ năng Hawk.
  *
- * Client dùng bulletType 9 của Hawk Eyes. Loại đạn này cần đúng bốn quỹ đạo
- * trong một lần bắn để tạo bốn ảnh Small1879, không được dùng soPhat=4 với
- * một quỹ đạo vì client sẽ tiếp tục tạo đạn sai bộ đếm.
+ * Skill dùng bulletType 37 để client vẽ sprite hai frame /eff/muiten.png
+ * được đóng gói sẵn. Đạn bắn thường của Hawk vẫn dùng bulletType 9 và ảnh
+ * Small1879 được server gửi riêng qua BulletForGun.
  */
 public final class ChickenHoatAnhHawk {
-    public static final byte LOAI_DAN_MUI_TEN = 9;
+    public static final byte LOAI_DAN_MUI_TEN = 37;
     public static final byte SO_MUI_TEN = 4;
     public static final byte SO_PHAT_MOT_LOAT = 1;
     public static final byte LUC_HIEN_THI = 30;
@@ -139,9 +139,9 @@ public final class ChickenHoatAnhHawk {
     }
 
     /**
-     * Bullet type 9 của client tạo bốn mũi từ bốn quỹ đạo trong một lần gọi.
-     * Mỗi đường sau được chèn thêm điểm đứng yên ở đầu để bốn mũi nối đuôi,
-     * nhưng bộ đếm bắn của client chỉ chạy đúng một lần rồi dừng.
+     * Packet chứa bốn quỹ đạo; client tạo một sprite /eff/muiten.png cho mỗi
+     * đường. Mỗi đường sau được chèn thêm điểm đứng yên ở đầu để bốn mũi nối
+     * đuôi, nhưng bộ đếm bắn của client chỉ chạy đúng một lần rồi dừng.
      */
     public static LoatDuongDan taoLoatBonMuiNoiDuoi(DuongDan duongDanGoc) {
         short[][] cacDuongX = new short[SO_MUI_TEN][];

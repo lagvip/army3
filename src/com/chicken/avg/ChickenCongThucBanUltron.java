@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * Công thức bắn riêng của AVG Ultron.
  *
- * - Tia laze đi thẳng từ đầu nòng tới biên bản đồ.
+ * - Tia laze đi thẳng từ đầu nòng với lực cố định native của gun 18.
  * - Không chịu ảnh hưởng của gió, trọng lực hoặc lực bắn.
  * - Công thức chỉ tạo đường thẳng; nơi điều khiển trận sẽ cắt tia tại
  *   địa hình hoặc nhân vật đầu tiên.
@@ -17,7 +17,9 @@ public final class ChickenCongThucBanUltron {
 
     public static final byte AVG_ULTRON = 8;
     public static final short ID_ANH_DAN_ULTRON = 1888;
-    private static final double BUOC_TIA = 6.0D;
+    /* CPlayer.gun=18 của client: CPlayer.maxforce=30 và drawPath dừng ở 50 nhịp. */
+    private static final int LUC_TIA_NATIVE = 30;
+    private static final int SO_NHIP_TIA_NATIVE = 50;
     private static final double DO_DAI_TACH_TIA = 30.0D;
     private static final double DO_LECH_TIA = 15.0D;
 
@@ -79,8 +81,28 @@ public final class ChickenCongThucBanUltron {
             int mapWidth,
             int mapHeight
     ) {
-        short[] dich = timDiemBien(dauNongX, dauNongY, goc, mapWidth, mapHeight);
-        return taoDoanThang(dauNongX, dauNongY, dich[0], dich[1]);
+        /*
+         * Client dùng drawPath(gun=18, wind=0, gravity=0). Mỗi nhịp cộng
+         * maxforce=30 theo sin/cos fixed-point rồi dừng ở nhịp 50; thanh lực
+         * của người chơi không tham gia vào công thức này. Không kéo tia tới
+         * biên map vì làm tăng tầm bắn khi map rộng và sai với client/plugin.
+         */
+        int gocChuan = chuanHoaGoc(goc);
+        int cos1024 = (int) Math.round(Math.cos(Math.toRadians(gocChuan)) * 1024.0D);
+        int sin1024 = (int) Math.round(Math.sin(Math.toRadians(gocChuan)) * 1024.0D);
+        /* CPlayer: (CPlayer.maxforce * CRes.cos/sin(angle)) >> 10. */
+        int buocX = (LUC_TIA_NATIVE * cos1024) >> 10;
+        int buocY = -((LUC_TIA_NATIVE * sin1024) >> 10);
+
+        short[] xs = new short[SO_NHIP_TIA_NATIVE + 1];
+        short[] ys = new short[SO_NHIP_TIA_NATIVE + 1];
+        xs[0] = dauNongX;
+        ys[0] = dauNongY;
+        for (int i = 1; i <= SO_NHIP_TIA_NATIVE; i++) {
+            xs[i] = (short) (dauNongX + buocX * i);
+            ys[i] = (short) (dauNongY + buocY * i);
+        }
+        return new DuongTia(xs, ys);
     }
 
     public static LoatBaTia taoBaTiaHoiTu(
@@ -90,7 +112,14 @@ public final class ChickenCongThucBanUltron {
             int mapWidth,
             int mapHeight
     ) {
-        short[] dich = timDiemBien(dauNongX, dauNongY, goc, mapWidth, mapHeight);
+        DuongTia tiaGiua = taoTiaThang(
+                dauNongX, dauNongY, goc, mapWidth, mapHeight);
+        int diemCuoi = Math.max(0, Math.min(
+                tiaGiua.getX().length, tiaGiua.getY().length) - 1);
+        short[] dich = new short[]{
+            tiaGiua.getX()[diemCuoi],
+            tiaGiua.getY()[diemCuoi]
+        };
         return taoBaTiaHoiTuTaiDiemCuoi(
                 dauNongX,
                 dauNongY,
@@ -163,7 +192,7 @@ public final class ChickenCongThucBanUltron {
             return new DuongTia(new short[]{x1}, new short[]{y1});
         }
 
-        int soBuoc = Math.max(1, (int) Math.ceil(doDai / BUOC_TIA));
+        int soBuoc = Math.max(1, (int) Math.ceil(doDai / 6.0D));
         List<Short> xs = new ArrayList<Short>(soBuoc + 1);
         List<Short> ys = new ArrayList<Short>(soBuoc + 1);
         for (int i = 0; i <= soBuoc; i++) {
@@ -172,39 +201,6 @@ public final class ChickenCongThucBanUltron {
             ys.add((short) Math.round(y1 + dy * tiLe));
         }
         return new DuongTia(doiMang(xs), doiMang(ys));
-    }
-
-    private static short[] timDiemBien(
-            short x,
-            short y,
-            short goc,
-            int mapWidth,
-            int mapHeight
-    ) {
-        int width = Math.max(1, mapWidth - 1);
-        int height = Math.max(1, mapHeight - 1);
-        double rad = Math.toRadians(chuanHoaGoc(goc));
-        double dx = Math.cos(rad);
-        double dy = -Math.sin(rad);
-
-        double t = Double.POSITIVE_INFINITY;
-        if (dx > 0.000001D) {
-            t = Math.min(t, (width - x) / dx);
-        } else if (dx < -0.000001D) {
-            t = Math.min(t, (0 - x) / dx);
-        }
-        if (dy > 0.000001D) {
-            t = Math.min(t, (height - y) / dy);
-        } else if (dy < -0.000001D) {
-            t = Math.min(t, (0 - y) / dy);
-        }
-        if (!Double.isFinite(t) || t < 0.0D) {
-            t = 0.0D;
-        }
-
-        short dichX = kepShort(Math.round(x + dx * t), 0, width);
-        short dichY = kepShort(Math.round(y + dy * t), 0, height);
-        return new short[]{dichX, dichY};
     }
 
     private static int chuanHoaGoc(short goc) {

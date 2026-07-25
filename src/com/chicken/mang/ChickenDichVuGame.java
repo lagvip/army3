@@ -11,6 +11,7 @@ import com.chicken.chien.ChickenKetQuaDan;
 import com.chicken.chien.ChickenSieuCao;
 import com.chicken.avg.ChickenThanhDiChuyenAVG;
 import com.chicken.avg.ChickenQuanLyNangLuongAVG;
+import com.chicken.avg.ChickenTiaLaserIronMan;
 import com.chicken.mohinh.ChickenNguoiChoi;
 import com.chicken.mang.IChickenDichVuGame;
 import com.chicken.mang.ChickenTinNhan;
@@ -704,8 +705,8 @@ implements IChickenDichVuGame {
             ds.writeShort(chienBinh.x);
             ds.writeShort(chienBinh.y);
             ds.writeShort(chienBinh.hp);
-            // Client gốc đọc short này vào giới hạn thanh di chuyển, không phải max HP.
-            ds.writeShort(ChickenThanhDiChuyenAVG.quangDuongToiDa(chienBinh.avenger));
+            // Client đọc short này vào thể lực/cự ly di chuyển tối đa (CPlayer.bx).
+            ds.writeShort(chienBinh.theLucDiChuyenToiDa);
         }
         ds.writeByte(maNen);
         ds.writeByte(this.demSungDau(chienBinhs));
@@ -933,9 +934,44 @@ implements IChickenDichVuGame {
             ChickenKetQuaDan ketQua,
             byte numShoot
     ) throws IOException {
+        this.guiKetQuaBanNoiBo(
+                whoShoot, shooterX, shooterY, ketQua, numShoot, false);
+    }
+
+    /**
+     * Gui ket qua tran thuong voi vi tri nguoi ban do server quan ly.
+     * neoDiemDauQuyDao chi anh huong ban sao hien thi gui cho client.
+     */
+    public void guiKetQuaBanDau(
+            byte whoShoot,
+            short shooterX,
+            short shooterY,
+            ChickenKetQuaDan ketQua,
+            byte numShoot,
+            boolean neoDiemDauQuyDao
+    ) throws IOException {
+        this.guiKetQuaBanNoiBo(
+                whoShoot,
+                shooterX,
+                shooterY,
+                ketQua,
+                numShoot,
+                neoDiemDauQuyDao
+        );
+    }
+
+    private void guiKetQuaBanNoiBo(
+            byte whoShoot,
+            short shooterX,
+            short shooterY,
+            ChickenKetQuaDan ketQua,
+            byte numShoot,
+            boolean neoDiemDauQuyDao
+    ) throws IOException {
         ChickenTinNhan ms = new ChickenTinNhan(22);
         DataOutputStream ds = ms.boGhi();
-        ds.writeByte(1);
+        ds.writeByte(ketQua.loaiDan == ChickenDuongDanLaserClient.LOAI_DAN_LASER
+                ? 0 : 1);
         ds.writeByte(0);
         ds.writeByte(whoShoot);
         ds.writeByte(ketQua.loaiDan);
@@ -943,50 +979,88 @@ implements IChickenDichVuGame {
         ds.writeShort(shooterY);
         ds.writeShort(ketQua.goc);
         if (ketQua.loaiDan == 17 || ketQua.loaiDan == 19) {
-            ds.writeByte(ketQua.luc);
+            ds.writeByte(ketQua.lucPhu);
         }
         ds.writeByte(numShoot <= 0 ? 1 : numShoot);
-        ds.writeByte(1);
-        int soDiem = Math.min(ketQua.duongX.length, ketQua.duongY.length);
-        ds.writeShort(soDiem);
-        for (int i = 0; i < soDiem; i++) {
-            ds.writeShort(ketQua.duongX[i]);
-            ds.writeShort(ketQua.duongY[i]);
+        int soDuong = Math.max(1, Math.min(255, Math.min(
+                ketQua.cacDuongX.length, ketQua.cacDuongY.length)));
+        ds.writeByte(soDuong);
+        for (int i = 0; i < soDuong; i++) {
+            this.ghiMotDuongDan(
+                    ds,
+                    ketQua.loaiDan,
+                    i < ketQua.cacDuongX.length ? ketQua.cacDuongX[i] : null,
+                    i < ketQua.cacDuongY.length ? ketQua.cacDuongY[i] : null,
+                    shooterX,
+                    shooterY,
+                    neoDiemDauQuyDao
+            );
         }
-        this.ghiDuLieuSieuCao(ds, ketQua.loaiDan, ketQua.duongX, ketQua.duongY);
+        this.ghiDuLieuSieuCao(
+                ds,
+                ketQua.loaiDan,
+                ketQua.duongX,
+                ketQua.duongY,
+                ketQua.sieuCao
+        );
         ds.flush();
         this.guiTin(ms);
     }
 
-    public void guiKetQuaBanDau(byte whoShoot, ChickenKetQuaDan ketQua, byte numShoot) throws IOException {
-        ChickenTinNhan ms = new ChickenTinNhan(22);
-        DataOutputStream ds = ms.boGhi();
-        ds.writeByte(1);
-        ds.writeByte(0);
-        ds.writeByte(whoShoot);
-        ds.writeByte(ketQua.loaiDan);
-        ds.writeShort(ketQua.batDauX);
-        ds.writeShort(ketQua.batDauY);
-        ds.writeShort(ketQua.goc);
-        if (ketQua.loaiDan == 17 || ketQua.loaiDan == 19) {
-            ds.writeByte(ketQua.luc);
+    private void ghiMotDuongDan(
+            DataOutputStream ds,
+            byte loaiDan,
+            short[] duongX,
+            short[] duongY,
+            short xMacDinh,
+            short yMacDinh
+    ) throws IOException {
+        this.ghiMotDuongDan(
+                ds, loaiDan, duongX, duongY, xMacDinh, yMacDinh, false);
+    }
+
+    private void ghiMotDuongDan(
+            DataOutputStream ds,
+            byte loaiDan,
+            short[] duongX,
+            short[] duongY,
+            short xMacDinh,
+            short yMacDinh,
+            boolean neoDiemDauQuyDao
+    ) throws IOException {
+        if (loaiDan == ChickenDuongDanLaserClient.LOAI_DAN_LASER) {
+            ChickenDuongDanLaserClient.DuLieu laser =
+                    ChickenDuongDanLaserClient.tao(
+                            duongX, duongY, xMacDinh, yMacDinh);
+            ChickenDuongDanLaserClient.ghiNen(ds, laser);
+            // Bullet type 49 đọc bắt buộc hai byte này ngay sau từng quỹ đạo.
+            return;
         }
-        ds.writeByte(numShoot <= 0 ? 1 : numShoot);
-        ds.writeByte(1);
-        ds.writeShort(ketQua.duongX.length);
-        for (int i = 0; i < ketQua.duongX.length; i++) {
-            ds.writeShort(ketQua.duongX[i]);
-            ds.writeShort(ketQua.duongY[i]);
+
+        int soDiem = Math.min(
+                duongX == null ? 0 : duongX.length,
+                duongY == null ? 0 : duongY.length
+        );
+        if (soDiem <= 0) {
+            ds.writeShort(1);
+            ds.writeShort(xMacDinh);
+            ds.writeShort(yMacDinh);
+            return;
         }
-        this.ghiDuLieuSieuCao(ds, ketQua.loaiDan, ketQua.duongX, ketQua.duongY);
-        ds.flush();
-        this.guiTin(ms);
+        soDiem = Math.min(Short.MAX_VALUE, soDiem);
+        ds.writeShort(soDiem);
+        for (int i = 0; i < soDiem; i++) {
+            ds.writeShort(neoDiemDauQuyDao && i == 0
+                    ? xMacDinh : duongX[i]);
+            ds.writeShort(neoDiemDauQuyDao && i == 0
+                    ? yMacDinh : duongY[i]);
+        }
     }
 
     /**
-     * Gửi riêng hoạt ảnh skill Hawk trong trận. Bullet type 9 của client tự
-     * tạo bốn mũi từ bốn quỹ đạo, vì vậy soPhat phải là 1 để loạt dừng đúng
-     * sau bốn mũi, không lặp vô hạn.
+     * Gửi riêng hoạt ảnh skill Hawk trong trận. Bullet type 37 của client vẽ
+     * sprite /eff/muiten.png cho bốn quỹ đạo, vì vậy soPhat phải là 1 để loạt
+     * dừng đúng sau bốn mũi, không lặp vô hạn.
      */
     public void guiLoatMuiTenHawkDau(
             byte whoShoot,
@@ -1056,9 +1130,15 @@ implements IChickenDichVuGame {
             DataOutputStream ds,
             byte loaiDan,
             short[] duongX,
-            short[] duongY
+            short[] duongY,
+            boolean sieuCao
     ) throws IOException {
-        int chiSoDinh = ChickenSieuCao.timChiSoDinh(loaiDan, duongX, duongY);
+        if (!sieuCao) {
+            ds.writeByte(0);
+            return;
+        }
+        int chiSoDinh = ChickenSieuCao.timChiSoDinhHinhHoc(
+                loaiDan, duongX, duongY);
         if (chiSoDinh < 0) {
             ds.writeByte(0);
             return;
@@ -1089,16 +1169,28 @@ implements IChickenDichVuGame {
             short[][] cacDuongX,
             short[][] cacDuongY
     ) throws IOException {
-        this.guiLoatLaserUltron(
-                (byte) 22,
-                whoShoot,
+        int soTia = Math.min(
+                cacDuongX == null ? 0 : cacDuongX.length,
+                cacDuongY == null ? 0 : cacDuongY.length
+        );
+        if (soTia <= 0) {
+            return;
+        }
+        /* Tia giữa cũ là quỹ đạo thật; client lặp nó 3 lần theo numShoot. */
+        int tiaThat = soTia >= 2 ? 1 : 0;
+        ChickenKetQuaDan ketQua = new ChickenKetQuaDan(
+                (byte) 0,
                 shooterX,
                 shooterY,
                 goc,
                 luc,
-                cacDuongX,
-                cacDuongY
+                cacDuongX[tiaThat],
+                cacDuongY[tiaThat],
+                null,
+                0
         );
+        this.guiKetQuaBanDau(
+                whoShoot, shooterX, shooterY, ketQua, (byte) 3, true);
     }
 
     /** Gửi hiệu ứng Bắn x3 của Ultron trong luyện tập bằng CMD 84. */
@@ -1186,8 +1278,8 @@ implements IChickenDichVuGame {
             soDiem = Math.min(Short.MAX_VALUE, soDiem);
             ds.writeShort(soDiem);
             for (int i = 0; i < soDiem; i++) {
-                ds.writeShort(xs[i]);
-                ds.writeShort(ys[i]);
+                ds.writeShort(i == 0 ? shooterX : xs[i]);
+                ds.writeShort(i == 0 ? shooterY : ys[i]);
             }
         }
 
@@ -1449,7 +1541,7 @@ implements IChickenDichVuGame {
                 ds.writeShort(playerX);
                 ds.writeShort(playerY);
                 ds.writeShort(Math.min(65535, Math.max(0, playerHp)));
-                ds.writeShort(ChickenThanhDiChuyenAVG.quangDuongToiDa(playerAvenger));
+                ds.writeShort(ChickenThanhDiChuyenAVG.quangDuongToiDa(this.nguoiChoi));
             } else if (i - 1 >= 0 && i - 1 < botX.length) {
                 int botIndex = i - 1;
                 ds.writeShort(botX[botIndex]);
@@ -1457,7 +1549,8 @@ implements IChickenDichVuGame {
                 ds.writeShort(Math.min(65535, Math.max(0, botHp[botIndex])));
                 byte botAvenger = botAvengers != null && botIndex < botAvengers.length
                         ? botAvengers[botIndex] : 0;
-                ds.writeShort(ChickenThanhDiChuyenAVG.quangDuongToiDa(botAvenger));
+                ds.writeShort(ChickenThanhDiChuyenAVG.quangDuongToiDaTheoAvenger(
+                        botAvenger));
             } else {
                 ds.writeShort(-1);
             }
@@ -1564,6 +1657,34 @@ implements IChickenDichVuGame {
     public void guiKetQuaBanLuyenTap(byte whoShoot, byte loaiDan,
             short shooterX, short shooterY, short goc,
             byte luc, byte soPhat, short[][] cacDuongX, short[][] cacDuongY) throws IOException {
+        this.guiKetQuaBanLuyenTap(
+                whoShoot, loaiDan, shooterX, shooterY, goc,
+                luc, luc, soPhat, cacDuongX, cacDuongY, false);
+    }
+
+    public void guiKetQuaBanLuyenTap(byte whoShoot, byte loaiDan,
+            short shooterX, short shooterY, short goc,
+            byte luc, byte soPhat, short[][] cacDuongX, short[][] cacDuongY,
+            boolean sieuCao) throws IOException {
+        this.guiKetQuaBanLuyenTap(
+                whoShoot, loaiDan, shooterX, shooterY, goc,
+                luc, luc, soPhat, cacDuongX, cacDuongY, sieuCao);
+    }
+
+    public void guiKetQuaBanLuyenTap(byte whoShoot, byte loaiDan,
+            short shooterX, short shooterY, short goc,
+            byte luc, byte lucPhu, byte soPhat,
+            short[][] cacDuongX, short[][] cacDuongY) throws IOException {
+        this.guiKetQuaBanLuyenTap(
+                whoShoot, loaiDan, shooterX, shooterY, goc,
+                luc, lucPhu, soPhat, cacDuongX, cacDuongY, false);
+    }
+
+    public void guiKetQuaBanLuyenTap(byte whoShoot, byte loaiDan,
+            short shooterX, short shooterY, short goc,
+            byte luc, byte lucPhu, byte soPhat,
+            short[][] cacDuongX, short[][] cacDuongY,
+            boolean sieuCao) throws IOException {
         int soVien = Math.min(cacDuongX == null ? 0 : cacDuongX.length,
                 cacDuongY == null ? 0 : cacDuongY.length);
         if (soVien <= 0) {
@@ -1572,8 +1693,9 @@ implements IChickenDichVuGame {
         soVien = Math.min(255, soVien);
         ChickenTinNhan ms = new ChickenTinNhan(84);
         DataOutputStream ds = ms.boGhi();
-        // typeShoot = 1: client đọc từng điểm quỹ đạo bằng readShort X/Y.
-        ds.writeByte(1);
+        // Bullet 49 dùng TYPE SHOOT = 0 để client đọc thêm dXLaser/dYLaser.
+        ds.writeByte(loaiDan == ChickenDuongDanLaserClient.LOAI_DAN_LASER
+                ? 0 : 1);
         ds.writeByte(0);
         ds.writeByte(whoShoot);
         ds.writeByte(loaiDan);
@@ -1583,29 +1705,22 @@ implements IChickenDichVuGame {
         ds.writeShort(shooterY);
         ds.writeShort(goc);
         if (loaiDan == 17 || loaiDan == 19) {
-            ds.writeByte(luc);
+            ds.writeByte(lucPhu);
         }
         ds.writeByte(soPhat <= 0 ? 1 : soPhat);
         ds.writeByte(soVien);
         for (int vien = 0; vien < soVien; vien++) {
-            short[] duongX = cacDuongX[vien];
-            short[] duongY = cacDuongY[vien];
-            int soDiem = Math.min(duongX == null ? 0 : duongX.length,
-                    duongY == null ? 0 : duongY.length);
-            if (soDiem <= 0) {
-                ds.writeShort(1);
-                ds.writeShort(shooterX);
-                ds.writeShort(shooterY);
-                continue;
-            }
-            soDiem = Math.min(Short.MAX_VALUE, soDiem);
-            ds.writeShort(soDiem);
-            for (int i = 0; i < soDiem; i++) {
-                ds.writeShort(duongX[i]);
-                ds.writeShort(duongY[i]);
-            }
+            this.ghiMotDuongDan(
+                    ds,
+                    loaiDan,
+                    cacDuongX[vien],
+                    cacDuongY[vien],
+                    shooterX,
+                    shooterY
+            );
         }
-        this.ghiDuLieuSieuCao(ds, loaiDan, cacDuongX[0], cacDuongY[0]);
+        this.ghiDuLieuSieuCao(
+                ds, loaiDan, cacDuongX[0], cacDuongY[0], sieuCao);
         ds.flush();
         this.guiTin(ms);
     }
@@ -1694,12 +1809,123 @@ implements IChickenDichVuGame {
         ds.flush();
         this.guiTin(ms);
     }
-    /** Menu test của Ultron. Client trả CMD 49 khi bấm mục duy nhất. */
+    /** Mở đúng một lựa chọn Bắn x3; client trả CMD -47 khi người chơi chọn. */
     public void guiChonKyNangUltron() {
         Vector danhSach = new Vector();
         danhSach.addElement("Bắn x3");
         this.moDanhSach("Kỹ năng đặc biệt", danhSach);
         System.out.println("[ULTRON] GUI_MENU label=Ban_x3 cmd=-47");
+    }
+
+    /** Mo menu generic de Iron Man bat laser, sau do client gui phat ban that. */
+    public void guiChonKyNangIronMan() {
+        Vector danhSach = new Vector();
+        danhSach.addElement("Laser nguc");
+        this.moDanhSach("Ky nang dac biet", danhSach);
+        System.out.println("[IRON_MAN] GUI_MENU label=Laser_nguc cmd=-47");
+    }
+
+    /**
+     * Xac nhan trang thai ngam skill cho client PC. Day chi la trang thai hien thi;
+     * goc, tia, va cham va damage van do server tu tinh lai khi nhan phat ban.
+     */
+    public void guiTrangThaiNgamLaserIronMan(boolean sanSang) {
+        ChickenTinNhan ms = new ChickenTinNhan(ChickenTiaLaserIronMan.LENH_TRANG_THAI_NGAM);
+        try {
+            DataOutputStream ds = ms.boGhi();
+            ds.writeByte(ChickenTiaLaserIronMan.PHIEN_BAN_TRANG_THAI_NGAM);
+            ds.writeBoolean(sanSang);
+            ds.flush();
+            this.guiTin(ms);
+        } catch (IOException ex) {
+            Logger.getLogger(ChickenDichVuGame.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            ms.donDep();
+        }
+    }
+
+    public void guiTiaLaserIronManDau(
+            byte whoShoot,
+            short shooterX,
+            short shooterY,
+            short goc,
+            short batDauX,
+            short batDauY,
+            short ketThucX,
+            short ketThucY
+    ) throws IOException {
+        this.guiTiaLaserIronMan(
+                (byte) 22, whoShoot, shooterX, shooterY, goc,
+                batDauX, batDauY, ketThucX, ketThucY);
+    }
+
+    public void guiTiaLaserIronManLuyenTap(
+            byte whoShoot,
+            short shooterX,
+            short shooterY,
+            short goc,
+            short batDauX,
+            short batDauY,
+            short ketThucX,
+            short ketThucY
+    ) throws IOException {
+        this.guiTiaLaserIronMan(
+                (byte) 84, whoShoot, shooterX, shooterY, goc,
+                batDauX, batDauY, ketThucX, ketThucY);
+    }
+
+    private void guiTiaLaserIronMan(
+            byte lenh,
+            byte whoShoot,
+            short shooterX,
+            short shooterY,
+            short goc,
+            short batDauX,
+            short batDauY,
+            short ketThucX,
+            short ketThucY
+    ) throws IOException {
+        /*
+         * Iron Man dung renderer rieng qua CMD 125. Khong gui bullet 49 nua:
+         * Laser Girl giu nguyen vong doi dan cua no, con client moi chi ve
+         * hieu ung dua tren diem dau/cuoi authoritative do server tinh.
+         *
+         * Tham so lenh/shooterX/shooterY duoc giu trong API de hai nhanh dau
+         * va luyen tap khong phai doi chu ky goi. Chung khong duoc tin de tinh
+         * va cham hay damage.
+         */
+        ChickenTinNhan ms = new ChickenTinNhan(
+                ChickenTiaLaserIronMan.LENH_HIEU_UNG_RIENG);
+        DataOutputStream ds = ms.boGhi();
+        ds.writeByte(ChickenTiaLaserIronMan.PHIEN_BAN_HIEU_UNG);
+        ds.writeByte(whoShoot);
+        ds.writeShort(batDauX);
+        ds.writeShort(batDauY);
+        ds.writeShort(ketThucX);
+        ds.writeShort(ketThucY);
+        ds.writeShort(ChickenTiaLaserIronMan.THOI_GIAN_HIEU_UNG_MS);
+        ds.flush();
+        this.guiTin(ms);
+    }
+
+    /**
+     * Đóng InfoDlg sau khi chọn Bắn x3 mà không gọi lại GameScr.show().
+     * Client luôn gọi InfoDlg.hide() khi nhận CMD -91; action 127 không thuộc
+     * action skill native 0..5 nên không mở thêm menu hoặc thay đổi nhân vật.
+     */
+    public void guiDongChoKyNangUltron() {
+        ChickenTinNhan ms = new ChickenTinNhan((byte)-91);
+        try {
+            DataOutputStream ds = ms.boGhi();
+            ds.writeByte(127);
+            ds.flush();
+            this.guiTin(ms);
+            System.out.println("[ULTRON] DONG_CHO cmd=-91 action=127");
+        } catch (IOException ex) {
+            Logger.getLogger(ChickenDichVuGame.class.getName()).log(Level.SEVERE, null, ex);
+        } finally {
+            ms.donDep();
+        }
     }
 
     /** Gửi tín hiệu native để client Loki mở menu Giả dạng. */

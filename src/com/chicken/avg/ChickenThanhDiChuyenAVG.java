@@ -1,5 +1,8 @@
 package com.chicken.avg;
 
+import com.chicken.chiso.ChickenChiSoNguoiChoi;
+import com.chicken.mohinh.ChickenNguoiChoi;
+
 /**
  * Quản lý giới hạn di chuyển trong một lượt chiến đấu.
  *
@@ -8,33 +11,42 @@ package com.chicken.avg;
  * hoàn toàn vào phần hiển thị hoặc giới hạn phía client.
  *
  * Quy ước hiện tại:
- * - không mặc AVG: 100 px cơ bản;
- * - có bất kỳ AVG nào: 100 px cơ bản + 100% = 200 px;
+ * - mọi nhân vật có 100 px thể lực cơ bản;
+ * - option 26 trên bộ trang bị/AVG cộng phần trăm cự ly tương ứng;
  * - chỉ packet di chuyển chủ động mới trừ thanh;
  * - rơi, bị đẩy, dịch chuyển skill và đồng bộ tọa độ không trừ thanh.
  */
 public final class ChickenThanhDiChuyenAVG {
 
     public static final int QUANG_DUONG_CO_BAN_PX = 100;
-    public static final int PHAN_TRAM_CONG_THEM_MAC_DINH = 100;
 
     private ChickenThanhDiChuyenAVG() {
     }
 
-    /** AVG ID 0 là không mặc AVG; các ID khác tạm thời đều cộng thêm 100%. */
-    public static int phanTramCongThem(byte avenger) {
-        return avenger == 0 ? 0 : PHAN_TRAM_CONG_THEM_MAC_DINH;
+    /** Chuyển option 26 thành giới hạn thể lực, có chặn tràn số. */
+    public static int quangDuongToiDaTuPhanTram(int phanTramCongThem) {
+        long phanTram = Math.max(0L, phanTramCongThem);
+        long congThem = (long) QUANG_DUONG_CO_BAN_PX * phanTram / 100L;
+        // CMD 20 truyền giá trị này bằng signed short; không để tràn thành số âm ở client.
+        return (int) Math.min(Short.MAX_VALUE,
+                (long) QUANG_DUONG_CO_BAN_PX + congThem);
     }
 
-    /** Tổng quãng đường mỗi lượt mà client và server cùng sử dụng. */
-    public static int quangDuongToiDa(byte avenger) {
-        int congThem = QUANG_DUONG_CO_BAN_PX * phanTramCongThem(avenger) / 100;
-        return QUANG_DUONG_CO_BAN_PX + congThem;
+    /** Tính từ bộ trang bị thật; client không được khai option hoặc thể lực. */
+    public static int quangDuongToiDa(ChickenNguoiChoi nguoiChoi) {
+        return quangDuongToiDaTuPhanTram(
+                ChickenChiSoNguoiChoi.tinhPhanTramCuLyDiChuyen(nguoiChoi));
     }
 
-    /** Hồi đầy thanh khi nhân vật bắt đầu lượt mới. */
-    public static int hoiDay(byte avenger) {
-        return quangDuongToiDa(avenger);
+    /** Dành cho bot không có inventory nhưng có bộ AVG do server cấp. */
+    public static int quangDuongToiDaTheoAvenger(byte avenger) {
+        return quangDuongToiDaTuPhanTram(
+                ChickenChiSoNguoiChoi.tinhPhanTramCuLyDiChuyenTheoAvenger(avenger));
+    }
+
+    /** Hồi đầy theo mức tối đa đã chốt lúc bắt đầu trận. */
+    public static int hoiDay(int quangDuongToiDa) {
+        return Math.max(0, quangDuongToiDa);
     }
 
     /**

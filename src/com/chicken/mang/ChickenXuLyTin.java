@@ -148,16 +148,32 @@ implements IChickenXuLyTin {
                     case -47:
                     case 49: {
                         /*
-                         * Menu generic CMD -47 của client trả lại chính CMD -47
-                         * kèm một byte chỉ số mục đã chọn. Bản cũ bắt nhầm CMD 49
-                         * nên bấm "Bắn x3" không bao giờ vào logic Ultron.
+                         * Menu generic CMD -47 của client gốc trả lại chính CMD -47
+                         * kèm một byte chỉ số mục đã chọn. Plugin PC dùng hàm
+                         * getItem(type, id), vì vậy gửi đúng hai byte 0,0.
+                         * Bản cũ bắt nhầm CMD 49 nên bấm "Bắn x3" không bao giờ
+                         * vào logic Ultron.
                          *
                          * Giữ case 49 để tương thích với client khác, nhưng client
                          * hiện tại dùng -47.
                          */
-                        int luaChon = mss.boDoc().available() > 0
-                                ? mss.boDoc().readUnsignedByte()
-                                : 0;
+                        int soByteLuaChon = mss.boDoc().available();
+                        if (soByteLuaChon != 1 && soByteLuaChon != 2) {
+                            break;
+                        }
+                        int luaChon;
+                        if (soByteLuaChon == 2) {
+                            // Client PC dung GameService.getItem(type, id) de gui lai
+                            // menu generic. Chi chap nhan dung cap 0,0 cua nut skill;
+                            // moi ket qua van duoc skill server kiem tra lai ben duoi.
+                            int loaiMenuPc = mss.boDoc().readUnsignedByte();
+                            luaChon = mss.boDoc().readUnsignedByte();
+                            if (loaiMenuPc != 0 || luaChon != 0) {
+                                break;
+                            }
+                        } else {
+                            luaChon = mss.boDoc().readUnsignedByte();
+                        }
                         ChickenNguoiChoi nguoiChoi = this.khach.user.nguoiChoi;
                         if (XuLyMenuChiHuy.xuLyLuaChon(nguoiChoi, luaChon)) {
                             break;
@@ -168,14 +184,19 @@ implements IChickenXuLyTin {
 
                         if (nguoiChoi != null
                                 && nguoiChoi.inTraining
-                                && nguoiChoi.kichHoatKyNangUltronLuyenTap()) {
-                            break;
+                                ) {
+                            if (nguoiChoi.kichHoatKyNangIronManLuyenTap()
+                                    || nguoiChoi.kichHoatKyNangUltronLuyenTap()) {
+                                break;
+                            }
                         }
 
                         ChickenQuanLyChien tranDau =
                                 ChickenQuanLyChien.timTranDauCuaNguoiChoi(nguoiChoi);
                         if (tranDau != null) {
-                            tranDau.kichHoatKyNangUltron(nguoiChoi);
+                            if (!tranDau.kichHoatKyNangIronMan(nguoiChoi)) {
+                                tranDau.kichHoatKyNangUltron(nguoiChoi);
+                            }
                         }
                         break;
                     }

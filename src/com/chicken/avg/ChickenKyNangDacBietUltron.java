@@ -12,7 +12,6 @@ import com.chicken.chien.ChickenChienBinh;
 public final class ChickenKyNangDacBietUltron {
 
     public static final byte AVG_ULTRON = ChickenCongThucBanUltron.AVG_ULTRON;
-
     public interface DieuKhienTranDau {
         boolean daKetThuc();
         byte luotHienTai();
@@ -41,7 +40,8 @@ public final class ChickenKyNangDacBietUltron {
         ultron.ultronDaGuiMenu = true;
         this.dieuKhien.guiMenuUltron(ultron);
         System.out.println("[ULTRON] GUI_MENU_BAN_X3 index="
-                + (ultron.chiSo & 0xFF));
+                + (ultron.chiSo & 0xFF)
+                + " choNguoiChoiChon=true");
     }
 
     /** Nhận lựa chọn duy nhất của menu generic CMD -47 (client trả lại CMD -47). */
@@ -59,6 +59,9 @@ public final class ChickenKyNangDacBietUltron {
         ultron.ultronDaGuiMenu = false;
         ultron.ultronDaDungKyNang = true;
         ultron.ultronDangBanX3 = true;
+        if (ultron.nguoiChoi != null && ultron.nguoiChoi.dichVu != null) {
+            ultron.nguoiChoi.dichVu.guiDongChoKyNangUltron();
+        }
         System.out.println("[ULTRON] KICH_HOAT_BAN_X3 index="
                 + (ultron.chiSo & 0xFF) + " choPhatBanThat=true");
         return true;

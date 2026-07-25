@@ -1,5 +1,6 @@
 package com.chicken.bando;
 
+import com.chicken.chien.ChickenQuanLyCongThucSung;
 import com.chicken.tienich.ChickenTienIch;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -8,7 +9,8 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.imageio.ImageIO;
 
-public class ChickenQuanLyBanDo {
+public class ChickenQuanLyBanDo
+        implements ChickenQuanLyCongThucSung.KiemTraBanDo {
     private static final short[] DEFAULT_SPAWN_X = new short[]{220, 600, 320, 720, 150, 850, 460, 980};
     private static final short[] DEFAULT_SPAWN_Y = new short[]{300, 300, 260, 260, 320, 320, 280, 280};
     private static final Map<String, HoleMask> HOLE_MASK_CACHE = new HashMap<>();

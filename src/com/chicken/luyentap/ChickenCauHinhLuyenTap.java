@@ -56,8 +56,6 @@ public final class ChickenCauHinhLuyenTap {
     public static final int TRAINING_BOSS_BODY_HALF_WIDTH = 13;
     public static final int TRAINING_BOSS_BODY_TOP_OFFSET = 40;
     public static final int TRAINING_BOSS_BODY_BOTTOM_OFFSET = 8;
-    public static final int TRAINING_SPLASH_RADIUS_PX = 8;
-    public static final int TRAINING_SPLASH_MIN_PERCENT = 20;
     public static final int TRAINING_MULTI_BULLET_DELAY_POINTS = 2;
 
     // Súng và ngoại hình boss. Súng dùng ID template; các món còn lại dùng part.

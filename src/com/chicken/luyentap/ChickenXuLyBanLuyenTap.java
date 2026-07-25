@@ -1,5 +1,6 @@
 package com.chicken.luyentap;
 
+import com.chicken.chien.ChickenLoatDanServer;
 import com.chicken.mang.ChickenTinNhan;
 
 /**
@@ -16,7 +17,10 @@ public final class ChickenXuLyBanLuyenTap {
             boolean loaiDanTheoSungHopLe,
             boolean danHaiLuc) {
         byte[] duLieu = tinNhan == null ? null : tinNhan.layDuLieu();
-        if (duLieu == null || duLieu.length < 8) {
+        int doDaiChinhXac = danHaiLuc ? 10 : 9;
+        if (!loaiDanTheoSungHopLe
+                || duLieu == null
+                || duLieu.length != doDaiChinhXac) {
             return null;
         }
 
@@ -29,17 +33,19 @@ public final class ChickenXuLyBanLuyenTap {
         short goc = docShort(duLieu, viTri);
         viTri += 2;
         int lucKhongDau = duLieu[viTri++] & 0xFF;
+        int lucPhuKhongDau = lucKhongDau;
 
         if (danHaiLuc) {
             if (viTri >= duLieu.length) {
                 return null;
             }
-            viTri++; // lực phụ: cơ chế hiện tại chưa dùng trong luyện tập
+            lucPhuKhongDau = duLieu[viTri++] & 0xFF;
         }
 
-        int soPhatKhongDau = viTri < duLieu.length ? duLieu[viTri] & 0xFF : 1;
-        byte loaiDanHopLe = loaiDanTheoSungHopLe ? loaiDanTheoSung : 0;
+        int soPhatKhongDau = duLieu[viTri] & 0xFF;
+        byte loaiDanHopLe = loaiDanTheoSung;
         byte lucHopLe = (byte) kep(lucKhongDau, 1, 30);
+        byte lucPhuHopLe = (byte) kep(lucPhuKhongDau, 1, 30);
         byte soPhatHopLe = (byte) kep(soPhatKhongDau, 1, 8);
 
         return new ChickenDuLieuPhatBanLuyenTap(
@@ -48,27 +54,25 @@ public final class ChickenXuLyBanLuyenTap {
                 y,
                 chuanHoaGoc(goc),
                 lucHopLe,
+                lucPhuHopLe,
                 soPhatHopLe
         );
     }
 
-    /** Độ lệch từng viên; MG và AK dùng cùng một quỹ đạo. */
-    public static int layDoLechGoc(int soVienMoiLoat, int chiSoVien) {
-        if (soVienMoiLoat == 5 || soVienMoiLoat == 2) {
-            return 0;
-        }
-        if (soVienMoiLoat == 3) {
-            int[] doLech = {-5, 0, 5};
-            return doLech[kep(chiSoVien, 0, doLech.length - 1)];
-        }
-        if (soVienMoiLoat == 7) {
-            return (chiSoVien - 3) * 2;
-        }
-        if (soVienMoiLoat == 4) {
-            int[] doLech = {-6, -2, 2, 6};
-            return doLech[kep(chiSoVien, 0, doLech.length - 1)];
-        }
-        return 0;
+    /**
+     * Độ lệch từng viên theo nhóm súng do server xác định.
+     * Proton bắn chùm ba hướng; cối cũng có ba viên nhưng là burst cùng hướng.
+     */
+    public static int layDoLechGoc(
+            byte nhomSung,
+            int soVienMoiLoat,
+            int chiSoVien
+    ) {
+        return ChickenLoatDanServer.layDoLechGoc(
+                nhomSung,
+                soVienMoiLoat,
+                chiSoVien
+        );
     }
 
     private static short docShort(byte[] duLieu, int viTri) {

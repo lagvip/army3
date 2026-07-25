@@ -39,6 +39,31 @@ sourceSets {
             srcDirs 'src'
         }
     }
+    combatTest {
+        java {
+            srcDirs 'combat-test'
+        }
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+
+configurations {
+    combatTestImplementation.extendsFrom implementation
+    combatTestRuntimeOnly.extendsFrom runtimeOnly
+}
+
+tasks.register('combatTest', JavaExec) {
+    group = 'verification'
+    description = 'Chay bo kiem thu hoi quy ban sung va ky nang AVG.'
+    dependsOn tasks.named('combatTestClasses')
+    classpath = sourceSets.combatTest.runtimeClasspath
+    mainClass = 'com.chicken.kiemthu.ChickenKiemThuBan'
+    jvmArgs '-Dfile.encoding=UTF-8'
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('combatTest')
 }
 
 jar {

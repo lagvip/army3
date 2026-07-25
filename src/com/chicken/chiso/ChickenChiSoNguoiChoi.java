@@ -36,6 +36,8 @@ public final class ChickenChiSoNguoiChoi {
 
     private static final int OPTION_SOCKET = 16;
     private static final int OPTION_PHAN_TRAM_CHUNG = 18;
+    /** Cự ly/thể lực di chuyển cộng theo phần trăm trên trang bị. */
+    private static final int OPTION_CU_LY_DI_CHUYEN_PHAN_TRAM = 26;
 
     private ChickenChiSoNguoiChoi() {
     }
@@ -70,6 +72,57 @@ public final class ChickenChiSoNguoiChoi {
     public static int tinhTocDo(ChickenNguoiChoi nguoiChoi) {
         return tinhChiSo(nguoiChoi, OPTION_TOC_DO, OPTION_TOC_DO_PHAN_TRAM,
                 ChickenQuanLyTiemNang.TOC_DO, -1);
+    }
+
+    /**
+     * Lấy tổng option 26 từ bộ trang bị thật của người chơi. Đây là phần trăm
+     * cộng vào thể lực di chuyển cơ bản, không phải chỉ số Tốc độ tiềm năng.
+     */
+    public static int tinhPhanTramCuLyDiChuyen(ChickenNguoiChoi nguoiChoi) {
+        if (nguoiChoi == null || nguoiChoi.itemBody == null) {
+            return 0;
+        }
+        long phanTram = 0L;
+        for (int i = 0; i < nguoiChoi.itemBody.length; i++) {
+            ChickenVatPham trangBi = nguoiChoi.itemBody[i];
+            if (!trangBiHopLe(trangBi, i)) {
+                continue;
+            }
+            long[] cong = layChiSoTuTrangBi(
+                    trangBi,
+                    OPTION_CU_LY_DI_CHUYEN_PHAN_TRAM,
+                    -1,
+                    -1
+            );
+            phanTram += cong[0];
+        }
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, phanTram));
+    }
+
+    /**
+     * Bot hiển thị bộ AVG nhưng không có inventory. Dùng template AVG tương
+     * ứng (391..398) để lấy đúng option 26 thay vì mặc định mọi AVG đều +100%.
+     */
+    public static int tinhPhanTramCuLyDiChuyenTheoAvenger(byte avenger) {
+        int chiSoAvenger = avenger & 0xFF;
+        if (chiSoAvenger < 1 || chiSoAvenger > 8) {
+            return 0;
+        }
+        ChickenMauVatPham mauAvenger = ChickenQuanLyMayChu.itemTemplates.get(
+                390 + chiSoAvenger);
+        if (mauAvenger == null) {
+            return 0;
+        }
+        long[] cong = layChiSoTuDanhSach(
+                mauAvenger.thuocTinhs,
+                OPTION_CU_LY_DI_CHUYEN_PHAN_TRAM,
+                -1,
+                -1,
+                false,
+                null,
+                false
+        );
+        return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, cong[0]));
     }
 
     /**

@@ -78,11 +78,15 @@ public final class ChickenGocBanUltron {
         int y = nhanVatY - TRUC_DUONG_CAN_CACH_CHAN
                 - ((KHOANG_CACH_DUONG_CAN * sin1024) >> 10);
 
-        int maxX = Math.max(0, mapWidth - 1);
-        int maxY = Math.max(0, mapHeight - 1);
+        /*
+         * Client không kẹp điểm đầu nòng vào map: khi Ultron bay sát mép, tia
+         * vẫn bắt đầu ở đúng đầu nòng kể cả khi điểm đó nằm hơi ngoài khung.
+         * Phần mô phỏng/cắt va chạm phía server đã bỏ qua các pixel ngoài map
+         * an toàn. Kẹp ở đây làm tia server bắt đầu lệch so với đường ngắm.
+         */
         return new short[]{
-            (short) Math.max(0, Math.min(maxX, x)),
-            (short) Math.max(0, Math.min(maxY, y))
+            (short) x,
+            (short) y
         };
     }
 }

@@ -2,6 +2,8 @@ package com.chicken;
 
 import com.chicken.loi.ChickenCoSoDuLieu;
 import com.chicken.loi.ChickenQuanLyMayChu;
+import com.chicken.chien.ChickenCauHinhSatThuongSung;
+import com.chicken.chien.ChickenTinhSatThuongNo;
 import com.chicken.tienich.ChickenTienIch;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -17,6 +19,8 @@ import java.util.logging.Logger;
 public class ChickenMayChu {
     public static void main(String[] args) {
         System.out.println("Chicken LT ChickenMayChu starting...");
+        ChickenCauHinhSatThuongSung.kiemTraDayDu();
+        ChickenTinhSatThuongNo.tuKiemTra();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutdown ChickenMayChu!");
             ChickenQuanLyMayChu.dung();
@@ -196,4 +200,3 @@ public class ChickenMayChu {
         };
     }
 }
-

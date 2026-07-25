@@ -1,10 +1,14 @@
 package com.chicken.avg;
 
+import com.chicken.chien.ChickenChienBinh;
+import com.chicken.mohinh.ChickenNguoiChoi;
+import com.chicken.vatpham.ChickenVatPham;
+
 /**
  * Quy tắc dùng chung cho các AVG có khả năng bay native trên client.
  *
  * Client hiện nhận AVG 1 và AVG 8 là nhân vật bay. Server chỉ cần:
- * - chấp nhận tọa độ X/Y tự do trong phạm vi bản đồ;
+ * - nhận X/Y như ý định di chuyển, sau đó server giới hạn theo thanh di chuyển;
  * - không ép nhân vật xuống nền;
  * - không áp trọng lực;
  * - không xử lý chết do rơi khỏi nền;
@@ -12,42 +16,58 @@ package com.chicken.avg;
  */
 public final class ChickenCoCheBayAVG {
 
-    public static final byte AVG_BAY_1 = 1;
+    public static final byte AVG_IRON_MAN = 1;
     public static final byte AVG_ULTRON = 8;
+    private static final int VAT_PHAM_IRON_MAN = 391;
+    private static final int VAT_PHAM_ULTRON = 398;
 
     private ChickenCoCheBayAVG() {
     }
 
-    /** Trùng đúng danh sách isFlyAvenger native của client. */
-    public static boolean coTheBay(byte avenger) {
-        return avenger == AVG_BAY_1 || avenger == AVG_ULTRON;
+    /** Whitelist ID; chưa đủ để cấp quyền bay cho một người chơi thật. */
+    public static boolean laIdBayDuocPhep(byte avenger) {
+        return avenger == AVG_IRON_MAN || avenger == AVG_ULTRON;
     }
 
-    /** AVG bay được di chuyển xuyên qua pixel địa hình trong phạm vi map. */
-    public static boolean boQuaVaChamDiaHinh(byte avenger) {
-        return coTheBay(avenger);
-    }
-
-    /** AVG bay không chịu trọng lực và không chết chỉ vì không có nền bên dưới. */
-    public static boolean mienTrongLucVaRoiMap(byte avenger) {
-        return coTheBay(avenger);
+    /** Suy ra bộ AVG từ đúng vật phẩm server đang giữ trong ô vũ khí. */
+    public static byte layAvengerTuTrangBi(ChickenNguoiChoi nguoiChoi) {
+        if (nguoiChoi == null || nguoiChoi.itemBody == null
+                || nguoiChoi.itemBody.length <= 5) {
+            return 0;
+        }
+        ChickenVatPham trangBi = nguoiChoi.itemBody[5];
+        if (trangBi == null || trangBi.mau == null || trangBi.mau.loai != 5
+                || trangBi.ma < VAT_PHAM_IRON_MAN || trangBi.ma > VAT_PHAM_ULTRON) {
+            return 0;
+        }
+        return (byte) (trangBi.ma - 390);
     }
 
     /**
-     * Khi địa hình bị phá, AVG bay phải giữ nguyên độ cao hiện tại.
-     * Không được gọi hàm tìm mặt đất rồi ghi đè Y như nhân vật đi bộ.
+     * Quyền bay của người chơi thật phải khớp cả ID AVG lẫn vật phẩm đang được
+     * server giữ ở ô vũ khí. Chỉ sửa trường avenger hoặc packet client là chưa đủ.
      */
-    public static boolean giuNguyenDoCaoKhiDiaHinhThayDoi(byte avenger) {
-        return coTheBay(avenger);
+    public static boolean coTrangBiBayHopLe(ChickenNguoiChoi nguoiChoi) {
+        return laIdBayDuocPhep(layAvengerTuTrangBi(nguoiChoi));
+    }
+
+    /** Quyền đã được server chốt khi tạo chiến binh; Loki sao chép cùng quyền này. */
+    public static boolean coTheBay(ChickenChienBinh chienBinh) {
+        return chienBinh != null
+                && chienBinh.duocPhepBay
+                && laIdBayDuocPhep(chienBinh.avenger);
     }
 
     /**
-     * Packet bắn của client tạm chuyển AVG bay sang trạng thái bắn/đứng ngắm.
-     * Server gửi lại đúng X/Y đã chốt để tránh client giữ một tọa độ tụt tạm
-     * thời sau khi nhận kết quả phát bắn hoặc kết thúc animation.
+     * Chỉ AVG bay thường cần một gói chốt X/Y sau phát bắn.
+     *
+     * Ultron dùng CMD 22/84 để client tự chuyển sang animation tia laser. Nếu
+     * gửi tiếp CMD 53 ngay sau đó, client sẽ áp X/Y trong lúc animation còn
+     * chạy và tạo ra hiện tượng giật/lùi vị trí. Tọa độ trong CMD 22/84 đã là
+     * tọa độ server chốt, nên Ultron không được gửi gói chốt thứ hai.
      */
     public static boolean canDongBoToaDoSauKhiBan(byte avenger) {
-        return coTheBay(avenger);
+        return avenger == AVG_IRON_MAN;
     }
 
     /** Giữ tọa độ trong vùng an toàn mà không kéo nhân vật về mặt đất. */
@@ -56,26 +76,4 @@ public final class ChickenCoCheBayAVG {
         return (short) Math.max(0, Math.min(max, toaDo));
     }
 
-    /**
-     * Lấy đúng tọa độ hiện tại mà client gửi kèm phát bắn của AVG bay.
-     *
-     * Client có thể gửi lệnh bắn ngay sau lệnh bay. Nếu server tiếp tục dùng
-     * tọa độ cũ đang lưu, packet kết quả bắn sẽ kéo nhân vật trở lại vị trí cũ.
-     * Chỉ AVG bay được đồng bộ X/Y theo packet bắn; AVG đi bộ vẫn giữ luồng cũ.
-     */
-    public static short[] toaDoKhiBan(
-            byte avenger,
-            short xClient,
-            short yClient,
-            int rongMap,
-            int caoMap
-    ) {
-        if (!coTheBay(avenger)) {
-            return null;
-        }
-        return new short[]{
-            gioiHanToaDoTrongMap(xClient, rongMap),
-            gioiHanToaDoTrongMap(yClient, caoMap)
-        };
-    }
 }

@@ -89,6 +89,23 @@ final class ChickenPhienLuyenTap {
     short trainingUltronGocNgamHienTai = 45;
     byte trainingUltronLucNgamHienTai = 30;
     boolean trainingUltronDaCoGocNgam;
+    /** CMD 79 được client gửi sau từng viên của Ultron X3, không chỉ cuối loạt. */
+    long trainingUltronX3ShotId = -1L;
+    int trainingUltronX3VaChamDaNhan;
+    int trainingUltronX3PhatDaGui;
+    byte trainingUltronX3LoaiDan;
+    short trainingUltronX3Goc;
+    byte trainingUltronX3Luc;
+    /** Vị trí vật lý server dùng làm anchor cho cả ba packet X3. */
+    short trainingUltronX3ShooterX;
+    short trainingUltronX3ShooterY;
+    short[][] trainingUltronX3DuongX;
+    short[][] trainingUltronX3DuongY;
+
+    // Trang thai skill laser nguc Iron Man trong luyen tap.
+    long trainingIronManMenuTurnId = -1L;
+    boolean trainingIronManDaDungKyNang;
+    boolean trainingIronManLaserSanSang;
 
     int trainingMgBurstTotal;
     int trainingMgBurstSent;

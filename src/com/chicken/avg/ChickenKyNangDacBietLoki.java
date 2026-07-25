@@ -14,8 +14,9 @@ import java.io.IOException;
  * - server gửi action 0, lokiIndex, targetIndex: client copy tên hiển thị,
  *   ngoại hình, AVG, hình súng và thanh máu của mục tiêu sang Loki.
  *
- * Server chỉ copy hp/máu tối đa. Vũ khí thật, tấn công, giáp, may mắn,
- * tốc độ và kỹ năng của Loki không thay đổi.
+ * Server sao chép bộ chiến đấu của mục tiêu là người chơi thật: tên hiển thị,
+ * ngoại hình phía client, súng, AVG, máu và các chỉ số. Bot/boss không hợp lệ.
+ * Phiên đăng nhập, tài khoản, battle index, vị trí và trạng thái lượt vẫn là Loki.
  */
 public final class ChickenKyNangDacBietLoki {
     public static final byte AVG_LOKI = 4;
@@ -65,8 +66,10 @@ public final class ChickenKyNangDacBietLoki {
             return;
         }
         if (loki.avenger != AVG_LOKI
+                || !loki.laNguoiChoiThat()
                 || loki.chet
                 || loki.lokiDaDungKyNang
+                || (!loki.lokiDaGuiMenu && !loki.lokiDangChoChonMucTieu)
                 || loki.chiSo != this.dieuKhien.luotHienTai()
                 || this.dieuKhien.daKetThuc()) {
             log("CMD_-91_BO_QUA", loki,
@@ -78,8 +81,8 @@ public final class ChickenKyNangDacBietLoki {
         }
 
         int soByte = ms.boDoc().available();
-        if (soByte < 2) {
-            System.out.println("[LOKI] PACKET_THIEU bytes=" + soByte);
+        if (soByte != 2) {
+            System.out.println("[LOKI] PACKET_SAI_DO_DAI bytes=" + soByte);
             return;
         }
 
@@ -124,6 +127,7 @@ public final class ChickenKyNangDacBietLoki {
         }
 
         loki.lokiDangChoChonMucTieu = true;
+        loki.lokiDaGuiMenu = false;
         this.dieuKhien.guiChonMucTieuLoki(loki);
         log("MO_DANH_SACH_MUC_TIEU", loki, "action=1");
     }
@@ -133,7 +137,7 @@ public final class ChickenKyNangDacBietLoki {
             int targetIndex
     ) throws IOException {
         ChickenChienBinh mucTieu = timMucTieu(targetIndex);
-        if (mucTieu == null || mucTieu == loki || mucTieu.chet) {
+        if (!laMucTieuHopLe(loki, mucTieu)) {
             log("MUC_TIEU_KHONG_HOP_LE", loki, "target=" + targetIndex);
             return;
         }
@@ -151,7 +155,7 @@ public final class ChickenKyNangDacBietLoki {
         }
 
         ChickenChienBinh mucTieu = timMucTieu(targetIndex);
-        if (mucTieu == null || mucTieu == loki || mucTieu.chet) {
+        if (!laMucTieuHopLe(loki, mucTieu)) {
             log("MUC_TIEU_KHONG_HOP_LE", loki, "target=" + targetIndex);
             return;
         }
@@ -164,7 +168,7 @@ public final class ChickenKyNangDacBietLoki {
             ChickenChienBinh mucTieu
     ) throws IOException {
         if (loki == null
-                || mucTieu == null
+                || !laMucTieuHopLe(loki, mucTieu)
                 || loki.lokiDaDungKyNang
                 || this.dieuKhien.daKetThuc()) {
             return;
@@ -177,12 +181,7 @@ public final class ChickenKyNangDacBietLoki {
         // Kỹ năng này không phải phát bắn và không làm mất lượt hiện tại.
         loki.lokiSkillActive = true;
 
-        // Copy tên hiển thị và máu trong phạm vi trận. Tên tài khoản thật,
-        // vũ khí thật và toàn bộ chỉ số chiến đấu của Loki vẫn không đổi.
-        loki.ten = mucTieu.ten;
-        loki.mauToiDa = Math.max(1, mucTieu.mauToiDa);
-        loki.hp = Math.max(0, Math.min(loki.mauToiDa, mucTieu.hp));
-        loki.chet = loki.hp <= 0;
+        loki.saoChepBoChienDauTu(mucTieu);
 
         this.dieuKhien.guiBienHinh(loki, mucTieu);
         this.dieuKhien.capNhatMau(loki);
@@ -191,8 +190,10 @@ public final class ChickenKyNangDacBietLoki {
                 + ", hp=" + loki.hp
                 + ", maxHp=" + loki.mauToiDa
                 + ", tenHienThi=" + loki.ten
-                + ", weaponThat=" + loki.maVuKhi
-                + ", avengerThat=" + loki.avenger);
+                + ", weaponCopied=" + loki.maVuKhi
+                + ", avengerCopied=" + loki.avenger
+                + ", attackCopied=" + loki.tanCong
+                + ", armorCopied=" + loki.giap);
 
         // Kết thúc trạng thái xử lý ngay nhưng giữ nguyên lượt của Loki.
         // Không gọi sangLuot(), không tính đây là một lượt bắn.
@@ -203,7 +204,7 @@ public final class ChickenKyNangDacBietLoki {
 
     private boolean coMucTieuHopLe(ChickenChienBinh loki) {
         for (ChickenChienBinh chienBinh : this.chienBinhs) {
-            if (chienBinh != null && chienBinh != loki && !chienBinh.chet) {
+            if (laMucTieuHopLe(loki, chienBinh)) {
                 return true;
             }
         }
@@ -218,6 +219,17 @@ public final class ChickenKyNangDacBietLoki {
             }
         }
         return null;
+    }
+
+    private static boolean laMucTieuHopLe(
+            ChickenChienBinh loki,
+            ChickenChienBinh mucTieu
+    ) {
+        return mucTieu != null
+                && mucTieu != loki
+                && mucTieu.laNguoiChoiThat()
+                && !mucTieu.chet
+                && mucTieu.hp > 0;
     }
 
     private static void log(

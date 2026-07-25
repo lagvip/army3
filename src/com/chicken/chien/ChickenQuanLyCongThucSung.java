@@ -20,6 +20,7 @@ public final class ChickenQuanLyCongThucSung {
 
     public static final int ID_SUNG_CAPTAIN = 395;
     public static final int ID_SUNG_WINTER_SOLDIER = 396;
+    public static final int ID_SUNG_HULK = 392;
 
     public enum KieuCongThuc {
         DAN_THUONG,
@@ -124,7 +125,9 @@ public final class ChickenQuanLyCongThucSung {
 
         dangKy(295, (byte) 0, KieuCongThuc.DAN_THUONG, 80, 100, 0);
         dangKy(391, (byte) 1, KieuCongThuc.DAN_THUONG, 50, 50, 0);
-        dangKy(392, (byte) 0, KieuCongThuc.DAN_THUONG, 80, 100, 0);
+        // CPlayer.drawBull(): gun 12 (AVG Hulk) = wind 0, gravity 100.
+        // Hulk chi dung chung dang dan dao, khong dung cong thuc AT gun 0.
+        dangKy(ID_SUNG_HULK, (byte) 0, KieuCongThuc.DAN_THUONG, 0, 100, 0);
         dangKy(393, (byte) 0, KieuCongThuc.DAN_THUONG, 80, 100, 0);
         dangKy(394, (byte) 1, KieuCongThuc.DAN_THUONG, 50, 50, 0);
         dangKy(ID_SUNG_CAPTAIN, (byte) 7, KieuCongThuc.BOOMERANG_QUAY_VE, 10, 50, 0);
@@ -191,6 +194,191 @@ public final class ChickenQuanLyCongThucSung {
                 theoIdSung(idSung), banDo);
     }
 
+    /**
+     * Quỹ đạo viên phụ của nhóm Gà (bullet type 20).
+     *
+     * Client sinh viên này tại bước force2 của viên chính, vận tốc ban đầu bằng 0,
+     * hệ số gió 10 và trọng lực 30. Điểm bắt đầu đã gồm độ lệch Y +8 do bên gọi
+     * xác định từ quỹ đạo viên chính.
+     */
+    public static KetQuaQuyDao taoQuyDaoDanGaRoi(short batDauX, short batDauY,
+            byte windX, byte windY, KiemTraBanDo banDo) {
+        List<Short> xs = new ArrayList<>();
+        List<Short> ys = new ArrayList<>();
+
+        if (banDo.coVaCham(batDauX, batDauY)) {
+            return ketQuaGiongNhau(xs, ys, batDauX, batDauY);
+        }
+
+        int x = batDauX;
+        int y = batDauY;
+        int dx = 0;
+        int dy = 0;
+        int accX = windX * 10 / 100;
+        int accY = windY * 10 / 100;
+        int carryX = 0;
+        int carryY = 0;
+        int carryGravity = 0;
+
+        for (int step = 1; step <= MAX_STEPS; step++) {
+            int nx = x + dx;
+            int ny = y + dy;
+            short px = (short) nx;
+            short py = (short) ny;
+            short[] vaCham = timVaChamDauTienTrenDoan(
+                    (short) x, (short) y, px, py, banDo);
+            if (vaCham != null) {
+                xs.add(vaCham[0]);
+                ys.add(vaCham[1]);
+                break;
+            }
+            if (daRaKhoiBienMoPhong(nx, ny, banDo.getWidth(), banDo.getHeight())) {
+                break;
+            }
+
+            xs.add(px);
+            ys.add(py);
+            x = nx;
+            y = ny;
+
+            carryX += accX;
+            carryY += accY;
+            carryGravity += 30;
+            if (Math.abs(carryX) >= 100) {
+                dx += carryX / 100;
+                carryX %= 100;
+            }
+            if (Math.abs(carryY) >= 100) {
+                dy += carryY / 100;
+                carryY %= 100;
+            }
+            if (Math.abs(carryGravity) >= 100) {
+                dy += carryGravity / 100;
+                carryGravity %= 100;
+            }
+        }
+
+        return ketQuaGiongNhau(xs, ys, batDauX, batDauY);
+    }
+
+    /**
+     * Tạo một trong ba quỹ đạo con của Rìu sau bước force2.
+     *
+     * Khớp client pathType 8: góc con cách nhau 15 độ, đầu nòng con cách điểm
+     * tách 40 px (trục Y trừ thêm 12), vận tốc chỉ bằng một nửa phát chính,
+     * hệ số gió 30 và trọng lực 100.
+     */
+    public static KetQuaQuyDao taoQuyDaoConRiu(
+            short diemTachX,
+            short diemTachY,
+            short nguoiBanX,
+            short nguoiBanY,
+            short gocGoc,
+            byte luc,
+            int chiSoCon,
+            byte windX,
+            byte windY,
+            KiemTraBanDo banDo
+    ) {
+        int gocCon = layGocConRiu(
+                diemTachX, diemTachY, nguoiBanX, nguoiBanY, gocGoc, chiSoCon);
+        int cos = cos1024(gocCon);
+        int sin = sin1024(gocCon);
+        int batDauX = diemTachX + ((40 * cos) >> 10);
+        int batDauY = diemTachY - 12 - ((40 * sin) >> 10);
+        int power = Math.max(1, luc & 0xFF);
+        int dx = (power * cos) >> 11;
+        int dy = -((power * sin) >> 11);
+        return taoDanRiuTuVanToc(
+                (short) batDauX,
+                (short) batDauY,
+                dx,
+                dy,
+                windX,
+                windY,
+                banDo
+        );
+    }
+
+    public static int layGocConRiu(
+            short diemTachX,
+            short diemTachY,
+            short nguoiBanX,
+            short nguoiBanY,
+            short gocGoc,
+            int chiSoCon
+    ) {
+        int baseAngle = chuanHoaGoc(gocGoc);
+        int dxVeNguoiBan = nguoiBanX - diemTachX;
+        int dyVeNguoiBan = nguoiBanY - diemTachY;
+        int gocVeNguoiBan = chuanHoaGoc((short) Math.round(
+                Math.toDegrees(Math.atan2(dyVeNguoiBan, dxVeNguoiBan))));
+        int gocCon = baseAngle + gocVeNguoiBan;
+        if (baseAngle < 90) {
+            gocCon = 180 - gocCon;
+        }
+        gocCon += Math.max(0, Math.min(2, chiSoCon)) * 15 - 15;
+        return chuanHoaGoc((short) gocCon);
+    }
+
+    private static KetQuaQuyDao taoDanRiuTuVanToc(
+            short batDauX,
+            short batDauY,
+            int dx,
+            int dy,
+            byte windX,
+            byte windY,
+            KiemTraBanDo banDo
+    ) {
+        List<Short> xs = new ArrayList<>();
+        List<Short> ys = new ArrayList<>();
+        int x = batDauX;
+        int y = batDauY;
+        int accX = windX * 30 / 100;
+        int accY = windY * 30 / 100;
+        int carryX = 0;
+        int carryY = 0;
+        int carryGravity = 0;
+
+        for (int step = 1; step <= MAX_STEPS; step++) {
+            int nx = x + dx;
+            int ny = y + dy;
+            short px = (short) nx;
+            short py = (short) ny;
+            short[] vaCham = timVaChamDauTienTrenDoan(
+                    (short) x, (short) y, px, py, banDo);
+            if (vaCham != null) {
+                xs.add(vaCham[0]);
+                ys.add(vaCham[1]);
+                break;
+            }
+            if (daRaKhoiBienMoPhong(nx, ny, banDo.getWidth(), banDo.getHeight())) {
+                break;
+            }
+
+            xs.add(px);
+            ys.add(py);
+            x = nx;
+            y = ny;
+            carryX += accX;
+            carryY += accY;
+            carryGravity += 100;
+            if (Math.abs(carryX) >= 100) {
+                dx += carryX / 100;
+                carryX %= 100;
+            }
+            if (Math.abs(carryY) >= 100) {
+                dy += carryY / 100;
+                carryY %= 100;
+            }
+            if (Math.abs(carryGravity) >= 100) {
+                dy += carryGravity / 100;
+                carryGravity %= 100;
+            }
+        }
+        return ketQuaGiongNhau(xs, ys, batDauX, batDauY);
+    }
+
     private static KetQuaQuyDao taoQuyDaoTheoCongThuc(short batDauX, short batDauY,
             short goc, byte luc, byte windX, byte windY, CongThucSung congThuc,
             KiemTraBanDo banDo) {
@@ -199,7 +387,7 @@ public final class ChickenQuanLyCongThucSung {
                 return taoDanFixedPoint(batDauX, batDauY, goc, luc, windX, windY,
                         congThuc, banDo, true);
             case LAZER_RIENG:
-                return taoLazerRieng(batDauX, batDauY, goc, luc, windX, windY,
+                return taoLazerTheoClient(batDauX, batDauY, goc, luc, windX, windY,
                         congThuc, banDo);
             case ULTRON_LAZER_THANG: {
                 ChickenCongThucBanUltron.DuongTia tia =
@@ -224,59 +412,56 @@ public final class ChickenQuanLyCongThucSung {
         }
     }
 
-
     /**
-     * Công thức riêng của lazer:
-     * 1) tính ngầm điểm cao nhất theo góc/lực, không hiển thị cục lazer đầu;
-     * 2) chỉ hiển thị tia lazer từ đầu nòng tới điểm cao nhất;
-     * 3) tại điểm cao nhất, tia đảo hướng và đi xuống với đúng góc bắn ban đầu;
-     *    ví dụ 20 độ phản xuống 20 độ, 50 độ phản xuống 50 độ,
-     *    90 độ đi thẳng lên sẽ phản thẳng xuống;
-     * 4) chỉ đoạn tia phản lại mới được xét va chạm.
+     * PathType 9 của client: đoạn đầu bay fixed-point bằng lực bắn +5, gió 40
+     * và trọng lực 70. Ngay sau đỉnh, đạn đổi sang tia thẳng lực 30 và không
+     * còn chịu gió/trọng lực. Cả hai đoạn đều hiển thị và xét va chạm.
      */
-    private static KetQuaQuyDao taoLazerRieng(short batDauX, short batDauY,
+    private static KetQuaQuyDao taoLazerTheoClient(short batDauX, short batDauY,
             short goc, byte luc, byte windX, byte windY, CongThucSung congThuc,
             KiemTraBanDo banDo) {
+        List<Short> xs = new ArrayList<>();
+        List<Short> ys = new ArrayList<>();
+
         int angle = chuanHoaGoc(goc);
-        int power = Math.max(1, luc & 0xFF) + congThuc.getLucCongThem();
-        int dx = (power * cos1024(angle)) >> 10;
-        int dy = -((power * sin1024(angle)) >> 10);
+        int lucBan = Math.max(1, Math.min(30, luc & 0xFF));
+        int lucDoanDau = lucBan + congThuc.getLucCongThem();
+        int dx = (lucDoanDau * cos1024(angle)) >> 10;
+        int dy = -((lucDoanDau * sin1024(angle)) >> 10);
         int x = batDauX;
         int y = batDauY;
         int accX = windX * congThuc.getHeSoGio() / 100;
         int accY = windY * congThuc.getHeSoGio() / 100;
+        int gravity = congThuc.getTrongLuc();
         int carryX = 0;
         int carryY = 0;
         int carryGravity = 0;
+        boolean daDoiHuong = false;
 
-        short dinhX = batDauX;
-        short dinhY = batDauY;
-        int minY = batDauY;
-
-        // Chỉ tính ngầm đường bay để tìm điểm cao nhất.
-        // Không đưa các tọa độ này vào mảng hiển thị nên cục lazer đầu đã bị bỏ.
-        boolean daDenDinh = false;
-        for (int step = 0; step < congThuc.getSoBuocToiDa() && !daDenDinh; step++) {
+        for (int step = 1; step <= congThuc.getSoBuocToiDa(); step++) {
             int nx = x + dx;
             int ny = y + dy;
             short px = (short) nx;
             short py = (short) ny;
 
+            short[] vaCham = timVaChamDauTienTrenDoan(
+                    (short) x, (short) y, px, py, banDo);
+            if (vaCham != null) {
+                xs.add(vaCham[0]);
+                ys.add(vaCham[1]);
+                break;
+            }
+
             if (raNgoaiLazer(nx, ny, banDo)) {
                 break;
             }
 
-            x = nx;
-            y = ny;
-            if (ny < minY) {
-                minY = ny;
-                dinhX = px;
-                dinhY = py;
-            }
+            xs.add(px);
+            ys.add(py);
 
             carryX += accX;
             carryY += accY;
-            carryGravity += congThuc.getTrongLuc();
+            carryGravity += gravity;
             if (Math.abs(carryX) >= 100) {
                 dx += carryX / 100;
                 carryX %= 100;
@@ -290,91 +475,37 @@ public final class ChickenQuanLyCongThucSung {
                 carryGravity %= 100;
             }
 
-            if (dy >= 0) {
-                daDenDinh = true;
-            }
-        }
+            int dyBuocTiep = dy
+                    + (carryY + accY) / 100
+                    + (carryGravity + gravity) / 100;
+            if (!daDoiHuong && dy >= 0 && dyBuocTiep > 0) {
+                int gocDoiHuong = (int) Math.round(Math.toDegrees(
+                        Math.atan2(batDauY - ny, nx - batDauX)));
+                gocDoiHuong = chuanHoaGoc((short) gocDoiHuong);
+                dx = (30 * cos1024(gocDoiHuong)) >> 10;
+                dy = (30 * sin1024(gocDoiHuong)) >> 10;
 
-        // Chỉ dùng tia lazer thứ hai: đi nhanh từ đầu nòng tới điểm cao nhất.
-        // Đoạn này chỉ hiển thị, không va chạm và không gây sát thương.
-        short[][] tiaNoi = taoDoanThangKhongVaCham(
-                batDauX, batDauY, dinhX, dinhY, 8.0D);
+                while (dx != 0 && Math.abs(dx) < 15) {
+                    dx *= 2;
+                    dy *= 2;
+                }
 
-        // Điểm C luôn nằm chính giữa A và B theo phương ngang, đồng thời
-        // hai đoạn lazer có cùng độ dài: AC = BC.
-        // Vì B nằm cùng độ cao với A nên B là ảnh đối xứng của A qua
-        // đường thẳng đứng đi qua C:
-        //      xB = 2*xC - xA, yB = yA.
-        // Khi C càng gần ngay trên A thì B càng gần A; nếu C nằm đúng
-        // trên A (góc 90 độ) thì B trùng A và tia dội thẳng xuống.
-        int diemBXInt = 2 * (int) dinhX - (int) batDauX;
-        short diemBX = (short) Math.max(Short.MIN_VALUE,
-                Math.min(Short.MAX_VALUE, diemBXInt));
-        short diemBY = batDauY;
-
-        // B chỉ dùng làm điểm xác định hướng dội từ C, không phải điểm kết thúc.
-        // Tia phản xạ được phép đi xa hơn độ dài AC và toàn bộ phần kéo dài
-        // vẫn xét va chạm map, va chạm nhân vật và sát thương.
-        List<Short> tiaBeX = new ArrayList<>();
-        List<Short> tiaBeY = new ArrayList<>();
-        List<Short> vaChamBeX = new ArrayList<>();
-        List<Short> vaChamBeY = new ArrayList<>();
-
-        double huongX = (double) diemBX - dinhX;
-        double huongY = (double) diemBY - dinhY;
-        double doDaiHuong = Math.hypot(huongX, huongY);
-        if (doDaiHuong < 0.0001D) {
-            // Trường hợp C nằm thẳng trên A: tia dội thẳng xuống.
-            huongX = 0.0D;
-            huongY = 1.0D;
-            doDaiHuong = 1.0D;
-        }
-
-        double buocX = huongX / doDaiHuong * 6.0D;
-        double buocY = huongY / doDaiHuong * 6.0D;
-        double hienTaiX = dinhX;
-        double hienTaiY = dinhY;
-        short truocX = dinhX;
-        short truocY = dinhY;
-
-        // Không giới hạn BC bằng AC. Tia tiếp tục tới khi chạm vật cản,
-        // ra ngoài bản đồ hoặc đạt giới hạn bước an toàn của công thức súng.
-        for (int i = 0; i < congThuc.getSoBuocToiDa(); i++) {
-            hienTaiX += buocX;
-            hienTaiY += buocY;
-            short px = (short) Math.round(hienTaiX);
-            short py = (short) Math.round(hienTaiY);
-
-            short[] vaCham = timVaChamDauTienTrenDoan(
-                    truocX, truocY, px, py, banDo);
-            if (vaCham != null) {
-                tiaBeX.add(vaCham[0]);
-                tiaBeY.add(vaCham[1]);
-                vaChamBeX.add(vaCham[0]);
-                vaChamBeY.add(vaCham[1]);
-                break;
+                accX = 0;
+                accY = 0;
+                gravity = 0;
+                carryX = 0;
+                carryY = 0;
+                carryGravity = 0;
+                daDoiHuong = true;
             }
 
-            if (raNgoaiLazer((int) Math.round(hienTaiX), (int) Math.round(hienTaiY), banDo)) {
-                break;
-            }
-
-            tiaBeX.add(px);
-            tiaBeY.add(py);
-            vaChamBeX.add(px);
-            vaChamBeY.add(py);
-            truocX = px;
-            truocY = py;
+            x = nx;
+            y = ny;
         }
 
-        short[] hienThiX = noiMang(tiaNoi[0], doiMang(tiaBeX));
-        short[] hienThiY = noiMang(tiaNoi[1], doiMang(tiaBeY));
-
-        // Mảng va chạm bao phủ toàn bộ tia phản lại C -> B.
-        short[] vaChamX = doiMang(vaChamBeX);
-        short[] vaChamY = doiMang(vaChamBeY);
-        return new KetQuaQuyDao(hienThiX, hienThiY, vaChamX, vaChamY);
+        return ketQuaGiongNhau(xs, ys, batDauX, batDauY);
     }
+
 
     /** Công thức cập nhật đúng kiểu client: tích lũy gió/trọng lực theo phần trăm. */
     private static KetQuaQuyDao taoDanFixedPoint(short batDauX, short batDauY,
@@ -495,33 +626,6 @@ public final class ChickenQuanLyCongThucSung {
             }
         }
         return null;
-    }
-
-    private static short[][] taoDoanThangKhongVaCham(short x1, short y1,
-            short x2, short y2, double khoangCachDiem) {
-        double dx = x2 - x1;
-        double dy = y2 - y1;
-        double length = Math.sqrt(dx * dx + dy * dy);
-        if (length < 1.0D) {
-            return new short[][]{new short[]{x1}, new short[]{y1}};
-        }
-        double buoc = Math.max(1.0D, khoangCachDiem);
-        int count = Math.max(1, (int) Math.ceil(length / buoc));
-        short[] xs = new short[count + 1];
-        short[] ys = new short[count + 1];
-        for (int i = 0; i <= count; i++) {
-            double t = (double) i / count;
-            xs[i] = (short) Math.round(x1 + dx * t);
-            ys[i] = (short) Math.round(y1 + dy * t);
-        }
-        return new short[][]{xs, ys};
-    }
-
-    private static short[] noiMang(short[] a, short[] b) {
-        short[] result = new short[a.length + b.length];
-        System.arraycopy(a, 0, result, 0, a.length);
-        System.arraycopy(b, 0, result, a.length, b.length);
-        return result;
     }
 
     private static short[] doiMang(List<Short> list) {
