@@ -2,6 +2,7 @@ package com.chicken.phong.boss.trandau;
 
 import com.chicken.chien.ChickenQuanLyChien;
 import com.chicken.mohinh.ChickenNguoiChoi;
+import com.chicken.phong.boss.sanhcho.ChickenKinhTeBoss;
 import com.chicken.phong.boss.sanhcho.QuanLySanhChoBoss;
 import com.chicken.phong.boss.sanhcho.SanhChoBoss;
 import com.chicken.phong.boss.sanhcho.ThanhVienBoss;
@@ -26,6 +27,11 @@ public final class VaoTranBoss {
     }
 
     public static void xuLy(ChickenNguoiChoi nguoiChoi) throws IOException {
+        if (nguoiChoi == null
+                || ChickenQuanLyChien.timTranDauCuaNguoiChoi(nguoiChoi)
+                        != null) {
+            return;
+        }
         SanhChoBoss sanh = QuanLySanhChoBoss.timSanhCuaNguoiChoi(nguoiChoi);
         if (sanh == null) {
             return;
@@ -33,6 +39,7 @@ public final class VaoTranBoss {
 
         ChickenQuanLyChien tranBoss;
         String tenTran;
+        ChickenKinhTeBoss.KetQuaThuPhiTran ketQuaThuPhiTran;
         synchronized (sanh) {
             ThanhVienBoss thanhVien = sanh.timThanhVien(nguoiChoi);
             if (thanhVien == null || !thanhVien.isChuPhong()) {
@@ -89,6 +96,41 @@ public final class VaoTranBoss {
                 nguoiChoi.startOKDlg2("Không thể tạo trận " + tenTran + ".");
                 return;
             }
+
+            ketQuaThuPhiTran = ChickenKinhTeBoss.thuPhiBatDauTran(
+                    sanh.chupThanhVien(), sanh.getGiaHienThi());
+            if (ketQuaThuPhiTran.getKetQua()
+                    == ChickenKinhTeBoss.KetQuaThuPhi.KHONG_DU_VANG) {
+                sanh.setTrangThai(SanhChoBoss.TrangThai.DANG_CHO);
+                tranBoss.dungBot();
+                ThanhVienBoss thanhVienThieu =
+                        ketQuaThuPhiTran.getThanhVienLoi();
+                ChickenNguoiChoi nguoiThieu = thanhVienThieu == null
+                        ? null : thanhVienThieu.getNguoiChoi();
+                if (nguoiThieu != null && nguoiThieu.dichVu != null) {
+                    nguoiThieu.startOKDlg2(
+                            "Bạn cần đủ " + sanh.getGiaHienThi()
+                                    + " vàng để bắt đầu đánh boss.");
+                }
+                if (nguoiThieu != nguoiChoi) {
+                    nguoiChoi.startOKDlg2(
+                            "Không thể bắt đầu: "
+                                    + (nguoiThieu == null
+                                            ? "một thành viên"
+                                            : nguoiThieu.ten)
+                                    + " không đủ "
+                                    + sanh.getGiaHienThi() + " vàng.");
+                }
+                return;
+            }
+            if (ketQuaThuPhiTran.getKetQua()
+                    == ChickenKinhTeBoss.KetQuaThuPhi.LOI_LUU_TRU) {
+                sanh.setTrangThai(SanhChoBoss.TrangThai.DANG_CHO);
+                tranBoss.dungBot();
+                nguoiChoi.startOKDlg2(
+                        "Không thể thu phí bắt đầu trận boss, vui lòng thử lại.");
+                return;
+            }
         }
 
         try {
@@ -100,8 +142,15 @@ public final class VaoTranBoss {
             }
         } catch (IOException | RuntimeException ex) {
             tranBoss.dungBot();
+            boolean daHoanPhi =
+                    ChickenKinhTeBoss.hoanPhiBatDauTran(ketQuaThuPhiTran);
             synchronized (sanh) {
                 sanh.setTrangThai(SanhChoBoss.TrangThai.DANG_CHO);
+            }
+            if (!daHoanPhi) {
+                nguoiChoi.startOKDlg2(
+                        "Trận không thể bắt đầu và hoàn phí đang lỗi. "
+                                + "Vui lòng liên hệ quản trị viên.");
             }
             throw ex;
         }

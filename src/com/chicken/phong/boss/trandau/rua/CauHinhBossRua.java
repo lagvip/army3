@@ -3,12 +3,18 @@ package com.chicken.phong.boss.trandau.rua;
 /** Cấu hình cố định Boss Rùa map 54. */
 public final class CauHinhBossRua {
     public static final int MAP_ID = 54;
-    public static final int MAU_BOSS = 10_000;
+    public static final int MAU_BOSS = 1;
     public static final int SAT_THUONG_CHAM = 500;
+    /** Ảnh viên đạn riêng của Rùa, dùng chung tài nguyên chuẩn với map 58. */
+    public static final short PART_ANH_DAN_RUA = 1563;
     public static final int SLOT_BOSS_DAU = 8;
     public static final int SLOT_BOSS_CUOI = 8;
     public static final int NAP_DAN_SAU_HANH_DONG = 300;
-    public static final int QUANG_DUONG_MOI_LUOT = 260;
+    /**
+     * Quãng chạy ngang của Rùa map 54 trong một lượt.
+     * Phần rơi theo trọng lực không được tính vào quãng này.
+     */
+    public static final int QUANG_DUONG_MOI_LUOT = 130;
     public static final int TRE_MOI_BUOC_MS = 70;
 
     public static final class CauHinh {
@@ -36,7 +42,7 @@ public final class CauHinhBossRua {
         public short getBody() { return -1; }
         public short getLeg() { return -1; }
         public short getWing() { return -1; }
-        public short getVuKhi() { return -1; }
+        public short getVuKhi() { return PART_ANH_DAN_RUA; }
         public byte getHuong() { return 0; }
         public String getLoai() { return "RUA"; }
         public boolean laBossBanSung() { return false; }

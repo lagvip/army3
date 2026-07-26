@@ -20,7 +20,7 @@ public class ChickenKhu {
         this.maxPlayer = 24;
     }
 
-    public boolean vao(ChickenNguoiChoi nguoiChoi) {
+    public synchronized boolean vao(ChickenNguoiChoi nguoiChoi) {
         if (this.players_id.get(nguoiChoi.ma) == null) {
             for (int i = 0; i < this.maxPlayer; ++i) {
                 if (this.players_index.get(i) != null) continue;
@@ -39,20 +39,41 @@ public class ChickenKhu {
         return false;
     }
 
-    public boolean roi(ChickenNguoiChoi nguoiChoi) {
-        if (this.players_id.get(nguoiChoi.ma) != null) {
-            this.players_index.remove(nguoiChoi.chiSo);
-            this.players_id.remove(nguoiChoi.ma);
-            --this.numPlayer;
-            int chiSo = nguoiChoi.chiSo;
+    public synchronized boolean roi(ChickenNguoiChoi nguoiChoi) {
+        if (nguoiChoi == null || this.players_id.get(nguoiChoi.ma) == null) {
+            return false;
+        }
+
+        /*
+         * Không tin nguoiChoi.chiSo ở đây. Khi code phòng đấu cũ ghi đè chiSo
+         * bằng số ghế, xóa theo giá trị đó có thể xóa nhầm một người khác khỏi
+         * khu RPG và để lại bản ghi ma. Tìm lại slot thật từ dữ liệu của khu.
+         */
+        int chiSoTrongKhu = -1;
+        for (int i = 0; i < this.maxPlayer; i++) {
+            ChickenNguoiChoi trongKhu = this.players_index.get(i);
+            if (trongKhu == nguoiChoi
+                    || (trongKhu != null && trongKhu.ma == nguoiChoi.ma)) {
+                chiSoTrongKhu = i;
+                break;
+            }
+        }
+        if (chiSoTrongKhu >= 0) {
+            this.players_index.remove(chiSoTrongKhu);
+        }
+        if (this.players_id.remove(nguoiChoi.ma) != null) {
+            this.numPlayer = Math.max(0, this.numPlayer - 1);
+        }
+        if (nguoiChoi.zone == this) {
             nguoiChoi.chiSo = -1;
             nguoiChoi.zoneId = (byte)-1;
             nguoiChoi.zone = null;
-            this.datDiem();
-            this.guiNguoiChoiRoiKhu(chiSo);
-            return true;
         }
-        return false;
+        this.datDiem();
+        if (chiSoTrongKhu >= 0) {
+            this.guiNguoiChoiRoiKhu(chiSoTrongKhu);
+        }
+        return true;
     }
 
     public void datDiem() {
@@ -86,4 +107,3 @@ public class ChickenKhu {
         }
     }
 }
-

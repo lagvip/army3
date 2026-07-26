@@ -55,10 +55,10 @@ configurations {
 
 tasks.register('combatTest', JavaExec) {
     group = 'verification'
-    description = 'Chay bo kiem thu hoi quy ban sung va ky nang AVG.'
+    description = 'Chay bo kiem thu hoi quy chung toan game.'
     dependsOn tasks.named('combatTestClasses')
     classpath = sourceSets.combatTest.runtimeClasspath
-    mainClass = 'com.chicken.kiemthu.ChickenKiemThuBan'
+    mainClass = 'com.chicken.kiemthu.ChickenKiemThuToanGame'
     jvmArgs '-Dfile.encoding=UTF-8'
 }
 

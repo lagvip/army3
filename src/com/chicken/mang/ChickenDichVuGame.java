@@ -12,6 +12,7 @@ import com.chicken.chien.ChickenSieuCao;
 import com.chicken.avg.ChickenThanhDiChuyenAVG;
 import com.chicken.avg.ChickenQuanLyNangLuongAVG;
 import com.chicken.avg.ChickenTiaLaserIronMan;
+import com.chicken.bando.ChickenDuLieuBanDo;
 import com.chicken.mohinh.ChickenNguoiChoi;
 import com.chicken.mang.IChickenDichVuGame;
 import com.chicken.mang.ChickenTinNhan;
@@ -231,7 +232,8 @@ implements IChickenDichVuGame {
     }
 
     public void yeuCauNguyenLieu(short ma) throws IOException {
-        String duongDan = "res/icon/map/" + ma + ".png";
+        int maAnhGoc = ChickenDuLieuBanDo.layMaAnhMapGoc(ma & 0xFFFF);
+        String duongDan = "res/icon/map/" + maAnhGoc + ".png";
         byte[] ab = ChickenTienIch.layTep(duongDan);
         if (ab == null) {
             ab = new byte[0];
@@ -927,6 +929,48 @@ implements IChickenDichVuGame {
      * chân thật của người/boss bắn; quỹ đạo vẫn bắt đầu tại đầu nòng trong
      * ketQua. Cách này tránh client kéo nhân vật tới đầu nòng sau mỗi phát.
      */
+    /**
+     * Hoạt ảnh native thứ hai của BigBoss Rùa:
+     * nhảy/dậm (action 0), rung màn hình và tạo Bullet type 61 tại điểm va
+     * chạm. Tọa độ người bị đá nâng lên do server quyết định và gửi kèm.
+     */
+    public void guiDamDaBossRua(
+            byte slotRua,
+            short xVaCham,
+            short yVaCham,
+            byte slotMucTieu,
+            short xMucTieuMoi,
+            short yMucTieuMoi
+    ) throws IOException {
+        ChickenTinNhan ms = new ChickenTinNhan(-68);
+        DataOutputStream ds = ms.boGhi();
+        ds.writeByte(slotRua);
+        ds.writeByte(0); // BigBoss action 0: nhảy rồi dậm.
+        ds.writeByte(1); // Một điểm đá rơi.
+        ds.writeByte(1); // Có Bullet type 61 tại điểm này.
+        ds.writeShort(xVaCham);
+        ds.writeShort(yVaCham);
+        ds.writeByte(1); // Một người chơi được chốt lại tọa độ.
+        ds.writeByte(slotMucTieu);
+        ds.writeShort(xMucTieuMoi);
+        ds.writeShort(yMucTieuMoi);
+        ds.flush();
+        this.guiTin(ms);
+    }
+
+    /**
+     * Packet độc native của client: byte đầu là người bắn, byte sau là người
+     * trúng độc. Packet chỉ bật hình ảnh; HP vẫn do server cập nhật bằng CMD 51.
+     */
+    public void guiTrungDoc(byte slotNguon, byte slotMucTieu) throws IOException {
+        ChickenTinNhan ms = new ChickenTinNhan(96);
+        DataOutputStream ds = ms.boGhi();
+        ds.writeByte(slotNguon);
+        ds.writeByte(slotMucTieu);
+        ds.flush();
+        this.guiTin(ms);
+    }
+
     public void guiKetQuaBanBossBaoVay(
             byte whoShoot,
             short shooterX,
@@ -1152,14 +1196,7 @@ implements IChickenDichVuGame {
      * Quy tắc gốc: chỉ các loại đạn đạo thông thường được tính siêu cao; sau
      * khi qua đỉnh, viên đạn phải rơi xuống hơn 350 px.
      */
-    /**
-     * Gửi hiệu ứng Bắn x3 của Ultron trong trận thường.
-     *
-     * Chỉ tia giữa là phát bắn thật ở phía server. Hai tia ngoài chỉ là quỹ
-     * đạo hiển thị. Packet dùng nhánh ba quỹ đạo đồng thời của client, nhưng
-     * luôn truyền shooterX/shooterY là vị trí đứng thật để AVG không bị kéo
-     * tới tọa độ đầu nòng.
-     */
+    /** Gửi ba viên Ultron độc lập trong một loạt native giống súng cối. */
     public void guiLoatLaserUltronDau(
             byte whoShoot,
             short shooterX,
@@ -1176,21 +1213,19 @@ implements IChickenDichVuGame {
         if (soTia <= 0) {
             return;
         }
-        /* Tia giữa cũ là quỹ đạo thật; client lặp nó 3 lần theo numShoot. */
-        int tiaThat = soTia >= 2 ? 1 : 0;
         ChickenKetQuaDan ketQua = new ChickenKetQuaDan(
                 (byte) 0,
                 shooterX,
                 shooterY,
                 goc,
                 luc,
-                cacDuongX[tiaThat],
-                cacDuongY[tiaThat],
-                null,
-                0
+                luc,
+                cacDuongX,
+                cacDuongY,
+                null
         );
         this.guiKetQuaBanDau(
-                whoShoot, shooterX, shooterY, ketQua, (byte) 3, true);
+                whoShoot, shooterX, shooterY, ketQua, (byte) 1, true);
     }
 
     /** Gửi hiệu ứng Bắn x3 của Ultron trong luyện tập bằng CMD 84. */
@@ -1299,7 +1334,9 @@ implements IChickenDichVuGame {
         DataOutputStream ds = ms.boGhi();
         ds.writeByte(chiSo);
         ds.writeShort(hp);
-        ds.writeByte(phanTram);
+        // Client vẽ thanh HP theo 25 nấc, còn ChickenChienBinh trả phần trăm 0..100.
+        int phanTram100 = Math.max(0, Math.min(100, phanTram & 0xFF));
+        ds.writeByte(Math.max(0, Math.min(25, phanTram100 * 25 / 100)));
         ds.writeByte(trangThaiChet);
         ds.flush();
         this.guiTin(ms);
@@ -1913,19 +1950,28 @@ implements IChickenDichVuGame {
      * Client luôn gọi InfoDlg.hide() khi nhận CMD -91; action 127 không thuộc
      * action skill native 0..5 nên không mở thêm menu hoặc thay đổi nhân vật.
      */
-    public void guiDongChoKyNangUltron() {
+    /*
+     * Luu y: day la lenh dong InfoDlg dung chung cho moi AVG, khong chi
+     * Ultron. Action 127 khong trung cac action skill native 0..5.
+     */
+    public void guiDongMenuKyNangDacBiet() {
         ChickenTinNhan ms = new ChickenTinNhan((byte)-91);
         try {
             DataOutputStream ds = ms.boGhi();
             ds.writeByte(127);
             ds.flush();
             this.guiTin(ms);
-            System.out.println("[ULTRON] DONG_CHO cmd=-91 action=127");
+            System.out.println("[SKILL] DONG_MENU cmd=-91 action=127");
         } catch (IOException ex) {
             Logger.getLogger(ChickenDichVuGame.class.getName()).log(Level.SEVERE, null, ex);
         } finally {
             ms.donDep();
         }
+    }
+
+    /** Ten cu duoc giu lai de cac nhanh Ultron/Iron Man hien tai tuong thich. */
+    public void guiDongChoKyNangUltron() {
+        this.guiDongMenuKyNangDacBiet();
     }
 
     /** Gửi tín hiệu native để client Loki mở menu Giả dạng. */

@@ -67,8 +67,32 @@ public class ChickenQuanLyChien {
     private final ChickenKyNangDacBietLoki kyNangLoki;
     private final ChickenKyNangDacBietUltron kyNangUltron;
     private final ChickenKyNangDacBietIronMan kyNangIronMan;
+    /** Trang thai ba LAN BAN lien tiep cua skill Ultron trong PvP. */
+    private ChickenChienBinh ultronX3NguoiBan;
+    private ChickenKetQuaDan ultronX3KetQua;
+    private int ultronX3SoLanDaGui;
+    private long ultronX3MaLoat;
+    private ScheduledFuture<?> ultronX3TacVuHetHan;
 
-    public ChickenQuanLyChien(ChickenChoDau wait, ChickenNguoiChoi[] nguoiChois, byte maBanDo) {
+    public ChickenQuanLyChien(
+            ChickenChoDau wait,
+            ChickenNguoiChoi[] nguoiChois,
+            byte maBanDo
+    ) {
+        this(wait, nguoiChois, maBanDo, true);
+    }
+
+    /**
+     * Trận boss truyền {@code false} rồi chỉ đăng ký sau khi constructor lớp
+     * con đã hoàn tất. Như vậy packet đến đồng thời không thể nhìn thấy một
+     * instance boss còn thiếu bản đồ, scheduler hoặc bộ kỹ năng.
+     */
+    protected ChickenQuanLyChien(
+            ChickenChoDau wait,
+            ChickenNguoiChoi[] nguoiChois,
+            byte maBanDo,
+            boolean dangKyNgay
+    ) {
         this.wait = wait;
         this.map = new ChickenQuanLyBanDo(maBanDo);
         for (int i = 0; i < nguoiChois.length && i < this.chienBinhs.length; i++) {
@@ -220,6 +244,15 @@ public class ChickenQuanLyChien {
                     }
                 }
         );
+        if (dangKyNgay) {
+            this.dangKyNguoiChoiTrongTran();
+        }
+    }
+
+    /**
+     * Công bố instance đã khởi tạo hoàn chỉnh cho router packet.
+     */
+    protected final void dangKyNguoiChoiTrongTran() {
         for (ChickenChienBinh chienBinh : this.chienBinhs) {
             if (chienBinh != null && chienBinh.nguoiChoi != null) {
                 TRAN_DAU_THEO_NGUOI_CHOI.put(chienBinh.nguoiChoi.ma, this);
@@ -250,7 +283,10 @@ public class ChickenQuanLyChien {
         this.lapLichBotBan();
     }
 
-    public void diChuyen(ChickenNguoiChoi nguoiChoi, ChickenTinNhan ms) throws IOException {
+    public synchronized void diChuyen(
+            ChickenNguoiChoi nguoiChoi,
+            ChickenTinNhan ms
+    ) throws IOException {
         ChickenChienBinh chienBinh = this.layChienBinh(nguoiChoi);
         if (chienBinh == null || chienBinh.chet || chienBinh.chiSo != this.luotHienTai || this.daKetThuc) {
             return;
@@ -306,7 +342,10 @@ public class ChickenQuanLyChien {
                 chienBinh.chiSo, chienBinh.x, chienBinh.y);
     }
 
-    public void ban(ChickenNguoiChoi nguoiChoi, ChickenTinNhan ms) throws IOException {
+    public synchronized void ban(
+            ChickenNguoiChoi nguoiChoi,
+            ChickenTinNhan ms
+    ) throws IOException {
         ChickenChienBinh shooter = this.layChienBinh(nguoiChoi);
         if (shooter == null || shooter.chet || shooter.chiSo != this.luotHienTai
                 || this.daKetThuc
@@ -342,7 +381,11 @@ public class ChickenQuanLyChien {
             this.kyNangIronMan.sauKhiBanHoacBoLuot(shooter);
         } else if (this.kyNangUltron.dangBanX3(shooter)) {
             this.banX3Ultron(shooter, goc, luc);
-            this.kyNangUltron.sauKhiDaBan(shooter);
+            /*
+             * Chua sang luot: CMD 79 cua client se lan luot mo khoa lan ban
+             * thu hai va thu ba. Ket thuc loat moi tinh damage va sang luot.
+             */
+            return;
         } else {
             ChickenKetQuaDan ketQua = this.xuLyPhatBan(
                     shooter, loaiDanMayChu, goc, luc, lucPhu);
@@ -428,17 +471,23 @@ public class ChickenQuanLyChien {
         this.nhanLenhKyNangHawk(nguoiChoi, ms);
     }
 
-    public void kiemTraVaCham(ChickenNguoiChoi nguoiChoi, ChickenTinNhan ms) throws IOException {
+    public synchronized void kiemTraVaCham(
+            ChickenNguoiChoi nguoiChoi,
+            ChickenTinNhan ms
+    ) throws IOException {
         while (ms.boDoc().available() > 0) {
             ms.boDoc().readByte();
         }
+        this.xuLyVaChamLoatUltron(nguoiChoi);
     }
 
-    public void boLuot(ChickenNguoiChoi nguoiChoi) throws IOException {
+    public synchronized void boLuot(ChickenNguoiChoi nguoiChoi)
+            throws IOException {
         ChickenChienBinh chienBinh = this.layChienBinh(nguoiChoi);
         if (chienBinh != null && !chienBinh.chet
                 && chienBinh.chiSo == this.luotHienTai
                 && !this.daKetThuc
+                && this.ultronX3KetQua == null
                 && !this.kyNangThor.dangThiTrien(chienBinh)
                 && !this.kyNangLoki.dangThiTrien(chienBinh)) {
             if (chienBinh.avenger == ChickenKyNangDacBietLoki.AVG_LOKI) {
@@ -451,11 +500,17 @@ public class ChickenQuanLyChien {
         }
     }
 
-    public void khiNguoiChoiRoi(ChickenNguoiChoi nguoiChoi) {
+    public synchronized void khiNguoiChoiRoi(
+            ChickenNguoiChoi nguoiChoi
+    ) {
         ChickenChienBinh chienBinh = this.layChienBinh(nguoiChoi);
+        if (chienBinh != null && chienBinh == this.ultronX3NguoiBan) {
+            this.huyTrangThaiLoatUltron();
+        }
         if (chienBinh != null) {
             chienBinh.chet = true;
             chienBinh.hp = 0;
+            chienBinh.daRoiTran = true;
         }
         if (nguoiChoi != null) {
             TRAN_DAU_THEO_NGUOI_CHOI.remove(nguoiChoi.ma, this);
@@ -465,6 +520,10 @@ public class ChickenQuanLyChien {
     /** Cho phép lớp trận boss riêng dọn đúng đăng ký trận mà constructor gốc đã tạo. */
     protected final void boDangKyNguoiChoi(ChickenNguoiChoi nguoiChoi) {
         if (nguoiChoi != null) {
+            ChickenChienBinh chienBinh = this.layChienBinh(nguoiChoi);
+            if (chienBinh != null) {
+                chienBinh.daRoiTran = true;
+            }
             TRAN_DAU_THEO_NGUOI_CHOI.remove(nguoiChoi.ma, this);
         }
     }
@@ -480,30 +539,144 @@ public class ChickenQuanLyChien {
         return ChickenGocBanUltron.chuanHoa(goc);
     }
 
-    private void banX3Ultron(
+    private synchronized void banX3Ultron(
             ChickenChienBinh shooter,
             short goc,
             byte luc
     ) throws IOException {
-        final byte soPhatKyNang = 3;
-        ChickenKetQuaDan ketQua = this.xuLyPhatBan(
-                shooter, (byte) 0, goc, luc, luc);
+        goc = this.chuanHoaGocUltron(goc);
+        short[] dauNong = ChickenGocBanUltron.layDiemBatDauDuongCan(
+                shooter.x,
+                shooter.y,
+                goc,
+                this.map.getWidth(),
+                this.map.getHeight()
+        );
+        ChickenKetQuaDan ketQua = ChickenLoatBanUltronServer.tao(
+                shooter,
+                dauNong[0],
+                dauNong[1],
+                goc,
+                luc,
+                this.map,
+                this.chienBinhs,
+                new ChickenLoatBanUltronServer.BoLocMucTieu() {
+                    @Override
+                    public boolean chapNhan(
+                            ChickenChienBinh nguoiBan,
+                            ChickenChienBinh mucTieu
+                    ) {
+                        return !(nguoiBan.bot && mucTieu.bot);
+                    }
+                }
+        );
 
-        /*
-         * BM của client lặp đúng cùng một packet theo numShoot. Gửi một quỹ
-         * đạo thường với numShoot=3 để nhả ba phát tuần tự; không dùng
-         * bulletType=2 vì type đó chỉ sinh ba tia đồng thời.
-         */
-        this.phatBan(shooter, ketQua, soPhatKyNang);
-        for (int i = 0; i < soPhatKyNang && !this.daKetThuc; i++) {
-            this.apDungSatThuongKetQua(ketQua);
-        }
+        this.huyTrangThaiLoatUltron();
+        this.ultronX3NguoiBan = shooter;
+        this.ultronX3KetQua = ketQua;
+        this.ultronX3SoLanDaGui = 1;
+        final long maLoat = ++this.ultronX3MaLoat;
+        this.phatMotLanBanUltron(shooter, ketQua, 0);
+        this.ultronX3TacVuHetHan = BOT_EXECUTOR.schedule(() -> {
+            synchronized (ChickenQuanLyChien.this) {
+                if (ChickenQuanLyChien.this.ultronX3KetQua == null
+                        || ChickenQuanLyChien.this.ultronX3MaLoat != maLoat) {
+                    return;
+                }
+                ChickenChienBinh nguoiBan =
+                        ChickenQuanLyChien.this.ultronX3NguoiBan;
+                ChickenQuanLyChien.this.huyTrangThaiLoatUltron();
+                ChickenQuanLyChien.this.kyNangUltron.sauKhiDaBan(nguoiBan);
+                System.out.println("[ULTRON] HUY_X3_QUA_HAN shooter="
+                        + (nguoiBan == null ? -1 : nguoiBan.chiSo & 0xFF));
+                try {
+                    if (!ChickenQuanLyChien.this.daKetThuc) {
+                        ChickenQuanLyChien.this.sangLuot();
+                    }
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }, 20L, TimeUnit.SECONDS);
 
         System.out.println("[ULTRON] BAN_X3 shooter="
                 + (shooter.chiSo & 0xFF)
                 + " goc=" + goc
-                + " soPhat=" + soPhatKyNang
-                + " phatThuongLienTiep=1");
+                + " lanBan=1/3 choCmd79=true");
+    }
+
+    /** Gui dung mot animation ban; moi CMD 79 moi duoc gui animation ke tiep. */
+    private void phatMotLanBanUltron(
+            ChickenChienBinh shooter,
+            ChickenKetQuaDan loat,
+            int chiSoLanBan
+    ) throws IOException {
+        if (loat == null
+                || chiSoLanBan < 0
+                || chiSoLanBan >= loat.cacDuongX.length
+                || chiSoLanBan >= loat.cacDuongY.length) {
+            return;
+        }
+        ChickenKetQuaDan motLan = new ChickenKetQuaDan(
+                loat.loaiDan,
+                loat.batDauX,
+                loat.batDauY,
+                loat.goc,
+                loat.luc,
+                loat.lucPhu,
+                new short[][]{loat.cacDuongX[chiSoLanBan]},
+                new short[][]{loat.cacDuongY[chiSoLanBan]},
+                new LinkedHashMap<ChickenChienBinh, Integer>()
+        );
+        this.phatBan(shooter, motLan, (byte) 1);
+    }
+
+    private void huyTrangThaiLoatUltron() {
+        if (this.ultronX3TacVuHetHan != null) {
+            this.ultronX3TacVuHetHan.cancel(false);
+            this.ultronX3TacVuHetHan = null;
+        }
+        this.ultronX3NguoiBan = null;
+        this.ultronX3KetQua = null;
+        this.ultronX3SoLanDaGui = 0;
+    }
+
+    private synchronized boolean xuLyVaChamLoatUltron(
+            ChickenNguoiChoi nguoiChoi
+    ) throws IOException {
+        ChickenChienBinh nguoiGui = this.layChienBinh(nguoiChoi);
+        if (this.ultronX3KetQua == null
+                || this.ultronX3NguoiBan == null
+                || nguoiGui != this.ultronX3NguoiBan) {
+            return false;
+        }
+        if (this.ultronX3SoLanDaGui < ChickenLoatBanUltronServer.SO_VIEN) {
+            int chiSoLanBan = this.ultronX3SoLanDaGui;
+            this.phatMotLanBanUltron(
+                    this.ultronX3NguoiBan,
+                    this.ultronX3KetQua,
+                    chiSoLanBan
+            );
+            this.ultronX3SoLanDaGui++;
+            System.out.println("[ULTRON] BAN_X3 shooter="
+                    + (this.ultronX3NguoiBan.chiSo & 0xFF)
+                    + " lanBan=" + this.ultronX3SoLanDaGui
+                    + "/3 choCmd79=true");
+            return true;
+        }
+
+        ChickenChienBinh shooter = this.ultronX3NguoiBan;
+        ChickenKetQuaDan ketQua = this.ultronX3KetQua;
+        this.huyTrangThaiLoatUltron();
+        this.kyNangUltron.sauKhiDaBan(shooter);
+        this.apDungSatThuongKetQua(ketQua);
+        this.kyNangHawk.sauKhiBanThuong(shooter);
+        if (!this.daKetThuc) {
+            this.sangLuot();
+        }
+        System.out.println("[ULTRON] KET_THUC_X3 shooter="
+                + (shooter.chiSo & 0xFF) + " daBanDu=3");
+        return true;
     }
 
     private ChickenKetQuaDan xuLyPhatBan(
@@ -1047,6 +1220,9 @@ public class ChickenQuanLyChien {
             this.dungBot();
             return;
         }
+        if (this.ultronX3KetQua != null) {
+            return;
+        }
         ChickenChienBinh turn = this.luotHienTai >= 0 && this.luotHienTai < this.chienBinhs.length ? this.chienBinhs[this.luotHienTai] : null;
         if (turn == null || turn.chet) {
             this.sangLuot();
@@ -1435,6 +1611,7 @@ public class ChickenQuanLyChien {
                 } else {
                     chienBinh.nguoiChoi.chet++;
                 }
+                chienBinh.nguoiChoi.dichVu.guiDongMenuKyNangDacBiet();
                 chienBinh.nguoiChoi.dichVu.guiKetThucDau(pheThang, 10, 100, 0);
                 chienBinh.nguoiChoi.dichVu.capNhatCup((byte)0, chienBinh.nguoiChoi.cup);
                 chienBinh.nguoiChoi.dichVu.capNhatKDVaKDA();
@@ -1483,6 +1660,7 @@ public class ChickenQuanLyChien {
         if (this.daKetThuc || this.luotHienTai < 0) {
             return;
         }
+        this.dongMenuKyNangKhiDoiLuot(this.chienBinhs);
         ChickenChienBinh next = this.chienBinhs[this.luotHienTai];
         if (next.avenger == ChickenKyNangDacBietIronMan.AVG_IRON_MAN) {
             next.ironManDaDungKyNang = false;
@@ -1505,6 +1683,36 @@ public class ChickenQuanLyChien {
         this.kyNangLoki.guiTinHieuKyNangNeuCo(next);
         this.kyNangUltron.guiTinHieuKyNangNeuCo(next);
         this.kyNangIronMan.guiTinHieuKyNangNeuCo(next);
+    }
+
+    /**
+     * Moi menu skill chi co hieu luc trong dung mot luot. Dong InfoDlg tren
+     * client va xoa cac co "da mo menu" truoc khi phat CMD 24 cua luot moi.
+     * Cac co da dung/progress skill van do tung skill quan ly.
+     */
+    protected final void dongMenuKyNangKhiDoiLuot(
+            ChickenChienBinh[] danhSach
+    ) {
+        if (danhSach == null) {
+            return;
+        }
+        for (ChickenChienBinh chienBinh : danhSach) {
+            if (chienBinh == null) {
+                continue;
+            }
+            chienBinh.hawkDaGuiChonMucTieu = false;
+            chienBinh.thorDaGuiMenu = false;
+            chienBinh.lokiDaGuiMenu = false;
+            chienBinh.lokiDangChoChonMucTieu = false;
+            chienBinh.ultronDaGuiMenu = false;
+            chienBinh.ultronDangBanX3 = false;
+            chienBinh.ironManDaGuiMenu = false;
+            ChickenKyNangDacBietIronMan.xoaTrangThaiChoBan(chienBinh);
+            if (chienBinh.coPhien()
+                    && chienBinh.nguoiChoi.dichVu != null) {
+                chienBinh.nguoiChoi.dichVu.guiDongMenuKyNangDacBiet();
+            }
+        }
     }
 
     private void banLaserIronMan(

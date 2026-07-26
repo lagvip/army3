@@ -23,6 +23,8 @@ public final class DiChuyenBossRua {
 
     /** Vùng chân dùng để dò nền, hẹp hơn sprite để không mắc cạnh trang trí. */
     private static final int NUA_RONG_CHAN = 27;
+    /** Rùa chỉ đứng vững khi ít nhất quá nửa bề rộng chân còn được đỡ. */
+    private static final int SO_DIEM_NEN_TOI_THIEU = 4;
     private static final int NUA_RONG_THAN_DI_CHUYEN = 30;
     private static final int CHIEU_CAO_THAN_DI_CHUYEN = 72;
 
@@ -94,7 +96,12 @@ public final class DiChuyenBossRua {
                 && danY <= bossY;
     }
 
-    /** Trả về tọa độ bước kế tiếp. Boss không thay đổi X trong lúc đang rơi. */
+    /** Trả về tọa độ bước kế tiếp, gồm cả đà ngang khi Rùa qua mép nền. */
+    /**
+     * Rùa giữ đà ngang khi vừa chạy khỏi mép địa hình. Nếu khóa X ngay tại
+     * mép thì client BigBoss không tới được đích CMD 21 và giữ packet bắn
+     * đứng sau nó.
+     */
     public static short[] tinhBuocTiepTheo(
             ChickenChienBinh boss,
             ChickenChienBinh mucTieu,
@@ -106,16 +113,17 @@ public final class DiChuyenBossRua {
             return new short[]{boss == null ? 0 : boss.x, boss == null ? 0 : boss.y};
         }
 
-        if (!coNenBenDuoi(boss.x, boss.y, banDo)) {
-            return roiTheoTrongLuc(boss.x, boss.y, banDo);
-        }
-
         int huong = huongXKhoa;
         if (huong == 0 && mucTieu != null) {
             huong = layHuongX(boss, mucTieu);
         }
         if (huong == 0) {
             return new short[]{boss.x, boss.y};
+        }
+
+        if (!coNenBenDuoi(boss.x, boss.y, banDo)) {
+            return roiTheoTrongLuc(
+                    boss.x, boss.y, huong, quangDuongConLai, banDo);
         }
 
         int buocX = Math.min(TOC_DO_CHAY, quangDuongConLai) * huong;
@@ -128,14 +136,14 @@ public final class DiChuyenBossRua {
             return new short[]{boss.x, boss.y};
         }
 
-        if (!thanBiChan(xMoi, boss.y, banDo)) {
+        if (!thanBiChan(xMoi, boss.y, huong, banDo)) {
             return new short[]{(short) xMoi, boss.y};
         }
 
         // Chỉ bước qua bậc thấp; không cho boss bật bay lên cao.
         for (int nang = 1; nang <= BUOC_LEN_TOI_DA; nang++) {
             int yMoi = boss.y - nang;
-            if (!thanBiChan(xMoi, yMoi, banDo)
+            if (!thanBiChan(xMoi, yMoi, huong, banDo)
                     && coNenBenDuoi(xMoi, yMoi, banDo)) {
                 return new short[]{(short) xMoi, (short) yMoi};
             }
@@ -151,38 +159,88 @@ public final class DiChuyenBossRua {
         return boss != null && banDo != null && boss.y > banDo.getHeight() + 24;
     }
 
-    private static short[] roiTheoTrongLuc(int x, int y, ChickenQuanLyBanDo banDo) {
+    /**
+     * Sau khi đã dùng hết quãng chạy ngang, Rùa vẫn phải rơi thẳng xuống cho
+     * tới khi có nền đỡ. Không cho thêm đà ngang ở giai đoạn này để mỗi lượt
+     * không đi xa hơn cấu hình.
+     */
+    public static short[] tinhBuocRoiThangDung(
+            ChickenChienBinh boss,
+            ChickenQuanLyBanDo banDo
+    ) {
+        if (boss == null || banDo == null
+                || coNenBenDuoi(boss.x, boss.y, banDo)) {
+            return new short[]{
+                boss == null ? 0 : boss.x,
+                boss == null ? 0 : boss.y
+            };
+        }
+        int yMoi = boss.y;
+        for (int i = 1; i <= TOC_DO_ROI; i++) {
+            int thuY = boss.y + i;
+            yMoi = thuY;
+            if (coNenBenDuoi(boss.x, thuY, banDo)) {
+                break;
+            }
+        }
+        yMoi = Math.min(banDo.getHeight() + 40, yMoi);
+        return new short[]{boss.x, (short) yMoi};
+    }
+
+    private static short[] roiTheoTrongLuc(
+            int x,
+            int y,
+            int huong,
+            int quangDuongConLai,
+            ChickenQuanLyBanDo banDo
+    ) {
+        int buocX = Math.min(TOC_DO_CHAY, quangDuongConLai) * huong;
+        int xMin = NUA_RONG_HITBOX;
+        int xMax = Math.max(xMin, banDo.getWidth() - 1 - NUA_RONG_HITBOX);
+        int xDuKien = Math.max(xMin, Math.min(xMax, x + buocX));
+        int xMoi = thanBiChan(xDuKien, y, huong, banDo) ? x : xDuKien;
         int yMoi = y;
         for (int i = 1; i <= TOC_DO_ROI; i++) {
             int thuY = y + i;
-            if (coNenBenDuoi(x, thuY, banDo)) {
+            if (coNenBenDuoi(xMoi, thuY, banDo)) {
                 yMoi = thuY;
                 break;
             }
             yMoi = thuY;
         }
         yMoi = Math.min(banDo.getHeight() + 40, yMoi);
-        return new short[]{(short) x, (short) yMoi};
+        return new short[]{(short) xMoi, (short) yMoi};
     }
 
     private static boolean coNenBenDuoi(int x, int chanY, ChickenQuanLyBanDo banDo) {
         int yKiemTra = chanY + 1;
+        int soDiemCoNen = 0;
         for (int lech = -NUA_RONG_CHAN; lech <= NUA_RONG_CHAN; lech += 9) {
             int px = x + lech;
             if (px >= 0 && px < banDo.getWidth()
                     && yKiemTra >= 0
                     && banDo.coVaCham((short) px, (short) yKiemTra)) {
-                return true;
+                soDiemCoNen++;
             }
         }
-        return false;
+        /*
+         * Không dùng quy tắc "chỉ một pixel chân chạm nền là đứng". Ở mép
+         * gạch map 54, đuôi Rùa còn chạm 2-3 điểm khiến cả thân treo lơ lửng
+         * và AI chuyển thẳng sang bắn. Thiếu quá nửa mặt chân thì phải rơi.
+         */
+        return soDiemCoNen >= SO_DIEM_NEN_TOI_THIEU;
     }
 
-    private static boolean thanBiChan(int x, int chanY, ChickenQuanLyBanDo banDo) {
+    private static boolean thanBiChan(
+            int x,
+            int chanY,
+            int huong,
+            ChickenQuanLyBanDo banDo
+    ) {
+        int mepTruoc = x + Integer.signum(huong) * NUA_RONG_THAN_DI_CHUYEN;
         int[] cacX = new int[]{
-            x - NUA_RONG_THAN_DI_CHUYEN,
             x,
-            x + NUA_RONG_THAN_DI_CHUYEN
+            mepTruoc
         };
         int[] cacY = new int[]{
             chanY - 6,

@@ -7,17 +7,24 @@ import com.chicken.dichvu.ChickenQuanLyThanhTich;
 import com.chicken.dichvu.ChickenQuanLyBietDoi;
 import com.chicken.dichvu.ChickenQuanLyBanBe;
 import com.chicken.phong.ChickenQuanLyPhong;
-import com.chicken.phong.boss.sanhcho.DebugSanhBoss;
 import com.chicken.phong.boss.sanhcho.QuanLySanhChoBoss;
 import com.chicken.phong.boss.sanhcho.SanhChoBoss;
 import com.chicken.npc.chihuy.XuLyMenuChiHuy;
 import com.chicken.thoat.ChickenThoatTran;
 import com.chicken.mohinh.ChickenNguoiChoi;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import com.chicken.loi.ChickenQuanLyMayChu;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class ChickenXuLyTin
 implements IChickenXuLyTin {
+    private static final ScheduledExecutorService BO_GUI_NGUYEN_LIEU_BOSS =
+            Executors.newScheduledThreadPool(2, r -> {
+                Thread thread = new Thread(r, "boss-resource");
+                thread.setDaemon(true);
+                return thread;
+            });
     private final ChickenPhien khach;
 
     public ChickenXuLyTin(ChickenPhien khach) {
@@ -27,25 +34,21 @@ implements IChickenXuLyTin {
     @Override
     public void khiCoTin(ChickenTinNhan mss) {
         if (mss != null) {
+            int cmd = mss.layLenh();
             try {
-                int cmd = mss.layLenh();
-                int soByte = 0;
-                try {
-                    soByte = mss.boDoc().available();
-                } catch (Exception ignored) {
+                if (!this.khach.choPhepXuLyLenh(
+                        cmd, System.currentTimeMillis())) {
+                    return;
                 }
-                String tenNguoiChoi = "chua_dang_nhap";
-                try {
-                    if (this.khach.user != null && this.khach.user.nguoiChoi != null
-                            && this.khach.user.nguoiChoi.ten != null) {
-                        tenNguoiChoi = this.khach.user.nguoiChoi.ten;
-                    }
-                } catch (Exception ignored) {
+                if (!this.khach.coNguoiChoiDaDangNhap()
+                        && canNguoiChoiDaDangNhap(cmd)) {
+                    this.khach.ghiNhanPacketLoi(
+                            cmd, new IllegalStateException("Chua dang nhap"));
+                    return;
                 }
-                System.out.println("[CLIENT ACTION] client=" + this.khach.ma
-                        + " player=" + tenNguoiChoi
-                        + " cmd=" + cmd
-                        + " bytes=" + soByte);
+                if (this.ngatKetNoiNeuChuyenCanhKhiDangDanhBoss(cmd)) {
+                    return;
+                }
                 switch (cmd) {
                     case 1:
                         this.khach.dangNhap(mss);
@@ -140,6 +143,12 @@ implements IChickenXuLyTin {
                         ChickenQuanLyPhong.sanSang(this.khach.user.nguoiChoi, mss);
                         break;
                     case 20:
+                        if (mss.layDuLieu().length != 0) {
+                            this.khach.ghiNhanPacketLoi(
+                                    cmd, new IllegalArgumentException(
+                                            "CMD 20 khong co payload"));
+                            break;
+                        }
                         ChickenQuanLyPhong.batDau(this.khach.user.nguoiChoi);
                         break;
                     case 23:
@@ -277,16 +286,17 @@ implements IChickenXuLyTin {
                         break;
                     case 126: {
                         ChickenNguoiChoi nguoiChoi = this.khach.user.nguoiChoi;
+                        if (mss.boDoc().available() != 2) {
+                            this.khach.ghiNhanPacketLoi(
+                                    cmd, new IllegalArgumentException(
+                                            "Sai kich thuoc CMD 126"));
+                            break;
+                        }
                         short materialId = mss.boDoc().readShort();
                         SanhChoBoss sanhBoss =
                                 QuanLySanhChoBoss.timSanhCuaNguoiChoi(nguoiChoi);
 
                         if (sanhBoss != null) {
-                            DebugSanhBoss.log("NHAN_CMD_126", nguoiChoi,
-                                    "P4-" + (sanhBoss.getMaBan() & 0xFF)
-                                    + " map=" + (sanhBoss.getMaBanDo() & 0xFF)
-                                    + " materialId=" + (materialId & 0xFFFF));
-
                             /*
                              * Client gửi CMD 126 ngay trong lúc còn đang phân tích
                              * CMD 75. Nếu server local trả ảnh tức thì, client có thể
@@ -295,14 +305,38 @@ implements IChickenXuLyTin {
                              * trì hoãn phản hồi ảnh terrain cho sảnh boss để tránh
                              * race này; PvP và các chế độ cũ không bị thay đổi.
                              */
-                            try {
-                                Thread.sleep(250L);
-                            } catch (InterruptedException ex) {
-                                Thread.currentThread().interrupt();
+                            long treMs = this.khach.datLichGuiNguyenLieuBoss(
+                                    System.currentTimeMillis());
+                            if (treMs < 0L) {
+                                this.khach.ghiNhanPacketLoi(
+                                        cmd, new IllegalStateException(
+                                                "Hang doi resource boss day"));
+                                break;
                             }
-                            DebugSanhBoss.log("GUI_CMD_126_SAU_DELAY", nguoiChoi,
-                                    "materialId=" + (materialId & 0xFFFF)
-                                    + " delayMs=250");
+                            BO_GUI_NGUYEN_LIEU_BOSS.schedule(() -> {
+                                try {
+                                    if (this.khach.conKichHoat()
+                                            && this.khach.coNguoiChoiDaDangNhap()
+                                            && QuanLySanhChoBoss
+                                                .timSanhCuaNguoiChoi(
+                                                    this.khach.user.nguoiChoi)
+                                                != null) {
+                                        this.khach.user.dichVu
+                                                .yeuCauNguyenLieu(materialId);
+                                    }
+                                } catch (Exception loi) {
+                                    ChickenQuanLyMayChu.log(
+                                            "Loi gui resource boss "
+                                            + this.khach.moTa()
+                                            + " materialId="
+                                            + (materialId & 0xFFFF)
+                                            + " loi="
+                                            + loi.getClass().getSimpleName());
+                                } finally {
+                                    this.khach.hoanTatGuiNguyenLieuBoss();
+                                }
+                            }, treMs, TimeUnit.MILLISECONDS);
+                            break;
                         }
 
                         this.khach.user.dichVu.yeuCauNguyenLieu(materialId);
@@ -312,6 +346,12 @@ implements IChickenXuLyTin {
                         this.khach.user.dichVu.yeuCauDanLuyenTap(mss);
                         break;
                     case 83:
+                        if (mss.layDuLieu().length != 0) {
+                            this.khach.ghiNhanPacketLoi(
+                                    cmd, new IllegalArgumentException(
+                                            "CMD 83 khong co payload"));
+                            break;
+                        }
                         this.khach.user.nguoiChoi.vaoLuyenTap();
                         break;
                     case 21:
@@ -341,15 +381,9 @@ implements IChickenXuLyTin {
                     case 91:
                     case -91: {
                         ChickenNguoiChoi nguoiChoi = this.khach.user.nguoiChoi;
-                        System.out.println("[SKILL] NHAN_CMD_-91 player="
-                                + (nguoiChoi != null ? nguoiChoi.ten : "null")
-                                + " bytes=" + mss.boDoc().available()
-                                + " inTraining=" + (nguoiChoi != null && nguoiChoi.inTraining));
-
                         // Luyện tập không tạo ChickenQuanLyChien. CMD -91 phải đi
                         // thẳng vào phiên luyện tập, nếu không luôn báo không tìm thấy trận.
                         if (nguoiChoi != null && nguoiChoi.inTraining) {
-                            System.out.println("[SKILL] ROUTE_LUYEN_TAP player=" + nguoiChoi.ten);
                             nguoiChoi.xuLyCmd91KyNangDacBietLuyenTap(mss);
                             break;
                         }
@@ -357,8 +391,6 @@ implements IChickenXuLyTin {
                         ChickenQuanLyChien tranDau =
                                 ChickenQuanLyChien.timTranDauCuaNguoiChoi(nguoiChoi);
                         if (tranDau == null) {
-                            System.out.println("[SKILL] KHONG_TIM_THAY_TRAN_DAU player="
-                                    + (nguoiChoi != null ? nguoiChoi.ten : "null"));
                             break;
                         }
 
@@ -372,16 +404,70 @@ implements IChickenXuLyTin {
                         this.khach.user.nguoiChoi.handleTrainingClientReady();
                         break;
                     default:
-                        if (mss.layLenh() != -98) {
-                            System.out.println("CMD: " + mss.layLenh());
-                        }
+                        this.khach.ghiNhanPacketLoi(
+                                cmd, new IllegalArgumentException(
+                                        "Lenh khong duoc ho tro"));
                         break;
                 }
             }
             catch (Exception ex) {
-                Logger.getLogger(ChickenXuLyTin.class.getName()).log(Level.SEVERE, null, ex);
+                this.khach.ghiNhanPacketLoi(cmd, ex);
             }
         }
+    }
+
+    /**
+     * Client khong co quyen chuyen scene hay sua phong cho trong khi tran boss
+     * dang bat dau/dang chien. Nút Thoat (CMD 15) khong nam trong danh sach
+     * nay, vi do la chuyen trang thai hop le do UI va server cung xu ly.
+     */
+    private boolean ngatKetNoiNeuChuyenCanhKhiDangDanhBoss(int cmd) {
+        ChickenNguoiChoi nguoiChoi = this.khach.coNguoiChoiDaDangNhap()
+                ? this.khach.user.nguoiChoi : null;
+        SanhChoBoss sanh =
+                QuanLySanhChoBoss.timSanhCuaNguoiChoi(nguoiChoi);
+        if (!dangDanhBoss(sanh) || !laLenhCamKhiDangDanhBoss(cmd)) {
+            return false;
+        }
+
+        ChickenQuanLyMayChu.log(
+                "[BAO_MAT] Ngat ket noi vi chuyen trang thai trai phep "
+                + this.khach.moTa()
+                + " cmd=" + cmd
+                + " bossRoom=" + (sanh.getMaBan() & 0xFF)
+                + " state=" + sanh.getTrangThai());
+        this.khach.dongTin();
+        return true;
+    }
+
+    static boolean dangDanhBoss(SanhChoBoss sanh) {
+        if (sanh == null) {
+            return false;
+        }
+        SanhChoBoss.TrangThai trangThai = sanh.getTrangThai();
+        return trangThai == SanhChoBoss.TrangThai.DANG_BAT_DAU
+                || trangThai == SanhChoBoss.TrangThai.DANG_CHIEN;
+    }
+
+    static boolean laLenhCamKhiDangDanhBoss(int cmd) {
+        return switch (cmd) {
+            /*
+             * Chuyen scene/RPG, mo danh sach phong-ban, vao ban khac,
+             * thay doi phong cho, bat dau lai hoac tao phien luyen tap.
+             */
+            case -98, -28, 6, 7, 8, 16, 18, 20, 71, 75, 83 -> true;
+            default -> false;
+        };
+    }
+
+    private static boolean canNguoiChoiDaDangNhap(int cmd) {
+        return cmd != 1
+                && cmd != -58
+                && cmd != -71
+                && cmd != 58
+                && cmd != 114
+                && cmd != -102
+                && cmd != -60;
     }
 
     @Override

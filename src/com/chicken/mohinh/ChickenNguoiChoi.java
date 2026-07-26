@@ -20,6 +20,7 @@ import com.chicken.chien.ChickenDiChuyenServer;
 import static com.chicken.luyentap.ChickenCauHinhLuyenTap.*;
 
 import com.chicken.chien.ChickenQuanLyCongThucSung;
+import com.chicken.chien.ChickenQuanLyChien;
 import com.chicken.chien.ChickenCauHinhSatThuongSung;
 import com.chicken.chien.ChickenTinhSatThuongNo;
 import com.chicken.chien.ChickenSieuCao;
@@ -40,6 +41,7 @@ import com.chicken.nhapvai.ChickenBanDoRPG;
 import com.chicken.nhapvai.ChickenKhu;
 import com.chicken.phong.ChickenQuanLyPhong;
 import com.chicken.phong.boss.sanhcho.QuanLySanhChoBoss;
+import com.chicken.phong.boss.sanhcho.SanhChoBoss;
 import com.chicken.npc.chihuy.XuLyMenuChiHuy;
 import com.chicken.cuahang.ChickenTrang;
 import com.chicken.cuahang.ChickenCuaHang;
@@ -207,6 +209,9 @@ public class ChickenNguoiChoi {
     }
 
     public void nangCapNhanVat(ChickenTinNhan ms) throws IOException {
+        if (this.tuChoiThayDoiKinhTeTrongTran()) {
+            return;
+        }
         ChickenQuanLyTiemNang.xuLyNangCap(this, ms);
     }
 
@@ -301,6 +306,9 @@ public class ChickenNguoiChoi {
     }
 
     public void thucHien(ChickenTinNhan ms) throws IOException {
+        if (this.tuChoiThayDoiKinhTeTrongTran()) {
+            return;
+        }
         if (ms == null || ms.boDoc().available() < 5) {
             return;
         }
@@ -327,6 +335,9 @@ public class ChickenNguoiChoi {
     }
 
     public void yeuCauBanVatPham(ChickenTinNhan ms) throws IOException {
+        if (this.tuChoiThayDoiKinhTeTrongTran()) {
+            return;
+        }
         if (ms == null || ms.boDoc().available() < 1) {
             return;
         }
@@ -354,6 +365,12 @@ public class ChickenNguoiChoi {
     }
 
     public void yeuCauMuaVatPham(ChickenTinNhan ms) throws IOException {
+        if (this.tuChoiThayDoiKinhTeTrongTran()) {
+            return;
+        }
+        if (ms == null || ms.boDoc().available() != 3) {
+            return;
+        }
         byte loai = ms.boDoc().readByte();
         int ma = ms.boDoc().readUnsignedShort();
 ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
@@ -559,6 +576,9 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
      * Enabled aggressive block sorting
      */
     public void chuyenVatPham(ChickenTinNhan ms) throws IOException {
+        if (this.tuChoiThayDoiKinhTeTrongTran()) {
+            return;
+        }
         if (ms == null || ms.boDoc().available() < 2) {
             return;
         }
@@ -799,6 +819,19 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
         }
     }
 
+    /**
+     * Chi cho phep sua trang bi/kinh te o ngoai tran. Chi so chien dau duoc
+     * chup luc bat dau, nen doi vu khi giua tran se tao cap vu khi/tai luc gia.
+     */
+    private boolean tuChoiThayDoiKinhTeTrongTran() {
+        if (!this.inTraining
+                && ChickenQuanLyChien.timTranDauCuaNguoiChoi(this) == null) {
+            return false;
+        }
+        this.startOKDlg2("Không thể thay đổi trang bị hoặc kinh tế khi đang chiến đấu.");
+        return true;
+    }
+
     public void moKhu() throws IOException {
         ChickenTinNhan mss = new ChickenTinNhan(-98);
         DataOutputStream ds = mss.boGhi();
@@ -870,8 +903,10 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
         }
     }
 
-    public void updateGold(int vang) {
-        this.vang += vang;
+    public synchronized void updateGold(int vang) {
+        long soDuMoi = (long) this.vang + vang;
+        this.vang = (int) Math.max(
+                0L, Math.min(Integer.MAX_VALUE, soDuMoi));
         this.dichVu.capNhat();
     }
 
@@ -997,7 +1032,7 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
         }
     }
 
-    public void flushCache() {
+    public synchronized void flushCache() {
         try (java.sql.Connection conn = ChickenCoSoDuLieu.getConnection()) {
             try (java.sql.PreparedStatement stmt = conn.prepareStatement("UPDATE `players` SET `gold` = ?, `cup` = ?, `gem` = ? WHERE `id` = ? LIMIT 1;")) {
                 stmt.setInt(1, this.vang);
@@ -1091,6 +1126,9 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
     }
 
     public synchronized void roiLuyenTap() {
+        if (this.dichVu != null) {
+            this.dichVu.guiDongMenuKyNangDacBiet();
+        }
         this.inTraining = false;
         this.dungVongBotLuyenTap();
         this.xoaTrangThaiPhatBanNguoiChoi();
@@ -1103,7 +1141,21 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
 
     public synchronized void vaoLuyenTap() {
         try {
-            if (this.trainingReturningToLobby) {
+            if (this.trainingReturningToLobby || this.inTraining) {
+                return;
+            }
+            SanhChoBoss sanhBoss =
+                    QuanLySanhChoBoss.timSanhCuaNguoiChoi(this);
+            SanhChoBoss.TrangThai trangThaiBoss = sanhBoss == null
+                    ? null : sanhBoss.getTrangThai();
+            if (ChickenQuanLyChien.timTranDauCuaNguoiChoi(this) != null
+                    || trangThaiBoss
+                            == SanhChoBoss.TrangThai.DANG_BAT_DAU
+                    || trangThaiBoss == SanhChoBoss.TrangThai.DANG_CHIEN) {
+                ChickenQuanLyMayChu.log(
+                        "[BAO_MAT] Tu choi tao luyen tap khi dang trong tran"
+                        + " playerId=" + this.ma
+                        + " bossState=" + trangThaiBoss);
                 return;
             }
             if (!ChickenQuanLyNangLuongAVG.kiemTraChoVaoTran(
@@ -2006,57 +2058,67 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
             short shooterX,
             short shooterY
     ) throws IOException {
-        ChickenCongThucBanUltron.DuongTia tiaGiuaDayDu =
-                ChickenCongThucBanUltron.taoTiaThang(
-                        muzzleX,
-                        muzzleY,
-                        goc,
-                        this.trainingSession.trainingMap.getWidth(),
-                        this.trainingSession.trainingMap.getHeight()
-                );
-        short[][] tiaGiua = this.catDuongDanUltronTaiVaChamBanDoLuyenTap(
-                tiaGiuaDayDu.getX(),
-                tiaGiuaDayDu.getY()
-        );
-
         final int soPhatKyNang = 3;
         int soVienTuTrung = 0;
         int[] soVienTrungBot = new int[TRAINING_BOT_COUNT];
         int[] satThuongBot = new int[TRAINING_BOT_COUNT];
         int satThuongTuThan = 0;
         int satThuongMoiVien = Math.max(1, satThuong);
+        short[][] cacDuongX = new short[soPhatKyNang][];
+        short[][] cacDuongY = new short[soPhatKyNang][];
+        int doDaiTia = 1;
+        short diemCuoiX = muzzleX;
+        short diemCuoiY = muzzleY;
 
-        TrainingCharacterHit vaChamNhanVat = this.timVaChamNhanVatTrenDuongDanLuyenTap(
-                tiaGiua[0],
-                tiaGiua[1],
-                muzzleX,
-                muzzleY,
-                true,
-                true
-        );
-        if (vaChamNhanVat != null) {
-            tiaGiua = this.catDuongDanTaiVaChamNhanVatLuyenTap(
-                    tiaGiua[0],
-                    tiaGiua[1],
-                    vaChamNhanVat
-            );
-            if (vaChamNhanVat.laNguoiChoi()) {
-                soVienTuTrung = soPhatKyNang;
-                satThuongTuThan = this.nhanSoNguyenAnToan(
-                        satThuongMoiVien, soPhatKyNang);
-            } else if (vaChamNhanVat.botIndex >= 0
-                    && vaChamNhanVat.botIndex < TRAINING_BOT_COUNT) {
-                soVienTrungBot[vaChamNhanVat.botIndex] = soPhatKyNang;
-                satThuongBot[vaChamNhanVat.botIndex] = this.nhanSoNguyenAnToan(
-                        satThuongMoiVien, soPhatKyNang);
+        for (int phat = 0; phat < soPhatKyNang; phat++) {
+            ChickenCongThucBanUltron.DuongTia tiaDayDu =
+                    ChickenCongThucBanUltron.taoTiaThang(
+                            muzzleX,
+                            muzzleY,
+                            goc,
+                            this.trainingSession.trainingMap.getWidth(),
+                            this.trainingSession.trainingMap.getHeight()
+                    );
+            short[][] duongDan = this.catDuongDanUltronTaiVaChamBanDoLuyenTap(
+                    tiaDayDu.getX(), tiaDayDu.getY());
+            TrainingCharacterHit vaChamNhanVat =
+                    this.timVaChamNhanVatTrenDuongDanLuyenTap(
+                            duongDan[0],
+                            duongDan[1],
+                            muzzleX,
+                            muzzleY,
+                            true,
+                            true
+                    );
+            if (vaChamNhanVat != null) {
+                duongDan = this.catDuongDanTaiVaChamNhanVatLuyenTap(
+                        duongDan[0], duongDan[1], vaChamNhanVat);
+                if (vaChamNhanVat.laNguoiChoi()) {
+                    soVienTuTrung++;
+                    satThuongTuThan = this.congSoNguyenAnToan(
+                            satThuongTuThan, satThuongMoiVien);
+                } else if (vaChamNhanVat.botIndex >= 0
+                        && vaChamNhanVat.botIndex < TRAINING_BOT_COUNT) {
+                    soVienTrungBot[vaChamNhanVat.botIndex]++;
+                    satThuongBot[vaChamNhanVat.botIndex] =
+                            this.congSoNguyenAnToan(
+                                    satThuongBot[vaChamNhanVat.botIndex],
+                                    satThuongMoiVien
+                            );
+                }
+            } else {
+                /* Vien sau thay dung lo ma vien truoc vua tao, giong loat coi. */
+                this.capNhatLoDiaHinhTheoDuongDanLuyenTap(
+                        duongDan[0], duongDan[1], null, loaiDan);
             }
-        }
 
-        short diemCuoiX = this.layGiaTriCuoiDuongDan(tiaGiua[0], muzzleX);
-        short diemCuoiY = this.layGiaTriCuoiDuongDan(tiaGiua[1], muzzleY);
-        short[][] cacDuongX = new short[][]{tiaGiua[0]};
-        short[][] cacDuongY = new short[][]{tiaGiua[1]};
-        int doDaiTia = Math.max(1, Math.min(tiaGiua[0].length, tiaGiua[1].length));
+            cacDuongX[phat] = duongDan[0];
+            cacDuongY[phat] = duongDan[1];
+            int soDiem = Math.min(duongDan[0].length, duongDan[1].length);
+            doDaiTia = Math.max(doDaiTia, soDiem);
+            diemCuoiX = this.layGiaTriCuoiDuongDan(duongDan[0], muzzleX);
+            diemCuoiY = this.layGiaTriCuoiDuongDan(duongDan[1], muzzleY);
+        }
 
         this.trainingSession.trainingPendingSelfHitCount = soVienTuTrung;
         this.trainingSession.trainingPendingSelfDamage = satThuongTuThan;
@@ -2078,8 +2140,8 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
         this.trainingSession.trainingWaitingShotEnd = true;
         final long shotId = ++this.trainingSession.trainingActiveShotId;
         this.trainingSession.trainingActiveShotResolved = false;
-        // BM client gửi CMD 79 sau MỖI viên lặp của numShoot=3. Ghi nhận ID
-        // này để không kết thúc lượt ngay sau viên đầu.
+        // Skill la ba LAN BAN hoan chinh, khong phai mot lan ban co ba vien.
+        // CMD 79 cua moi lan se mo khoa packet ban tiep theo.
         this.trainingSession.trainingUltronX3ShotId = shotId;
         this.trainingSession.trainingUltronX3VaChamDaNhan = 0;
         this.trainingSession.trainingUltronX3PhatDaGui = 1;
@@ -2093,11 +2155,7 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
 
         this.huyLoatMgDangCho();
         this.trainingSession.trainingMgBurstEndAt = 0L;
-        /*
-         * Client local treo trong vòng lặp BM khi nhận numShoot=3. Vì vậy gửi
-         * viên đầu là packet thường và chỉ gửi viên 2/3 sau CMD 79 của viên
-         * trước. Mỗi packet là một phát native hoàn chỉnh, không chồng state.
-         */
+        /* Moi packet la mot lan ban native: soPhat=1 va NBULL=1. */
         this.dichVu.guiKetQuaBanLuyenTap(
                 TRAINING_PLAYER_INDEX,
                 loaiDan,
@@ -2106,15 +2164,15 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
                 goc,
                 luc,
                 (byte) 1,
-                cacDuongX,
-                cacDuongY
+                new short[][]{cacDuongX[0]},
+                new short[][]{cacDuongY[0]}
         );
         this.dongBoToaDoBaySauKhiBanLuyenTap();
         this.trainingSession.trainingUltronDangBanX3 = false;
         System.out.println("[ULTRON] BAN_X3 mode=training goc=" + goc
                 + " impactX=" + diemCuoiX
                 + " impactY=" + diemCuoiY
-                + " soPhat=" + soPhatKyNang + " phatThuongLienTiep=1");
+                + " soVien=" + soPhatKyNang + " quyDaoDocLap=true");
 
         long thoiGianKetToan = Math.max(
                 5000L,
@@ -2388,7 +2446,11 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
         int phatThu = this.trainingSession.trainingUltronX3PhatDaGui + 1;
         short[][] cacDuongX = this.trainingSession.trainingUltronX3DuongX;
         short[][] cacDuongY = this.trainingSession.trainingUltronX3DuongY;
-        if (cacDuongX == null || cacDuongY == null) {
+        int chiSo = phatThu - 1;
+        if (cacDuongX == null || cacDuongY == null
+                || chiSo < 0
+                || chiSo >= cacDuongX.length
+                || chiSo >= cacDuongY.length) {
             return;
         }
         this.dichVu.guiKetQuaBanLuyenTap(
@@ -2399,8 +2461,8 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
                 this.trainingSession.trainingUltronX3Goc,
                 this.trainingSession.trainingUltronX3Luc,
                 (byte) 1,
-                cacDuongX,
-                cacDuongY
+                new short[][]{cacDuongX[chiSo]},
+                new short[][]{cacDuongY[chiSo]}
         );
         this.trainingSession.trainingUltronX3PhatDaGui = phatThu;
         System.out.println("[ULTRON] GUI_X3_VIEN=" + phatThu
@@ -3698,6 +3760,7 @@ ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
     }
 
     private void guiTrangThaiLuotLuyenTap() throws IOException {
+        this.dichVu.guiDongMenuKyNangDacBiet();
         this.dichVu.guiGio(
                 this.trainingSession.trainingWind.getWindX(),
                 this.trainingSession.trainingWind.getWindY()

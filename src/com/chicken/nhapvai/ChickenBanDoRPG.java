@@ -37,8 +37,19 @@ public class ChickenBanDoRPG {
     }
 
     public static void roi(ChickenNguoiChoi nguoiChoi) {
-        ChickenKhu z = zones.get(nguoiChoi.zoneId);
-        z.roi(nguoiChoi);
+        if (nguoiChoi == null) {
+            return;
+        }
+        ChickenKhu z = nguoiChoi.zone;
+        if (z == null) {
+            int zoneId = nguoiChoi.zoneId;
+            if (zoneId < 0 || zoneId >= zones.size()) {
+                return;
+            }
+            z = zones.get(zoneId);
+        }
+        if (z != null) {
+            z.roi(nguoiChoi);
+        }
     }
 }
-

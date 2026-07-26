@@ -10,6 +10,14 @@ import java.util.ArrayList;
 import javax.imageio.ImageIO;
 
 public class ChickenDuLieuBanDo {
+    /** ID ao chi dung cho vien gach nho co dinh tren duong Boss Rua map 54. */
+    public static final int ID_GACH_NHO_CO_DINH_BOSS_RUA = 169;
+    private static final int MAP_BOSS_RUA = 54;
+    private static final int ID_GACH_BOSS_RUA_GOC = 19;
+    private static final int ID_GACH_BOSS_RUA_CO_DINH = 167;
+    private static final int ID_GACH_NHO_GOC = 20;
+    private static final int GACH_NHO_BOSS_RUA_X = 714;
+    private static final int GACH_NHO_BOSS_RUA_Y = 353;
     public static ArrayList<MapDataEntry> entrys;
     public static ArrayList<MapBrickEntry> brickEntrys;
     public static final short[] undestroyTile;
@@ -56,7 +64,8 @@ public class ChickenDuLieuBanDo {
      * res/icon/map trước đây làm nhân vật mới không dựng được map luyện tập.
      */
     private static BufferedImage docAnhMapBrick(int ma) throws Exception {
-        String duongDan = "res/icon/map/" + ma + ".png";
+        int maAnhGoc = layMaAnhMapGoc(ma);
+        String duongDan = "res/icon/map/" + maAnhGoc + ".png";
         File[] ungVien = new File[]{
             new File(duongDan),
             new File(System.getProperty("user.dir", "."), duongDan),
@@ -101,7 +110,7 @@ public class ChickenDuLieuBanDo {
 
         String[] taiNguyen = new String[]{
             "/" + duongDan,
-            "/icon/map/" + ma + ".png"
+            "/icon/map/" + maAnhGoc + ".png"
         };
         for (String taiNguyenPath : taiNguyen) {
             try (InputStream in = ChickenDuLieuBanDo.class.getResourceAsStream(taiNguyenPath)) {
@@ -116,6 +125,15 @@ public class ChickenDuLieuBanDo {
         return null;
     }
 
+    /**
+     * Vat lieu 169 dung lai hinh gach 20 nhung co ID rieng de client nhan no
+     * trong danh sach undestroyTile. Nho vay chi placement duoc doi sang 169
+     * moi bat tu, cac gach 20 khac van bi pha binh thuong.
+     */
+    public static int layMaAnhMapGoc(int ma) {
+        return ma == ID_GACH_NHO_CO_DINH_BOSS_RUA ? ID_GACH_NHO_GOC : ma;
+    }
+
     public static boolean existsMapBrick(int ma) {
         for (MapBrickEntry me : brickEntrys) {
             if (me.ma != ma) continue;
@@ -125,7 +143,34 @@ public class ChickenDuLieuBanDo {
     }
 
     static {
-        undestroyTile = new short[]{70, 71, 73, 74, 75, 77, 78, 79, 97, 121, 122, 123, 124, 130, 131, 132, 135, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168};
+        undestroyTile = new short[]{70, 71, 73, 74, 75, 77, 78, 79, 97, 121, 122, 123, 124, 130, 131, 132, 135, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, ID_GACH_NHO_CO_DINH_BOSS_RUA};
+    }
+
+    private static byte[] baoVeDiaHinhBossRua(byte[] duLieu, int mapID) {
+        if (mapID != MAP_BOSS_RUA || duLieu == null || duLieu.length < 5) {
+            return duLieu;
+        }
+        byte[] ketQua = duLieu.clone();
+        int soMuc = ketQua[4] & 0xFF;
+        int offset = 5;
+        for (int i = 0; i < soMuc && offset + 4 < ketQua.length; i++) {
+            int brickId = ketQua[offset] & 0xFF;
+            int x = ChickenTienIch.getShort(offset + 1, ketQua);
+            int y = ChickenTienIch.getShort(offset + 3, ketQua);
+            boolean laBeBoss = brickId == ID_GACH_BOSS_RUA_GOC
+                    && x >= 737 && x <= 865
+                    && y >= 252 && y <= 284;
+            if (laBeBoss) {
+                // 19 va 167 dung cung mot PNG; 167 da la tile khong the pha.
+                ketQua[offset] = (byte) ID_GACH_BOSS_RUA_CO_DINH;
+            } else if (brickId == ID_GACH_NHO_GOC
+                    && x == GACH_NHO_BOSS_RUA_X
+                    && y == GACH_NHO_BOSS_RUA_Y) {
+                ketQua[offset] = (byte) ID_GACH_NHO_CO_DINH_BOSS_RUA;
+            }
+            offset += 5;
+        }
+        return ketQua;
     }
 
     public static final class MapBrickEntry {
@@ -160,13 +205,13 @@ public class ChickenDuLieuBanDo {
         public short yWater;
 
         public MapDataEntry(byte[] duLieu, byte mapID, String mapName, short icon, byte bgID) {
-            this.duLieu = duLieu;
+            this.duLieu = baoVeDiaHinhBossRua(duLieu, mapID & 0xFF);
             this.mapID = mapID;
             this.bgID = bgID;
             this.iconID = icon;
             this.mapName = mapName;
-            this.mapW = ChickenTienIch.getShort(0, duLieu) / 24;
-            this.mapH = ChickenTienIch.getShort(2, duLieu) / 24;
+            this.mapW = ChickenTienIch.getShort(0, this.duLieu) / 24;
+            this.mapH = ChickenTienIch.getShort(2, this.duLieu) / 24;
             System.out.println("map ID= " + mapID + " mapName= " + mapName + " bgID= " + bgID);
             this.khoiTao();
         }
@@ -181,4 +226,3 @@ public class ChickenDuLieuBanDo {
         }
     }
 }
-

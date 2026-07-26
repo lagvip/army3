@@ -12,6 +12,7 @@ import com.chicken.bando.ChickenDuLieuBanDo;
 import com.chicken.mang.ChickenPhien;
 import com.chicken.mang.kenh.ChickenMayChuNetty;
 import com.chicken.phong.ChickenQuanLyPhong;
+import com.chicken.phong.boss.sanhcho.ChickenKinhTeBoss;
 import com.chicken.nhapvai.ChickenBanDoRPG;
 import com.chicken.cuahang.ChickenCuaHang;
 import com.chicken.tienich.ChickenDuLieuJson;
@@ -54,6 +55,12 @@ public class ChickenQuanLyMayChu {
     public static int eventDurationMinutes;
     public static int worldTreasureIntervalMinutes;
     public static int worldBossHp;
+    /** EXP server trao cho mỗi thành viên khi toàn bộ boss trong trận bị hạ. */
+    public static int bossExpReward;
+    /** Phí vàng server thu đúng một lần khi người chơi vào phòng boss. */
+    public static int bossEntryGoldCost;
+    /** Vàng server trao cho mỗi người chơi khi trận boss kết thúc với chiến thắng. */
+    public static int bossWinGoldReward;
     public static byte vBig;
     public static byte vData;
     public static byte vItem;
@@ -335,6 +342,13 @@ public class ChickenQuanLyMayChu {
         wheelGemCost = ChickenQuanLyMayChu.cfgInt(configMap, wheelGemCost, "lucky-wheel-gem-cost", "wheel-gem-cost");
         worldTreasureIntervalMinutes = ChickenQuanLyMayChu.cfgInt(configMap, worldTreasureIntervalMinutes, "world-treasure-spawn-minutes", "world-treasure-interval-minutes");
         worldBossHp = ChickenQuanLyMayChu.cfgInt(configMap, worldBossHp, "world-boss-hp");
+        bossExpReward = Math.max(0, Math.min(Short.MAX_VALUE,
+                ChickenQuanLyMayChu.cfgInt(
+                        configMap, bossExpReward, "reward-boss-exp")));
+        bossEntryGoldCost = Math.max(0, ChickenQuanLyMayChu.cfgInt(
+                configMap, bossEntryGoldCost, "boss-entry-gold-cost"));
+        bossWinGoldReward = Math.max(0, ChickenQuanLyMayChu.cfgInt(
+                configMap, bossWinGoldReward, "boss-win-gold-reward"));
     }
 
     private static String cfgStr(HashMap<String, String> map, String def, String... keys) {
@@ -412,6 +426,7 @@ public class ChickenQuanLyMayChu {
         batDau = false;
         ChickenQuanLyMayChu.loadConfigFile();
         ChickenCoSoDuLieu.khoiTao(mysql_host, mysql_database, mysql_user, mysql_pass);
+        ChickenKinhTeBoss.khoiTao();
         ChickenQuanLyMayChu.damBaoTaiKhoanTest();
         ChickenQuanLyMayChu.loadDataItem();
         ChickenQuanLyMayChu.setDataItem();
@@ -654,6 +669,9 @@ public class ChickenQuanLyMayChu {
         eventDurationMinutes = 30;
         worldTreasureIntervalMinutes = 8;
         worldBossHp = 50000;
+        bossExpReward = 1000;
+        bossEntryGoldCost = 1000;
+        bossWinGoldReward = 2000;
         maxElementFight = 8;
         maxPlayers = 8;
         nPlayersInitRoom = 2;

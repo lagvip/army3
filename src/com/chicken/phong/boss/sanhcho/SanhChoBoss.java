@@ -238,6 +238,68 @@ public final class SanhChoBoss {
         return true;
     }
 
+    /**
+     * Thành viên rớt mạng trong trận được giữ vé tới lúc server phát thưởng.
+     * Sau khi chốt kết quả mới loại các vé này để phòng không bị kẹt.
+     */
+    public synchronized void donThanhVienNgatKetNoiSauTran() {
+        for (int i = 0; i < this.thanhViens.length; i++) {
+            ThanhVienBoss thanhVien = this.thanhViens[i];
+            if (thanhVien != null && thanhVien.isDaNgatKetNoi()) {
+                if (this.chuPhong == thanhVien) {
+                    this.chuPhong = null;
+                }
+                this.thanhViens[i] = null;
+            }
+        }
+        if (this.getSoNguoi() == 0) {
+            this.reset();
+        }
+    }
+
+    /**
+     * Đưa phòng vừa kết thúc về trạng thái có thể tái đấu. Người còn kết nối
+     * được giữ nguyên ghế, nhưng vé kinh tế và trạng thái sẵn sàng phải là vé
+     * mới hoàn toàn; người đã rớt mạng bị loại khỏi phòng.
+     */
+    public synchronized void chuanBiTaiDauSauKetQua() {
+        this.donThanhVienNgatKetNoiSauTran();
+        if (this.getSoNguoi() == 0) {
+            return;
+        }
+
+        ThanhVienBoss chuMoi = null;
+        for (int i = 0; i < this.thanhViens.length; i++) {
+            ThanhVienBoss veTranCu = this.thanhViens[i];
+            if (veTranCu == null || veTranCu.getNguoiChoi() == null) {
+                continue;
+            }
+            /*
+             * Không sửa UUID trên vé cũ. Tạo object vé mới để callback muộn của
+             * trận trước vẫn chỉ nhìn thấy khóa idempotency cũ và không thể vô
+             * tình phát lại thưởng bằng khóa của trận tái đấu.
+             */
+            ThanhVienBoss veTranMoi = new ThanhVienBoss(
+                    veTranCu.getNguoiChoi(),
+                    veTranCu.getGhe(),
+                    veTranCu.getThuTuVao(),
+                    veTranCu.isChuPhong()
+            );
+            this.thanhViens[i] = veTranMoi;
+            veTranMoi.getNguoiChoi().isReady = false;
+            if (veTranCu.isChuPhong()
+                    || chuMoi == null
+                    || (!chuMoi.isChuPhong()
+                    && veTranMoi.getThuTuVao() < chuMoi.getThuTuVao())) {
+                chuMoi = veTranMoi;
+            }
+        }
+        if (chuMoi != null) {
+            this.datChuPhongNoiBo(chuMoi);
+        }
+        this.trangThai = TrangThai.DANG_CHO;
+    }
+
     public synchronized void reset() {
         for (int i = 0; i < this.thanhViens.length; i++) {
             ThanhVienBoss thanhVien = this.thanhViens[i];

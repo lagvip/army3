@@ -1103,6 +1103,26 @@ CREATE TABLE `players` (
   `storage_json` mediumtext NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Sổ idempotency cho phí vào phòng và thưởng thắng boss.
+CREATE TABLE `boss_gold_transactions` (
+  `operation_key` varchar(80) NOT NULL,
+  `player_id` int(11) NOT NULL,
+  `gold_delta` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`operation_key`),
+  KEY `idx_boss_gold_player` (`player_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Sổ idempotency cho EXP và thưởng lên cấp khi hạ boss.
+CREATE TABLE `boss_exp_transactions` (
+  `operation_key` varchar(80) NOT NULL,
+  `player_id` int(11) NOT NULL,
+  `exp_delta` int(11) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`operation_key`),
+  KEY `idx_boss_exp_player` (`player_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 --
 -- Đang đổ dữ liệu cho bảng `players`
 --

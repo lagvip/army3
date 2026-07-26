@@ -14,6 +14,12 @@ public class ChickenQuanLyBanDo
     private static final short[] DEFAULT_SPAWN_X = new short[]{220, 600, 320, 720, 150, 850, 460, 980};
     private static final short[] DEFAULT_SPAWN_Y = new short[]{300, 300, 260, 260, 320, 320, 280, 280};
     private static final Map<String, HoleMask> HOLE_MASK_CACHE = new HashMap<>();
+    private static final String TEP_DA_RUA = "res/icon/hole/bullrua.png";
+    private static final int LECH_DA_RUA_X = 15;
+    private static final int LECH_DA_RUA_Y = 37;
+    private static int[] daRuaArgb;
+    private static int daRuaRong;
+    private static int daRuaCao;
 
     private final ArrayList<MapEntry> mucs = new ArrayList<>();
     private short[] spawnX = DEFAULT_SPAWN_X;
@@ -110,6 +116,49 @@ public class ChickenQuanLyBanDo
         for (MapEntry muc : this.mucs) {
             muc.xoaTheoMatNa(batDauX, batDauY, mask);
         }
+    }
+
+    /**
+     * Thêm đúng vật cản mà client tạo khi Bullet type 61 của Boss Rùa nổ.
+     * Client neo ảnh BULLRUA tại (x - 15, y - 37), nên server dùng cùng ảnh
+     * và cùng tọa độ để đường đạn, di chuyển và phá địa hình không bị lệch.
+     */
+    public synchronized boolean themDaRua(int xVaCham, int yVaCham) {
+        int[] argb = docAnhDaRua();
+        if (argb == null || daRuaRong <= 0 || daRuaCao <= 0) {
+            return false;
+        }
+        int trai = xVaCham - LECH_DA_RUA_X;
+        int tren = yVaCham - LECH_DA_RUA_Y;
+        this.mucs.add(new MapEntry(
+                (short) trai,
+                (short) tren,
+                (short) daRuaRong,
+                (short) daRuaCao,
+                argb,
+                true,
+                true
+        ));
+        return true;
+    }
+
+    /**
+     * Kiểm tra phần lõi của đúng tảng đá đã ghim người chơi còn tồn tại.
+     * Khi đạn phá trúng tâm đá, pixel này mất và người chơi được thoát ghim.
+     */
+    public synchronized boolean conDaRuaGhimTai(int xVaCham, int yVaCham) {
+        int trai = xVaCham - LECH_DA_RUA_X;
+        int tren = yVaCham - LECH_DA_RUA_Y;
+        int yLoi = yVaCham - LECH_DA_RUA_Y / 2;
+        for (MapEntry muc : this.mucs) {
+            if (muc.laDaRua
+                    && muc.x == (short) trai
+                    && muc.y == (short) tren
+                    && muc.coVaCham((short) xVaCham, (short) yLoi)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private ChickenDuLieuBanDo.MapDataEntry findEntry(int mapID) {
@@ -291,6 +340,25 @@ public class ChickenQuanLyBanDo
         }
     }
 
+    private static synchronized int[] docAnhDaRua() {
+        if (daRuaArgb != null) {
+            return daRuaArgb;
+        }
+        try {
+            BufferedImage img = ImageIO.read(new File(TEP_DA_RUA));
+            if (img == null || img.getWidth() <= 0 || img.getHeight() <= 0) {
+                return null;
+            }
+            daRuaRong = img.getWidth();
+            daRuaCao = img.getHeight();
+            daRuaArgb = new int[daRuaRong * daRuaCao];
+            img.getRGB(0, 0, daRuaRong, daRuaCao, daRuaArgb, 0, daRuaRong);
+            return daRuaArgb;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     private static final class HoleMask {
         private final int width;
         private final int height;
@@ -310,6 +378,7 @@ public class ChickenQuanLyBanDo
         private final short chieuCao;
         private final int[] argb;
         private final boolean coThePha;
+        private final boolean laDaRua;
 
         private MapEntry(
                 short x,
@@ -319,6 +388,18 @@ public class ChickenQuanLyBanDo
                 int[] argb,
                 boolean coThePha
         ) {
+            this(x, y, chieuRong, chieuCao, argb, coThePha, false);
+        }
+
+        private MapEntry(
+                short x,
+                short y,
+                short chieuRong,
+                short chieuCao,
+                int[] argb,
+                boolean coThePha,
+                boolean laDaRua
+        ) {
             this.x = x;
             this.y = y;
             this.chieuRong = chieuRong;
@@ -326,6 +407,7 @@ public class ChickenQuanLyBanDo
             // Mỗi trận phải có mặt nạ riêng; không được sửa mảng cache dùng chung.
             this.argb = argb == null ? null : argb.clone();
             this.coThePha = coThePha;
+            this.laDaRua = laDaRua;
         }
 
         private boolean coVaCham(short px, short py) {

@@ -140,7 +140,8 @@ public final class ChickenPhatBanServer {
                 }
                 if (laDiemVaChamDiaHinh(xNo, yNo, banDo) && cacMucTieu != null) {
                     for (ChickenChienBinh mucTieu : cacMucTieu) {
-                        if (!laMucTieuHopLe(nguoiBan, mucTieu, boLoc)) {
+                        if (!laMucTieuNhanNoHopLe(
+                                nguoiBan, mucTieu, boLoc)) {
                             continue;
                         }
                         int damageDayDu = tinhSatThuongMoiDuong(
@@ -198,7 +199,7 @@ public final class ChickenPhatBanServer {
                 continue;
             }
             for (ChickenChienBinh mucTieu : cacMucTieu) {
-                if (!laMucTieuHopLe(nguoiBan, mucTieu, boLoc)) {
+                if (!laMucTieuNhanNoHopLe(nguoiBan, mucTieu, boLoc)) {
                     continue;
                 }
                 int damageDayDuMoiDuong = tinhSatThuongMoiDuong(
@@ -399,6 +400,22 @@ public final class ChickenPhatBanServer {
     ) {
         return mucTieu != null
                 && mucTieu != nguoiBan
+                && !mucTieu.chet
+                && mucTieu.hp > 0
+                && (boLoc == null || boLoc.chapNhan(nguoiBan, mucTieu));
+    }
+
+    /**
+     * Vu no co the gay damage lai nguoi ban. Duong bay truc tiep van dung
+     * {@link #laMucTieuHopLe} va {@link #timVaChamDauTien} de bo qua hitbox
+     * nguoi ban luc vien dan vua roi nong.
+     */
+    private static boolean laMucTieuNhanNoHopLe(
+            ChickenChienBinh nguoiBan,
+            ChickenChienBinh mucTieu,
+            BoLocMucTieu boLoc
+    ) {
+        return mucTieu != null
                 && !mucTieu.chet
                 && mucTieu.hp > 0
                 && (boLoc == null || boLoc.chapNhan(nguoiBan, mucTieu));

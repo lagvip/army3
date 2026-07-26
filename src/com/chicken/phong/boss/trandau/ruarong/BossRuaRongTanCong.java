@@ -4,16 +4,11 @@ import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.chien.ChickenChienBinh;
 import com.chicken.chien.ChickenKetQuaDan;
 import com.chicken.chiso.ChickenKichThuocNhanVat;
+import com.chicken.phong.boss.trandau.rua.DocBossRua;
 import java.util.Arrays;
 
 /** Tạo đường đạn riêng cho Rùa máy và Rồng máy map 58. */
 public final class BossRuaRongTanCong {
-    /**
-     * Type 1 là đạn theo vũ khí (BulletForGun). Rùa mang wp=1563 nên client
-     * dùng đúng ảnh Small1563.png đã được server trả qua CMD -40.
-     */
-    private static final byte LOAI_DAN_RUA = 1;
-
     /**
      * Type 59 là bong bóng nước native của client (/item/bongbong2.png).
      * Dùng type native để không phụ thuộc vào wp và không bị mất hình.
@@ -44,7 +39,9 @@ public final class BossRuaRongTanCong {
         }
         int satThuong = vaCham == null ? 0 : Math.max(1, boss.tanCong - mucTieu.giap);
         short goc = gocToiMucTieu(dauX, dauY, dichX, dichY);
-        return new ChickenKetQuaDan(LOAI_DAN_RUA, dauX, dauY, goc, LUC_HIEN_THI,
+        return new ChickenKetQuaDan(
+                DocBossRua.LOAI_DAN_DOC,
+                dauX, dauY, goc, LUC_HIEN_THI,
                 duong[0], duong[1], vaCham == null ? null : mucTieu, satThuong);
     }
 

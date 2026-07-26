@@ -93,6 +93,9 @@ public class ChickenQuanLyPhong {
     }
 
     public static void yeuCauDanhSachBan(ChickenNguoiChoi nguoiChoi, ChickenTinNhan ms) throws IOException {
+        if (ms == null || ms.boDoc().available() != 1) {
+            return;
+        }
         byte maPhong = ms.boDoc().readByte();
         if (maPhong == QuanLySanhChoBoss.MA_PHONG_BOSS) {
             DebugSanhBoss.log("NHAN_CMD_7_DANH_SACH_BAN", nguoiChoi,
@@ -145,7 +148,13 @@ public class ChickenQuanLyPhong {
                 + " ten=P" + (maPhong & 0xFF) + "-" + (maBan & 0xFF)
                 + " bytesConLai=" + conLai);
 
-        String matKhau = ms.boDoc().available() > 0 ? ms.boDoc().readUTF() : "";
+        String matKhau = docUtfTuyChon(ms, 20);
+        if (matKhau == null) {
+            DebugSanhBoss.log("LOI_PACKET_CMD_8", nguoiChoi,
+                    "matKhauSaiDinhDangHoacCoByteThua");
+            nguoiChoi.startOKDlg2("Dá»¯ liá»‡u vÃ o phÃ²ng khÃ´ng há»£p lá»‡.");
+            return;
+        }
         if (maPhong == QuanLySanhChoBoss.MA_PHONG_BOSS) {
             DebugSanhBoss.log("VAO_NHANH_PHONG_BOSS", nguoiChoi,
                     "P4-" + (maBan & 0xFF)
@@ -172,6 +181,9 @@ public class ChickenQuanLyPhong {
     }
 
     public static void sanSang(ChickenNguoiChoi nguoiChoi, ChickenTinNhan ms) throws IOException {
+        if (ms == null || ms.boDoc().available() != 1) {
+            return;
+        }
         boolean giaTri = ms.boDoc().readBoolean();
         if (QuanLySanhChoBoss.timSanhCuaNguoiChoi(nguoiChoi) != null) {
             SanSangBoss.xuLy(nguoiChoi, giaTri);
@@ -195,6 +207,9 @@ public class ChickenQuanLyPhong {
     }
 
     public static void chonBanDo(ChickenNguoiChoi nguoiChoi, ChickenTinNhan ms) throws IOException {
+        if (ms == null || ms.boDoc().available() != 1) {
+            return;
+        }
         byte maBanDo = ms.boDoc().readByte();
         SanhChoBoss sanhBoss = QuanLySanhChoBoss.timSanhCuaNguoiChoi(nguoiChoi);
         if (sanhBoss != null) {
@@ -215,9 +230,42 @@ public class ChickenQuanLyPhong {
 
     public static void datMatKhau(ChickenNguoiChoi nguoiChoi, ChickenTinNhan ms)
             throws IOException {
-        String matKhau = ms.boDoc().available() > 0 ? ms.boDoc().readUTF() : "";
+        if (ms == null) {
+            return;
+        }
+        String matKhau = docUtfTuyChon(ms, 20);
+        if (matKhau == null) {
+            return;
+        }
         if (QuanLySanhChoBoss.timSanhCuaNguoiChoi(nguoiChoi) != null) {
             MatKhauBoss.xuLy(nguoiChoi, matKhau);
+        }
+    }
+
+    /**
+     * Đọc đúng một chuỗi UTF tùy chọn và từ chối byte thừa. Không để packet
+     * giả dùng phần đuôi làm dữ liệu cho một hành động khác hoặc gây log lỗi.
+     */
+    private static String docUtfTuyChon(
+            ChickenTinNhan ms,
+            int doDaiToiDa
+    ) {
+        try {
+            int soByte = ms.boDoc().available();
+            if (soByte == 0) {
+                return "";
+            }
+            if (soByte < 2) {
+                return null;
+            }
+            String giaTri = ms.boDoc().readUTF();
+            if (ms.boDoc().available() != 0
+                    || giaTri.length() > Math.max(0, doDaiToiDa)) {
+                return null;
+            }
+            return giaTri;
+        } catch (IOException | RuntimeException loi) {
+            return null;
         }
     }
 

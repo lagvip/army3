@@ -21,7 +21,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ChickenPhien
 implements IChickenPhien {
@@ -48,12 +50,156 @@ implements IChickenPhien {
     private String maPhien;
     private volatile boolean kichHoat = true;
     private ScheduledFuture<?> tacVuGiuKetNoi;
+    private long batDauCuaSoTinMs;
+    private int soTinTrongCuaSo;
+    private long lanDiChuyenGanNhatMs;
+    private long lanGuiLenhKyNangGanNhatMs;
+    private long batDauCuaSoLoiMs;
+    private int soLoiTrongCuaSo;
+    private long mocGuiNguyenLieuBossTiepTheoMs;
+    private int soNguyenLieuBossDangCho;
+
+    private static final int GIOI_HAN_TIN_MOI_GIAY = 300;
+    private static final int GIOI_HAN_TIN_MOI_TAI_KHOAN_MOI_GIAY = 450;
+    private static final int GIOI_HAN_TIN_MOI_IP_MOI_GIAY = 2_000;
+    private static final int GIOI_HAN_LOI_TRONG_10_GIAY = 8;
+    private static final int GIOI_HAN_HANG_DOI_NGUYEN_LIEU_BOSS = 64;
+    private static final ConcurrentHashMap<String, CuaSoTanSuat>
+            TAN_SUAT_THEO_IP = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Integer, CuaSoTanSuat>
+            TAN_SUAT_THEO_TAI_KHOAN = new ConcurrentHashMap<>();
+    private static final AtomicInteger DEM_DON_TAN_SUAT = new AtomicInteger();
 
     public ChickenPhien(Channel kenh, int ma) {
         this.kenh = kenh;
         this.ma = ma;
         this.datBoXuLy(new ChickenXuLyTin(this));
         this.datDichVu(new ChickenDichVuGame(this));
+    }
+
+    /**
+     * Chan nhe theo tung phien de client sua doi khong chiem luong Netty
+     * hoac spam log. Kiem tra nghiep vu van duoc thuc hien tai tung handler.
+     */
+    public synchronized boolean choPhepXuLyLenh(int cmd, long hienTaiMs) {
+        if (!this.kichHoat) {
+            return false;
+        }
+        if (this.batDauCuaSoTinMs == 0L
+                || hienTaiMs - this.batDauCuaSoTinMs >= 1_000L) {
+            this.batDauCuaSoTinMs = hienTaiMs;
+            this.soTinTrongCuaSo = 0;
+        }
+        if (++this.soTinTrongCuaSo > GIOI_HAN_TIN_MOI_GIAY) {
+            ChickenQuanLyMayChu.log("[BAO_MAT] Dong phien spam packet "
+                    + this.moTa() + " cmd=" + cmd);
+            this.dongTin();
+            return false;
+        }
+        String ip = this.mayXa();
+        if (ip != null && !ip.isBlank()
+                && !choPhepTanSuatChiaSe(
+                        TAN_SUAT_THEO_IP, ip, hienTaiMs,
+                        GIOI_HAN_TIN_MOI_IP_MOI_GIAY)) {
+            ChickenQuanLyMayChu.log("[BAO_MAT] Vuot tan suat IP "
+                    + this.moTa() + " cmd=" + cmd);
+            this.dongTin();
+            return false;
+        }
+        if (this.user != null && this.user.nguoiChoi != null
+                && !choPhepTanSuatChiaSe(
+                        TAN_SUAT_THEO_TAI_KHOAN,
+                        this.user.nguoiChoi.ma,
+                        hienTaiMs,
+                        GIOI_HAN_TIN_MOI_TAI_KHOAN_MOI_GIAY)) {
+            ChickenQuanLyMayChu.log("[BAO_MAT] Vuot tan suat tai khoan "
+                    + this.moTa() + " cmd=" + cmd);
+            this.dongTin();
+            return false;
+        }
+
+        if (cmd == 21) {
+            if (hienTaiMs - this.lanDiChuyenGanNhatMs < 30L) {
+                return false;
+            }
+            this.lanDiChuyenGanNhatMs = hienTaiMs;
+        } else if (cmd == -91 || cmd == 91 || cmd == -47 || cmd == 49) {
+            if (hienTaiMs - this.lanGuiLenhKyNangGanNhatMs < 75L) {
+                return false;
+            }
+            this.lanGuiLenhKyNangGanNhatMs = hienTaiMs;
+        }
+        return true;
+    }
+
+    private static <K> boolean choPhepTanSuatChiaSe(
+            ConcurrentHashMap<K, CuaSoTanSuat> cacCuaSo,
+            K khoa,
+            long hienTaiMs,
+            int gioiHan
+    ) {
+        CuaSoTanSuat cuaSo = cacCuaSo.computeIfAbsent(
+                khoa, boQua -> new CuaSoTanSuat(hienTaiMs));
+        boolean ketQua = cuaSo.choPhep(hienTaiMs, gioiHan);
+        if ((DEM_DON_TAN_SUAT.incrementAndGet() & 4095) == 0) {
+            long mocCu = hienTaiMs - 60_000L;
+            cacCuaSo.entrySet().removeIf(
+                    entry -> entry.getValue().lanCuoiMs < mocCu);
+        }
+        return ketQua;
+    }
+
+    /**
+     * Gom loi theo cua so, chi log ten loi va dong phien neu lap lai.
+     */
+    public synchronized void ghiNhanPacketLoi(int cmd, Throwable loi) {
+        long hienTaiMs = System.currentTimeMillis();
+        if (this.batDauCuaSoLoiMs == 0L
+                || hienTaiMs - this.batDauCuaSoLoiMs >= 10_000L) {
+            this.batDauCuaSoLoiMs = hienTaiMs;
+            this.soLoiTrongCuaSo = 0;
+        }
+        int soLoi = ++this.soLoiTrongCuaSo;
+        if (soLoi == 1 || soLoi == 4 || soLoi >= GIOI_HAN_LOI_TRONG_10_GIAY) {
+            String loaiLoi = loi == null
+                    ? "khong_ro"
+                    : loi.getClass().getSimpleName();
+            ChickenQuanLyMayChu.log("[BAO_MAT] Packet khong hop le "
+                    + this.moTa() + " cmd=" + cmd
+                    + " loi=" + loaiLoi + " dem=" + soLoi);
+        }
+        if (soLoi >= GIOI_HAN_LOI_TRONG_10_GIAY) {
+            this.dongTin();
+        }
+    }
+
+    /**
+     * Xep terrain boss theo thu tu thay cho Thread.sleep tren Netty.
+     */
+    public synchronized long datLichGuiNguyenLieuBoss(long hienTaiMs) {
+        if (!this.kichHoat
+                || this.soNguyenLieuBossDangCho
+                >= GIOI_HAN_HANG_DOI_NGUYEN_LIEU_BOSS) {
+            return -1L;
+        }
+        long mocGui = Math.max(hienTaiMs, this.mocGuiNguyenLieuBossTiepTheoMs);
+        this.mocGuiNguyenLieuBossTiepTheoMs = mocGui + 250L;
+        this.soNguyenLieuBossDangCho++;
+        return Math.max(0L, mocGui - hienTaiMs);
+    }
+
+    public synchronized void hoanTatGuiNguyenLieuBoss() {
+        if (this.soNguyenLieuBossDangCho > 0) {
+            this.soNguyenLieuBossDangCho--;
+        }
+    }
+
+    public boolean coNguoiChoiDaDangNhap() {
+        return this.user != null && this.user.nguoiChoi != null;
+    }
+
+    public boolean conKichHoat() {
+        return this.kichHoat;
     }
 
     public ChickenTinNhan thuGiaiMaTin(ByteBuf in) {
@@ -346,7 +492,9 @@ implements IChickenPhien {
             this.donMang();
         }
         catch (Exception e) {
-            e.printStackTrace();
+            ChickenQuanLyMayChu.log("Loi don phien " + this.moTa()
+                    + ": " + e.getClass().getSimpleName());
+            this.donMang();
         }
     }
 
@@ -551,6 +699,27 @@ implements IChickenPhien {
         private List<ChickenTinNhan> vResendMessage = new ArrayList<ChickenTinNhan>();
 
         private Count() {
+        }
+    }
+
+    private static final class CuaSoTanSuat {
+        private long batDauMs;
+        private volatile long lanCuoiMs;
+        private int soTin;
+
+        private CuaSoTanSuat(long hienTaiMs) {
+            this.batDauMs = hienTaiMs;
+            this.lanCuoiMs = hienTaiMs;
+        }
+
+        private synchronized boolean choPhep(long hienTaiMs, int gioiHan) {
+            this.lanCuoiMs = hienTaiMs;
+            if (hienTaiMs - this.batDauMs >= 1_000L
+                    || hienTaiMs < this.batDauMs) {
+                this.batDauMs = hienTaiMs;
+                this.soTin = 0;
+            }
+            return ++this.soTin <= gioiHan;
         }
     }
 }

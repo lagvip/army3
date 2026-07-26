@@ -20,6 +20,13 @@ public class ChickenChienBinh {
     public int hp;
     public int mauToiDa;
     public boolean chet;
+    /**
+     * Đã rời hẳn trận đấu nhưng phiên đăng nhập vẫn còn hoạt động.
+     *
+     * Tách cờ này khỏi {@link #chet}: người chết vẫn cần nhận diễn biến trận,
+     * còn người đã bấm thoát thì tuyệt đối không được nhận packet trận đấu nữa.
+     */
+    public boolean daRoiTran;
     public int tanCong;
     public int giap;
     public int mayMan;
@@ -30,6 +37,17 @@ public class ChickenChienBinh {
     public int quangDuongDiChuyenConLai;
     /** Mốc chống spam CMD 53; chỉ dùng ở server, không nhận từ client. */
     public long lanDongBoToaDoGanNhat;
+    /**
+     * Bị tảng đá của Boss Rùa ghim tại chỗ. Tọa độ neo chỉ do server đặt khi
+     * phát CMD -68; client không được tự khai trạng thái này.
+     */
+    public boolean biDaRuaGhim;
+    public short xDaRuaGhim;
+    public short yDaRuaGhim;
+    /** Trạng thái độc do đạn Rùa gây ra; toàn bộ damage được server lưu và tính. */
+    public boolean biDocBossRua;
+    public int satThuongDocBossRuaMoiLuot;
+    public byte slotGayDocBossRua = -1;
     public int hawkSoLuotBan;
     public boolean hawkDaDungKyNang;
     public boolean hawkDaGuiChonMucTieu;
@@ -143,7 +161,9 @@ public class ChickenChienBinh {
     }
 
     public boolean coPhien() {
-        return this.nguoiChoi != null && this.nguoiChoi.dichVu != null;
+        return !this.daRoiTran
+                && this.nguoiChoi != null
+                && this.nguoiChoi.dichVu != null;
     }
 
     /** Phân biệt người chơi thật với bot luyện tập và boss do server tạo. */

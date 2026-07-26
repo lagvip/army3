@@ -1,6 +1,7 @@
 package com.chicken.phong.boss.sanhcho;
 
 import com.chicken.mohinh.ChickenNguoiChoi;
+import com.chicken.nhapvai.ChickenBanDoRPG;
 import com.chicken.phong.ChickenQuanLyPhong;
 import java.io.IOException;
 
@@ -10,9 +11,26 @@ public final class VaoSanhChoBoss {
 
     public static boolean xuLy(ChickenNguoiChoi nguoiChoi, int maBan, String matKhauNhap)
             throws IOException {
+        if (nguoiChoi == null) {
+            return false;
+        }
+        /*
+         * Khóa theo account thay vì theo object session để hai kết nối trùng
+         * tài khoản không thể đồng thời mua vé và chui vào hai phòng khác nhau.
+         */
+        synchronized (QuanLySanhChoBoss.layKhoaTaiKhoan(nguoiChoi.ma)) {
+            return xuLyDaKhoaTaiKhoan(nguoiChoi, maBan, matKhauNhap);
+        }
+    }
+
+    private static boolean xuLyDaKhoaTaiKhoan(
+            ChickenNguoiChoi nguoiChoi,
+            int maBan,
+            String matKhauNhap
+    ) throws IOException {
         DebugSanhBoss.log("BAT_DAU_XU_LY_VAO_SANH", nguoiChoi,
                 "maBan=" + maBan);
-        if (nguoiChoi == null || nguoiChoi.dichVu == null) {
+        if (nguoiChoi.dichVu == null) {
             DebugSanhBoss.log("TU_CHOI_VAO_SANH", nguoiChoi,
                     "lyDo=nguoiChoi_hoac_dichVu_null");
             return false;
@@ -91,6 +109,12 @@ public final class VaoSanhChoBoss {
                 nguoiChoi.startOKDlg2("Không thể xếp ghế trong phòng boss.");
                 return false;
             }
+            /*
+             * Phòng boss là một scene riêng. Tháo người chơi khỏi khu RPG trước
+             * khi dùng chiSo làm số ghế; nếu giữ cả hai trạng thái thì lúc thoát
+             * không thể dựng lại GameScrRPG và còn có nguy cơ xóa nhầm slot RPG.
+             */
+            ChickenBanDoRPG.roi(nguoiChoi);
             nguoiChoi.chiSo = ghe;
             nguoiChoi.pointSeat = (byte) ghe;
             nguoiChoi.isReady = false;
