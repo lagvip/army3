@@ -1,5 +1,6 @@
 package com.chicken.chien;
 
+import com.chicken.avg.ChickenCoCheHulk;
 import com.chicken.chiso.ChickenKichThuocNhanVat;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -141,6 +142,14 @@ public final class ChickenPhatBanServer {
                 short[][] daCat = catTaiVaCham(cacX[i], cacY[i], vaCham);
                 cacX[i] = daCat[0];
                 cacY[i] = daCat[1];
+                if (ChickenCoCheHulk.laHulk(nguoiBan.avenger)) {
+                    ChickenCoCheHulk.datDiemCuoiTaiChanMucTieu(
+                            cacX[i],
+                            cacY[i],
+                            vaCham.mucTieu.x,
+                            vaCham.mucTieu.y
+                    );
+                }
             }
             if (hoSoSatThuong == null) {
                 continue;
@@ -345,6 +354,7 @@ public final class ChickenPhatBanServer {
                 double tiLe = (double) buoc / (double) soBuoc;
                 int danX = (int) Math.round(x1 + (x2 - x1) * tiLe);
                 int danY = (int) Math.round(y1 + (y2 - y1) * tiLe);
+                VaCham vaChamNguoiBan = null;
                 for (ChickenChienBinh mucTieu : cacMucTieu) {
                     if (!laMucTieuHopLe(
                             nguoiBan, mucTieu, boLoc)) {
@@ -353,13 +363,27 @@ public final class ChickenPhatBanServer {
                     boolean trung = trungHitbox(
                             boLoc, mucTieu, danX, danY);
                     if (trung) {
-                        return new VaCham(
+                        VaCham vaCham = new VaCham(
                                 mucTieu,
                                 i,
                                 (short) danX,
                                 (short) danY
                         );
+                        /*
+                         * Trong phong boss co cho phep tu ban. Hulk sau khi lao
+                         * thuong dung trung toa do voi muc tieu, nen cung mot
+                         * diem dan co the nam trong ca hai hitbox. Uu tien doi
+                         * thu tai chinh diem do; neu khong co ai khac thi van
+                         * giu va cham vao nguoi ban nhu luat friendly fire.
+                         */
+                        if (mucTieu != nguoiBan) {
+                            return vaCham;
+                        }
+                        vaChamNguoiBan = vaCham;
                     }
+                }
+                if (vaChamNguoiBan != null) {
+                    return vaChamNguoiBan;
                 }
             }
         }
@@ -494,6 +518,11 @@ public final class ChickenPhatBanServer {
                 && !mucTieu.chet
                 && mucTieu.hp > 0
                 /*
+                 * Giong luyen tap: Hulk chinh la vat the dang bay. Duong lao
+                 * quay lai vi tri cu chi la ha canh, khong phai tu ban trung.
+                 */
+                && !laHulkTuVaCham(nguoiBan, mucTieu)
+                /*
                  * Khong tu quyet dinh loai nguoi ban tai tang va cham.
                  * PvP tu choi self-hit trong BoLoc cua PvP; cac phong boss
                  * chu dong chap nhan de dong bo voi luyen tap/friendly fire.
@@ -514,7 +543,17 @@ public final class ChickenPhatBanServer {
         return mucTieu != null
                 && !mucTieu.chet
                 && mucTieu.hp > 0
+                && !laHulkTuVaCham(nguoiBan, mucTieu)
                 && (boLoc == null || boLoc.chapNhan(nguoiBan, mucTieu));
+    }
+
+    private static boolean laHulkTuVaCham(
+            ChickenChienBinh nguoiBan,
+            ChickenChienBinh mucTieu
+    ) {
+        return nguoiBan == mucTieu
+                && nguoiBan != null
+                && ChickenCoCheHulk.laHulk(nguoiBan.avenger);
     }
 
     private static boolean laDiemVaChamDiaHinh(

@@ -18,6 +18,30 @@ public final class ChickenCoCheHulk {
         return avenger == AVG_HULK;
     }
 
+    /**
+     * Client gan truc tiep toa do Hulk bang tung diem cua duong dan. Khi duong
+     * dan cham nhan vat, diem va cham dau tien nam o mep hitbox (thuong la
+     * dau/vai), khong phai toa do chan. Diem cuoi rieng cua Hulk vi vay phai
+     * duoc chot ve toa do chan authoritative cua muc tieu.
+     */
+    public static boolean datDiemCuoiTaiChanMucTieu(
+            short[] xs,
+            short[] ys,
+            short mucTieuX,
+            short mucTieuY
+    ) {
+        int soDiem = Math.min(
+                xs == null ? 0 : xs.length,
+                ys == null ? 0 : ys.length
+        );
+        if (soDiem <= 0) {
+            return false;
+        }
+        xs[soDiem - 1] = mucTieuX;
+        ys[soDiem - 1] = mucTieuY;
+        return true;
+    }
+
     /** Chot toa do server cua Hulk tai diem cuoi duong dan chinh. */
     public static boolean apDungViTriCuoi(
             ChickenChienBinh hulk,

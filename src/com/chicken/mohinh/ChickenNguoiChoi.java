@@ -1801,6 +1801,10 @@ public class ChickenNguoiChoi {
                      */
                     duongDan = this.catDuongDanTaiVaChamNhanVatLuyenTap(
                             duongDan[0], duongDan[1], vaChamNhanVat);
+                    if (hulkLaNguoiDan) {
+                        this.chotDiemCuoiHulkTaiMucTieuLuyenTap(
+                                duongDan, vaChamNhanVat);
+                    }
                     boolean tiaGaySatThuong = !banX3Ultron || vien == 1;
                     if (tiaGaySatThuong && hoSoSatThuong.coNoTheoKhoangCach()) {
                         int soDiemVaCham = Math.min(duongDan[0].length, duongDan[1].length);
@@ -3755,6 +3759,29 @@ public class ChickenNguoiChoi {
         ketQuaX[doDai - 1] = vaCham.hitX;
         ketQuaY[doDai - 1] = vaCham.hitY;
         return new short[][]{ketQuaX, ketQuaY};
+    }
+
+    private void chotDiemCuoiHulkTaiMucTieuLuyenTap(
+            short[][] duongDan,
+            TrainingCharacterHit vaCham
+    ) {
+        if (duongDan == null || duongDan.length < 2 || vaCham == null) {
+            return;
+        }
+        short mucTieuX;
+        short mucTieuY;
+        if (vaCham.laNguoiChoi()) {
+            mucTieuX = this.trainingSession.trainingPlayerX;
+            mucTieuY = this.trainingSession.trainingPlayerY;
+        } else if (vaCham.botIndex >= 0
+                && vaCham.botIndex < TRAINING_BOT_COUNT) {
+            mucTieuX = this.trainingSession.trainingBotX[vaCham.botIndex];
+            mucTieuY = this.trainingSession.trainingBotY[vaCham.botIndex];
+        } else {
+            return;
+        }
+        ChickenCoCheHulk.datDiemCuoiTaiChanMucTieu(
+                duongDan[0], duongDan[1], mucTieuX, mucTieuY);
     }
 
     private boolean diemLuyenTapTrungBia(int pointX, int pointY) {

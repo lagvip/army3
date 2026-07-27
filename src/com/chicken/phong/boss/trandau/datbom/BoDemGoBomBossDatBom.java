@@ -1,6 +1,5 @@
 package com.chicken.phong.boss.trandau.datbom;
 
-import com.chicken.chiso.ChickenKichThuocNhanVat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -8,13 +7,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Tracks four consecutive completed turns spent standing on a timed bomb.
+ * Tracks four consecutive completed turns spent inside a timed bomb's
+ * interaction radius.
  * Player positions are supplied by authoritative server state.
  */
 public final class BoDemGoBomBossDatBom {
     public static final int SO_LUOT_CAN_GO = 4;
     public static final int PHAN_TRAM_MOI_LUOT = 100 / SO_LUOT_CAN_GO;
-    public static final int SAI_SO_CHAN_Y = 6;
+    /** Ban kinh tuong tac tron; ap dung nhu nhau cho nguoi di bo va AVG bay. */
+    public static final int BAN_KINH_GO_BOM = 48;
+    private static final long BINH_PHUONG_BAN_KINH_GO_BOM =
+            (long) BAN_KINH_GO_BOM * BAN_KINH_GO_BOM;
 
     private final Map<Byte, TrangThai> trangThaiTheoBom =
             new LinkedHashMap<>();
@@ -54,12 +57,12 @@ public final class BoDemGoBomBossDatBom {
                 : new ArrayList<>(this.trangThaiTheoBom.values())) {
             boolean coNguoiDungTrenBom = false;
             for (ViTriNguoiChoi viTri : viTris) {
-                if (viTri != null
-                        && Math.abs(viTri.x - trangThai.x)
-                                <= ChickenKichThuocNhanVat
-                                        .NGUOI_CHOI_NUA_RONG
-                        && Math.abs(viTri.y - trangThai.y)
-                                <= SAI_SO_CHAN_Y) {
+                if (viTri == null) {
+                    continue;
+                }
+                long dx = (long) viTri.x - trangThai.x;
+                long dy = (long) viTri.y - trangThai.y;
+                if (dx * dx + dy * dy <= BINH_PHUONG_BAN_KINH_GO_BOM) {
                     coNguoiDungTrenBom = true;
                     break;
                 }
