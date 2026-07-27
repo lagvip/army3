@@ -6,11 +6,15 @@ import com.chicken.chiso.ChickenKichThuocNhanVat;
 
 /** Di chuyển bay và tọa độ kẹp/thả riêng của BigBoss Rồng. */
 public final class DiChuyenBossRong {
-    public static final int BUOC_BAY_TOI_DA = 50;
-    public static final int BUOC_ROI = 14;
-    public static final int LECH_Y_NGUOI_BI_KEP = 47;
-    public static final int NUA_RONG_HITBOX = 72;
-    public static final int CHIEU_CAO_HITBOX = 122;
+    /*
+     * Bullet client native mo rong pW=20, pH=35 cua BigBoss them 15 px moi
+     * canh: Rectangle(x - 25, y - 50, 50, 65). CRes.inRect dung canh phai
+     * va canh duoi dang exclusive, nen pixel cuoi la x+24 va y+14.
+     */
+    private static final int NUA_RONG_NGUOI_CHOI =
+            ChickenKichThuocNhanVat.NGUOI_CHOI_NUA_RONG;
+    private static final int CAO_THAN_NGUOI_CHOI =
+            ChickenKichThuocNhanVat.NGUOI_CHOI_LECH_TREN;
 
     private DiChuyenBossRong() {
     }
@@ -31,7 +35,9 @@ public final class DiChuyenBossRong {
             }
             long dx = (long) nguoi.x - boss.x;
             long dy = (long) ChickenKichThuocNhanVat.layTamThanNguoiChoiY(nguoi.y)
-                    - (boss.y - CHIEU_CAO_HITBOX / 2L);
+                    - (boss.y
+                            + (CauHinhBossRong.HITBOX_LECH_DUOI
+                                    - CauHinhBossRong.HITBOX_LECH_TREN) / 2L);
             long kc = dx * dx + dy * dy;
             if (kc < khoangCachNhoNhat) {
                 khoangCachNhoNhat = kc;
@@ -58,14 +64,55 @@ public final class DiChuyenBossRong {
         if (kc <= 1.0D) {
             return kepTrongMap(denX, denY, banDo);
         }
-        double tiLe = Math.min(1.0D, BUOC_BAY_TOI_DA / kc);
+        double tiLe = Math.min(
+                1.0D,
+                CauHinhBossRong.BUOC_BAY_TOI_DA / kc);
         int x = (int) Math.round(tuX + dx * tiLe);
         int y = (int) Math.round(tuY + dy * tiLe);
         return kepTrongMap(x, y, banDo);
     }
 
     public static boolean daDenGan(int x, int y, int denX, int denY) {
-        return Math.hypot(denX - x, denY - y) <= BUOC_BAY_TOI_DA;
+        return Math.hypot(denX - x, denY - y)
+                <= CauHinhBossRong.BUOC_BAY_TOI_DA;
+    }
+
+    /** Tra ve mot dich bay hop le de server chi can gui mot lenh di chuyen. */
+    public static short[] chuanHoaDiemBay(
+            int x,
+            int y,
+            ChickenQuanLyBanDo banDo
+    ) {
+        if (banDo == null) {
+            return new short[]{(short) x, (short) y};
+        }
+        return kepTrongMap(x, y, banDo);
+    }
+
+    /**
+     * Uoc luong thoi gian client native noi suy toi dich. Server khong gui
+     * them diem trung gian trong khoang nay de tranh ghi de xToNow lien tuc.
+     */
+    public static long tinhThoiGianBayMs(
+            int tuX,
+            int tuY,
+            int denX,
+            int denY
+    ) {
+        double khoangCach = Math.hypot(denX - tuX, denY - tuY);
+        long soFrame = Math.max(
+                1L,
+                (long) Math.ceil(
+                        khoangCach
+                                / CauHinhBossRong.TOC_DO_BAY_CLIENT_MOI_FRAME)
+        );
+        return Math.max(
+                CauHinhBossRong.THOI_GIAN_BAY_TOI_THIEU_MS,
+                Math.min(
+                        CauHinhBossRong.THOI_GIAN_BAY_TOI_DA_MS,
+                        soFrame * CauHinhBossRong.THOI_GIAN_FRAME_CLIENT_MS
+                )
+        );
     }
 
     /** Điểm trung chuyển: bay sang nửa map đối diện và nâng mục tiêu lên cao. */
@@ -75,9 +122,19 @@ public final class DiChuyenBossRong {
     ) {
         int nuaMap = banDo.getWidth() / 2;
         int x = mucTieu.x < nuaMap
-                ? Math.max(nuaMap + 120, banDo.getWidth() - 200)
-                : Math.min(nuaMap - 120, 200);
-        int y = Math.max(130, Math.min(230, mucTieu.y - 170));
+                ? Math.max(
+                        nuaMap + CauHinhBossRong.LECH_NUA_MAP_DIEM_MANG,
+                        banDo.getWidth()
+                                - CauHinhBossRong.CACH_RIA_MAP_DIEM_MANG)
+                : Math.min(
+                        nuaMap - CauHinhBossRong.LECH_NUA_MAP_DIEM_MANG,
+                        CauHinhBossRong.CACH_RIA_MAP_DIEM_MANG);
+        int y = Math.max(
+                CauHinhBossRong.Y_DIEM_MANG_TOI_THIEU,
+                Math.min(
+                        CauHinhBossRong.Y_DIEM_MANG_TOI_DA,
+                        mucTieu.y
+                                - CauHinhBossRong.DO_CAO_NANG_NGUOI_KHI_MANG));
         return kepTrongMap(x, y, banDo);
     }
 
@@ -88,7 +145,7 @@ public final class DiChuyenBossRong {
             ChickenQuanLyBanDo banDo
     ) {
         int start = Math.max(0, batDauY);
-        int max = banDo.getHeight() + 24;
+        int max = banDo.getHeight() - 2;
         for (int y = start; y <= max; y++) {
             if (coNenNguoiChoi(x, y, banDo)) {
                 return y;
@@ -97,11 +154,93 @@ public final class DiChuyenBossRong {
         return -1;
     }
 
+    /**
+     * Tim diem tha gan X uu tien nhat ma toan bo than nguoi choi khong nam
+     * trong dia hinh. Neu cot uu tien bi mot tang da bit kin, tim dan sang hai
+     * ben; khong co nen hop le thi tra ve null de xu ly roi xuong vuc.
+     */
+    public static short[] chonDiemThaAnToan(
+            int xUuTien,
+            int batDauY,
+            ChickenQuanLyBanDo banDo
+    ) {
+        if (banDo == null || banDo.getWidth() <= NUA_RONG_NGUOI_CHOI * 2
+                || banDo.getHeight() <= CAO_THAN_NGUOI_CHOI + 1) {
+            return null;
+        }
+        int xMin = NUA_RONG_NGUOI_CHOI;
+        int xMax = banDo.getWidth() - 1 - NUA_RONG_NGUOI_CHOI;
+        int xGiua = Math.max(xMin, Math.min(xMax, xUuTien));
+        int gioiHan = Math.max(xGiua - xMin, xMax - xGiua);
+        for (int doLech = 0; doLech <= gioiHan;
+                doLech += CauHinhBossRong.BUOC_TIM_X_THA_AN_TOAN) {
+            int xPhai = xGiua + doLech;
+            if (xPhai <= xMax) {
+                int y = timChanDatAnToanTaiX(xPhai, batDauY, banDo);
+                if (y >= 0) {
+                    return new short[]{(short) xPhai, (short) y};
+                }
+            }
+            if (doLech == 0) {
+                continue;
+            }
+            int xTrai = xGiua - doLech;
+            if (xTrai >= xMin) {
+                int y = timChanDatAnToanTaiX(xTrai, batDauY, banDo);
+                if (y >= 0) {
+                    return new short[]{(short) xTrai, (short) y};
+                }
+            }
+        }
+        return null;
+    }
+
+    public static boolean laDiemThaAnToan(
+            int x,
+            int chanY,
+            ChickenQuanLyBanDo banDo
+    ) {
+        if (banDo == null
+                || x - NUA_RONG_NGUOI_CHOI < 0
+                || x + NUA_RONG_NGUOI_CHOI >= banDo.getWidth()
+                || chanY - CAO_THAN_NGUOI_CHOI < 0
+                || chanY + 1 >= banDo.getHeight()
+                || !coNenNguoiChoi(x, chanY, banDo)) {
+            return false;
+        }
+        for (int px = x - NUA_RONG_NGUOI_CHOI;
+                px <= x + NUA_RONG_NGUOI_CHOI; px++) {
+            for (int py = chanY - CAO_THAN_NGUOI_CHOI;
+                    py <= chanY; py++) {
+                if (banDo.coVaCham((short) px, (short) py)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     public static boolean trungBossRong(int danX, int danY, int bossX, int bossY) {
-        return danX >= bossX - NUA_RONG_HITBOX
-                && danX <= bossX + NUA_RONG_HITBOX
-                && danY >= bossY - CHIEU_CAO_HITBOX
-                && danY <= bossY;
+        return danX >= bossX - CauHinhBossRong.HITBOX_LECH_TRAI
+                && danX <= bossX + CauHinhBossRong.HITBOX_LECH_PHAI
+                && danY >= bossY - CauHinhBossRong.HITBOX_LECH_TREN
+                && danY <= bossY + CauHinhBossRong.HITBOX_LECH_DUOI;
+    }
+
+    private static int timChanDatAnToanTaiX(
+            int x,
+            int batDauY,
+            ChickenQuanLyBanDo banDo
+    ) {
+        int start = Math.max(CAO_THAN_NGUOI_CHOI, batDauY);
+        int max = banDo.getHeight() - 2;
+        for (int y = start; y <= max; y++) {
+            if (coNenNguoiChoi(x, y, banDo)
+                    && laDiemThaAnToan(x, y, banDo)) {
+                return y;
+            }
+        }
+        return -1;
     }
 
     private static boolean coNenNguoiChoi(
@@ -110,6 +249,9 @@ public final class DiChuyenBossRong {
             ChickenQuanLyBanDo banDo
     ) {
         int y = chanY + 1;
+        if (y < 0 || y >= banDo.getHeight()) {
+            return false;
+        }
         int[] lechX = new int[]{-5, 0, 5};
         for (int lech : lechX) {
             int px = x + lech;
@@ -123,10 +265,16 @@ public final class DiChuyenBossRong {
     }
 
     private static short[] kepTrongMap(int x, int y, ChickenQuanLyBanDo banDo) {
-        int xMin = NUA_RONG_HITBOX;
-        int xMax = Math.max(xMin, banDo.getWidth() - 1 - NUA_RONG_HITBOX);
-        int yMin = 90;
-        int yMax = Math.max(yMin, banDo.getHeight() - 35);
+        int xMin = CauHinhBossRong.HITBOX_LECH_TRAI;
+        int xMax = Math.max(
+                xMin,
+                banDo.getWidth() - 1
+                        - CauHinhBossRong.HITBOX_LECH_TRAI);
+        int yMin = CauHinhBossRong.HITBOX_LECH_TREN;
+        int yMax = Math.max(
+                yMin,
+                banDo.getHeight() - 1
+                        - CauHinhBossRong.HITBOX_LECH_DUOI);
         x = Math.max(xMin, Math.min(xMax, x));
         y = Math.max(yMin, Math.min(yMax, y));
         return new short[]{(short) x, (short) y};

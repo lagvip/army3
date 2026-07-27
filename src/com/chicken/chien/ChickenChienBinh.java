@@ -73,7 +73,11 @@ public class ChickenChienBinh {
         this.bot = false;
         this.ten = nguoiChoi.ten;
         this.ma = nguoiChoi.ma;
-        this.avenger = ChickenCoCheBayAVG.layAvengerTuTrangBi(nguoiChoi);
+        /*
+         * avenger la state do server suy ra luc nap/doi trang bi. Dung truc
+         * tiep de client nhan dung animation bay cua Iron Man/Ultron.
+         */
+        this.avenger = nguoiChoi.avenger;
         this.duocPhepBay = ChickenCoCheBayAVG.laIdBayDuocPhep(this.avenger);
         this.maVuKhi = layVuKhiHienThiTrongTran(nguoiChoi);
         this.x = x;

@@ -48,6 +48,24 @@ public final class BossBanSung {
             byte windX,
             byte windY
     ) {
+        return taoPhatBan(
+                boss,
+                mucTieu,
+                new ChickenChienBinh[]{mucTieu},
+                banDo,
+                windX,
+                windY
+        );
+    }
+
+    public static ChickenKetQuaDan taoPhatBan(
+            ChickenChienBinh boss,
+            ChickenChienBinh mucTieu,
+            ChickenChienBinh[] cacMucTieu,
+            ChickenQuanLyBanDo banDo,
+            byte windX,
+            byte windY
+    ) {
         ChickenQuanLyDanSung.DuLieuSung duLieu =
                 ChickenQuanLyDanSung.theoPartSung(boss.maVuKhi);
         byte loaiDan = duLieu == null ? (byte) 1 : duLieu.getLoaiDan();
@@ -68,14 +86,14 @@ public final class BossBanSung {
         short[][] duongDan = taoDuongDanCong(
                 dauNong[0], dauNong[1], mucTieu.x, (short) mucTieuY,
                 banDo, windX, windY);
-        VaChamNhanVat vaCham = timVaChamNguoiChoi(
-                duongDan[0], duongDan[1], mucTieu);
+        VaChamNhanVat vaCham = timVaChamNhanVat(
+                duongDan[0], duongDan[1], boss, cacMucTieu);
         if (vaCham != null) {
             duongDan = catTaiVaCham(duongDan[0], duongDan[1], vaCham);
         }
         int satThuong = vaCham == null
                 ? 0
-                : Math.max(1, boss.tanCong - mucTieu.giap);
+                : Math.max(1, boss.tanCong - vaCham.mucTieu.giap);
         return new ChickenKetQuaDan(
                 loaiDan,
                 dauNong[0],
@@ -84,7 +102,7 @@ public final class BossBanSung {
                 LUC_HIEN_THI,
                 duongDan[0],
                 duongDan[1],
-                vaCham == null ? null : mucTieu,
+                vaCham == null ? null : vaCham.mucTieu,
                 satThuong
         );
     }
@@ -203,9 +221,13 @@ public final class BossBanSung {
         return null;
     }
 
-    private static VaChamNhanVat timVaChamNguoiChoi(
-            short[] xs, short[] ys, ChickenChienBinh mucTieu
+    private static VaChamNhanVat timVaChamNhanVat(
+            short[] xs,
+            short[] ys,
+            ChickenChienBinh nguoiBan,
+            ChickenChienBinh[] cacMucTieu
     ) {
+        boolean daRoiHitboxNguoiBan = false;
         int soDiem = Math.min(xs.length, ys.length);
         for (int i = 1; i < soDiem; i++) {
             int x1 = xs[i - 1];
@@ -217,12 +239,44 @@ public final class BossBanSung {
                 double t = (double) buoc / (double) soBuoc;
                 int x = (int) Math.round(x1 + (x2 - x1) * t);
                 int y = (int) Math.round(y1 + (y2 - y1) * t);
-                if (ChickenKichThuocNhanVat.trungNguoiChoi(x, y, mucTieu.x, mucTieu.y)) {
-                    return new VaChamNhanVat(i, (short) x, (short) y);
+                if (!daRoiHitboxNguoiBan) {
+                    daRoiHitboxNguoiBan = !trungHitbox(
+                            nguoiBan, x, y);
+                    if (!daRoiHitboxNguoiBan) {
+                        continue;
+                    }
+                }
+                if (cacMucTieu == null) {
+                    continue;
+                }
+                for (ChickenChienBinh mucTieu : cacMucTieu) {
+                    if (mucTieu == null || mucTieu.chet
+                            || mucTieu.hp <= 0) {
+                        continue;
+                    }
+                    if (trungHitbox(mucTieu, x, y)) {
+                        return new VaChamNhanVat(
+                                i, (short) x, (short) y, mucTieu);
+                    }
                 }
             }
         }
         return null;
+    }
+
+    private static boolean trungHitbox(
+            ChickenChienBinh mucTieu,
+            int x,
+            int y
+    ) {
+        if (mucTieu == null) {
+            return false;
+        }
+        return mucTieu.bot
+                ? ChickenKichThuocNhanVat.trungBoss(
+                        x, y, mucTieu.x, mucTieu.y)
+                : ChickenKichThuocNhanVat.trungNguoiChoi(
+                        x, y, mucTieu.x, mucTieu.y);
     }
 
     private static short[][] catTaiVaCham(short[] xs, short[] ys, VaChamNhanVat vaCham) {
@@ -256,11 +310,18 @@ public final class BossBanSung {
         private final int chiSoDoan;
         private final short x;
         private final short y;
+        private final ChickenChienBinh mucTieu;
 
-        private VaChamNhanVat(int chiSoDoan, short x, short y) {
+        private VaChamNhanVat(
+                int chiSoDoan,
+                short x,
+                short y,
+                ChickenChienBinh mucTieu
+        ) {
             this.chiSoDoan = chiSoDoan;
             this.x = x;
             this.y = y;
+            this.mucTieu = mucTieu;
         }
     }
 }

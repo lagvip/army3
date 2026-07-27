@@ -45,8 +45,49 @@ public final class ChickenKiemThuToanGame {
 
         chay("7 boss: moi luot chi nhan mot phat ban",
                 ChickenKiemThuToanGame::kiemTraMotPhatMoiLuotTatCaBoss);
+        chay("7 boss: chi mo GameScr sau ACK tai anh dan",
+                ChickenKiemThuToanGame::kiemTraKhongGuiGameScrSom);
         System.out.println("GAME_TEST_OK matrices=" + soMaTranDaChay
                 + " bossMaps=" + MAP_BOSS.length);
+    }
+
+    /**
+     * CMD 20 khoi tao tran va lam client tai anh dan. Client chi gui ACK -67
+     * sau khi BulletForGun.nMustGet ve 0; server khong duoc gui -67 som trong
+     * batDau(), neu khong client co the quay lai BoardScr khi tai nguyen den
+     * lech thu tu.
+     */
+    private static void kiemTraKhongGuiGameScrSom() throws Exception {
+        for (int mapId : MAP_BOSS) {
+            DichVuBatPacket dichVu = new DichVuBatPacket();
+            ChickenNguoiChoi nguoiChoi = new ChickenNguoiChoi(dichVu);
+            nguoiChoi.ma = 97_000 + mapId;
+            nguoiChoi.ten = "BossSceneHandshake" + mapId;
+            nguoiChoi.wp = 57;
+
+            SanhChoBoss sanh = new SanhChoBoss(
+                    (byte) 4,
+                    (byte) (mapId - 50),
+                    (byte) mapId,
+                    (byte) 8,
+                    1_000
+            );
+            dung(sanh.themThanhVien(new ThanhVienBoss(
+                            nguoiChoi, (byte) 0, mapId, true)),
+                    "khong them duoc player handshake map=" + mapId);
+
+            ChickenQuanLyChien tran = taoTranBoss(mapId, sanh);
+            khacNull(tran, "khong tao duoc boss handshake map=" + mapId);
+            try {
+                tran.batDau();
+                bang(1, dichVu.demLenh(20),
+                        "boss khong gui dung mot CMD20 map=" + mapId);
+                bang(0, dichVu.demLenh(-67),
+                        "boss gui -67 truoc ACK tai anh dan map=" + mapId);
+            } finally {
+                tran.dungBot();
+            }
+        }
     }
 
     /**

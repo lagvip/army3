@@ -19,6 +19,36 @@ public final class ChickenPhatBanServer {
 
     public interface BoLocMucTieu {
         boolean chapNhan(ChickenChienBinh nguoiBan, ChickenChienBinh mucTieu);
+
+        default boolean trungHitbox(
+                ChickenChienBinh mucTieu,
+                int danX,
+                int danY
+        ) {
+            return mucTieu.bot
+                    ? ChickenKichThuocNhanVat.trungBoss(
+                            danX, danY, mucTieu.x, mucTieu.y)
+                    : ChickenKichThuocNhanVat.trungNguoiChoi(
+                            danX, danY, mucTieu.x, mucTieu.y);
+        }
+
+        default int nuaRongHitbox(ChickenChienBinh mucTieu) {
+            return mucTieu.bot
+                    ? ChickenKichThuocNhanVat.BOSS_NUA_RONG
+                    : ChickenKichThuocNhanVat.NGUOI_CHOI_NUA_RONG;
+        }
+
+        default int lechTrenHitbox(ChickenChienBinh mucTieu) {
+            return mucTieu.bot
+                    ? ChickenKichThuocNhanVat.BOSS_LECH_TREN
+                    : ChickenKichThuocNhanVat.NGUOI_CHOI_LECH_TREN;
+        }
+
+        default int lechDuoiHitbox(ChickenChienBinh mucTieu) {
+            return mucTieu.bot
+                    ? ChickenKichThuocNhanVat.BOSS_LECH_DUOI
+                    : ChickenKichThuocNhanVat.NGUOI_CHOI_LECH_DUOI;
+        }
     }
 
     public static ChickenKetQuaDan tao(
@@ -150,14 +180,13 @@ public final class ChickenPhatBanServer {
                                 soDuong,
                                 mucTieuSieuCao.contains(mucTieu)
                         );
-                        int damageNo = ChickenTinhSatThuongNo.tinhSatThuongChoNhanVat(
+                        int damageNo = tinhSatThuongNoChoMucTieu(
                                 hoSoSatThuong,
                                 damageDayDu,
                                 xNo,
                                 yNo,
-                                mucTieu.x,
-                                mucTieu.y,
-                                mucTieu.bot,
+                                mucTieu,
+                                boLoc,
                                 banDo
                         );
                         int damageLuotQua = damageMotDuong.containsKey(mucTieu)
@@ -209,14 +238,13 @@ public final class ChickenPhatBanServer {
                         mucTieuSieuCao.contains(mucTieu)
                 );
                 int damageTheoKhoangCach =
-                        ChickenTinhSatThuongNo.tinhSatThuongChoNhanVat(
+                        tinhSatThuongNoChoMucTieu(
                                 hoSoSatThuong,
                                 damageDayDuMoiDuong,
                                 xNo,
                                 yNo,
-                                mucTieu.x,
-                                mucTieu.y,
-                                mucTieu.bot,
+                                mucTieu,
+                                boLoc,
                                 banDo
                         );
                 congSatThuong(
@@ -284,7 +312,8 @@ public final class ChickenPhatBanServer {
                     ysKhongDiaHinh,
                     mucTieu.x,
                     mucTieu.y,
-                    mucTieu.bot
+                    (danX, danY) -> trungHitbox(
+                            boLoc, mucTieu, danX, danY)
             )) {
                 ketQua.add(mucTieu);
             }
@@ -317,19 +346,12 @@ public final class ChickenPhatBanServer {
                 int danX = (int) Math.round(x1 + (x2 - x1) * tiLe);
                 int danY = (int) Math.round(y1 + (y2 - y1) * tiLe);
                 for (ChickenChienBinh mucTieu : cacMucTieu) {
-                    if (mucTieu == null
-                            || mucTieu == nguoiBan
-                            || mucTieu.chet
-                            || mucTieu.hp <= 0
-                            || (boLoc != null
-                                    && !boLoc.chapNhan(nguoiBan, mucTieu))) {
+                    if (!laMucTieuHopLe(
+                            nguoiBan, mucTieu, boLoc)) {
                         continue;
                     }
-                    boolean trung = mucTieu.bot
-                            ? ChickenKichThuocNhanVat.trungBoss(
-                                    danX, danY, mucTieu.x, mucTieu.y)
-                            : ChickenKichThuocNhanVat.trungNguoiChoi(
-                                    danX, danY, mucTieu.x, mucTieu.y);
+                    boolean trung = trungHitbox(
+                            boLoc, mucTieu, danX, danY);
                     if (trung) {
                         return new VaCham(
                                 mucTieu,
@@ -357,7 +379,8 @@ public final class ChickenPhatBanServer {
         }
         for (ChickenChienBinh mucTieu : cacMucTieu) {
             if (laMucTieuHopLe(nguoiBan, mucTieu, boLoc)
-                    && duongDanTrungMucTieu(xs, ys, mucTieu)) {
+                    && duongDanTrungMucTieu(
+                            xs, ys, mucTieu, boLoc)) {
                 ketQua.add(mucTieu);
             }
         }
@@ -367,7 +390,8 @@ public final class ChickenPhatBanServer {
     private static boolean duongDanTrungMucTieu(
             short[] xs,
             short[] ys,
-            ChickenChienBinh mucTieu
+            ChickenChienBinh mucTieu,
+            BoLocMucTieu boLoc
     ) {
         int soDiem = Math.min(xs.length, ys.length);
         for (int i = 1; i < soDiem; i++) {
@@ -380,11 +404,8 @@ public final class ChickenPhatBanServer {
                 double tiLe = (double) buoc / (double) soBuoc;
                 int danX = (int) Math.round(x1 + (x2 - x1) * tiLe);
                 int danY = (int) Math.round(y1 + (y2 - y1) * tiLe);
-                boolean trung = mucTieu.bot
-                        ? ChickenKichThuocNhanVat.trungBoss(
-                                danX, danY, mucTieu.x, mucTieu.y)
-                        : ChickenKichThuocNhanVat.trungNguoiChoi(
-                                danX, danY, mucTieu.x, mucTieu.y);
+                boolean trung = trungHitbox(
+                        boLoc, mucTieu, danX, danY);
                 if (trung) {
                     return true;
                 }
@@ -393,22 +414,97 @@ public final class ChickenPhatBanServer {
         return false;
     }
 
+    private static int tinhSatThuongNoChoMucTieu(
+            ChickenCauHinhSatThuongSung.HoSoSatThuong hoSo,
+            int satThuongGoc,
+            int xNo,
+            int yNo,
+            ChickenChienBinh mucTieu,
+            BoLocMucTieu boLoc,
+            ChickenQuanLyCongThucSung.KiemTraBanDo banDo
+    ) {
+        if (hoSo == null || mucTieu == null || satThuongGoc <= 0) {
+            return 0;
+        }
+        int nuaRong = boLoc == null
+                ? (mucTieu.bot
+                        ? ChickenKichThuocNhanVat.BOSS_NUA_RONG
+                        : ChickenKichThuocNhanVat.NGUOI_CHOI_NUA_RONG)
+                : boLoc.nuaRongHitbox(mucTieu);
+        int lechTren = boLoc == null
+                ? (mucTieu.bot
+                        ? ChickenKichThuocNhanVat.BOSS_LECH_TREN
+                        : ChickenKichThuocNhanVat.NGUOI_CHOI_LECH_TREN)
+                : boLoc.lechTrenHitbox(mucTieu);
+        int lechDuoi = boLoc == null
+                ? (mucTieu.bot
+                        ? ChickenKichThuocNhanVat.BOSS_LECH_DUOI
+                        : ChickenKichThuocNhanVat.NGUOI_CHOI_LECH_DUOI)
+                : boLoc.lechDuoiHitbox(mucTieu);
+        int dichX = Math.max(
+                mucTieu.x - nuaRong,
+                Math.min(mucTieu.x + nuaRong, xNo));
+        int dichY = Math.max(
+                mucTieu.y - lechTren,
+                Math.min(mucTieu.y - lechDuoi, yNo));
+        double khoangCach = Math.hypot(xNo - dichX, yNo - dichY);
+        if (ChickenTinhSatThuongNo.tinhPhanTramTheoKhoangCach(
+                hoSo, khoangCach) <= 0) {
+            return 0;
+        }
+        int phanTramQuaDiaHinh =
+                ChickenTinhSatThuongNo.tinhPhanTramQuaDiaHinh(
+                        hoSo,
+                        xNo,
+                        yNo,
+                        mucTieu.x,
+                        mucTieu.y,
+                        nuaRong,
+                        lechTren,
+                        lechDuoi,
+                        banDo,
+                        khoangCach
+                );
+        return ChickenTinhSatThuongNo.tinhSatThuong(
+                hoSo, satThuongGoc, khoangCach, phanTramQuaDiaHinh);
+    }
+
+    private static boolean trungHitbox(
+            BoLocMucTieu boLoc,
+            ChickenChienBinh mucTieu,
+            int danX,
+            int danY
+    ) {
+        if (boLoc != null) {
+            return boLoc.trungHitbox(mucTieu, danX, danY);
+        }
+        return mucTieu.bot
+                ? ChickenKichThuocNhanVat.trungBoss(
+                        danX, danY, mucTieu.x, mucTieu.y)
+                : ChickenKichThuocNhanVat.trungNguoiChoi(
+                        danX, danY, mucTieu.x, mucTieu.y);
+    }
+
     private static boolean laMucTieuHopLe(
             ChickenChienBinh nguoiBan,
             ChickenChienBinh mucTieu,
             BoLocMucTieu boLoc
     ) {
         return mucTieu != null
-                && mucTieu != nguoiBan
                 && !mucTieu.chet
                 && mucTieu.hp > 0
+                /*
+                 * Khong tu quyet dinh loai nguoi ban tai tang va cham.
+                 * PvP tu choi self-hit trong BoLoc cua PvP; cac phong boss
+                 * chu dong chap nhan de dong bo voi luyen tap/friendly fire.
+                 * Khi khong co BoLoc van giu mac dinh an toan la bo qua minh.
+                 */
+                && (mucTieu != nguoiBan || boLoc != null)
                 && (boLoc == null || boLoc.chapNhan(nguoiBan, mucTieu));
     }
 
     /**
-     * Vu no co the gay damage lai nguoi ban. Duong bay truc tiep van dung
-     * {@link #laMucTieuHopLe} va {@link #timVaChamDauTien} de bo qua hitbox
-     * nguoi ban luc vien dan vua roi nong.
+     * Vu no co the gay damage lai nguoi ban neu BoLoc cua che do cho phep.
      */
     private static boolean laMucTieuNhanNoHopLe(
             ChickenChienBinh nguoiBan,

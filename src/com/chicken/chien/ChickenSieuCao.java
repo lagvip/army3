@@ -13,6 +13,11 @@ public final class ChickenSieuCao {
     private ChickenSieuCao() {
     }
 
+    @FunctionalInterface
+    public interface KiemTraHitbox {
+        boolean trung(int danX, int danY);
+    }
+
     /**
      * Danh gia sieu cao tren quy dao hinh hoc khong bi dia hinh cat ngan.
      * Duong dan phai cat dung hitbox muc tieu sau khi da roi hon 350 px tu
@@ -26,9 +31,31 @@ public final class ChickenSieuCao {
             int mucTieuY,
             boolean mucTieuLaBoss
     ) {
+        return laPhatSieuCaoTrungMucTieu(
+                loaiDan,
+                duongXKhongDiaHinh,
+                duongYKhongDiaHinh,
+                mucTieuX,
+                mucTieuY,
+                (danX, danY) -> mucTieuLaBoss
+                        ? ChickenKichThuocNhanVat.trungBoss(
+                                danX, danY, mucTieuX, mucTieuY)
+                        : ChickenKichThuocNhanVat.trungNguoiChoi(
+                                danX, danY, mucTieuX, mucTieuY)
+        );
+    }
+
+    public static boolean laPhatSieuCaoTrungMucTieu(
+            byte loaiDan,
+            short[] duongXKhongDiaHinh,
+            short[] duongYKhongDiaHinh,
+            int mucTieuX,
+            int mucTieuY,
+            KiemTraHitbox kiemTraHitbox
+    ) {
         int chiSoDinh = timChiSoDinhHinhHoc(
                 loaiDan, duongXKhongDiaHinh, duongYKhongDiaHinh);
-        if (chiSoDinh < 0) {
+        if (chiSoDinh < 0 || kiemTraHitbox == null) {
             return false;
         }
 
@@ -53,12 +80,7 @@ public final class ChickenSieuCao {
                 if (danY - yDinh <= DO_ROI_TOI_THIEU) {
                     continue;
                 }
-                boolean trung = mucTieuLaBoss
-                        ? ChickenKichThuocNhanVat.trungBoss(
-                                danX, danY, mucTieuX, mucTieuY)
-                        : ChickenKichThuocNhanVat.trungNguoiChoi(
-                                danX, danY, mucTieuX, mucTieuY);
-                if (trung) {
+                if (kiemTraHitbox.trung(danX, danY)) {
                     return true;
                 }
             }

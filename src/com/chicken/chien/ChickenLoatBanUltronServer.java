@@ -22,6 +22,18 @@ public final class ChickenLoatBanUltronServer {
 
     public interface BoLocMucTieu {
         boolean chapNhan(ChickenChienBinh nguoiBan, ChickenChienBinh mucTieu);
+
+        default boolean trungHitbox(
+                ChickenChienBinh mucTieu,
+                int danX,
+                int danY
+        ) {
+            return mucTieu.bot
+                    ? ChickenKichThuocNhanVat.trungBoss(
+                            danX, danY, mucTieu.x, mucTieu.y)
+                    : ChickenKichThuocNhanVat.trungNguoiChoi(
+                            danX, danY, mucTieu.x, mucTieu.y);
+        }
     }
 
     public static ChickenKetQuaDan tao(
@@ -135,18 +147,20 @@ public final class ChickenLoatBanUltronServer {
             public ChickenChienBinh tai(int x, int y) {
                 for (ChickenChienBinh mucTieu : cacMucTieu) {
                     if (mucTieu == null
-                            || mucTieu == nguoiBan
                             || mucTieu.chet
                             || mucTieu.hp <= 0
+                            || (mucTieu == nguoiBan && boLoc == null)
                             || (boLoc != null
                                     && !boLoc.chapNhan(nguoiBan, mucTieu))) {
                         continue;
                     }
-                    boolean trung = mucTieu.bot
-                            ? ChickenKichThuocNhanVat.trungBoss(
-                                    x, y, mucTieu.x, mucTieu.y)
-                            : ChickenKichThuocNhanVat.trungNguoiChoi(
-                                    x, y, mucTieu.x, mucTieu.y);
+                    boolean trung = boLoc != null
+                            ? boLoc.trungHitbox(mucTieu, x, y)
+                            : mucTieu.bot
+                                    ? ChickenKichThuocNhanVat.trungBoss(
+                                            x, y, mucTieu.x, mucTieu.y)
+                                    : ChickenKichThuocNhanVat.trungNguoiChoi(
+                                            x, y, mucTieu.x, mucTieu.y);
                     if (trung) {
                         return mucTieu;
                     }

@@ -6,8 +6,8 @@ import com.chicken.chiso.ChickenKichThuocNhanVat;
 
 /**
  * Cơ chế di chuyển riêng của Boss Rùa.
- * Y là tọa độ chân. Boss chỉ chạy khi đang có nền; mất nền thì dừng X và rơi
- * theo trọng lực cho tới khi chạm địa hình hoặc rơi khỏi map.
+ * Y là tọa độ chân. Ở map 54, mép phải ngoài cùng được chặn để Rùa không lao
+ * xuống vực; phía trái vẫn giữ đà và rơi xuống chuỗi bệ thấp của bản đồ.
  */
 public final class DiChuyenBossRua {
     public static final int QUANG_DUONG_MOI_LUOT = 170;
@@ -16,6 +16,7 @@ public final class DiChuyenBossRua {
     private static final int TOC_DO_CHAY = 9;
     private static final int TOC_DO_ROI = 12;
     private static final int BUOC_LEN_TOI_DA = 12;
+    private static final int BUOC_XUONG_TOI_DA = 12;
 
     /** Vùng thân dùng cho va chạm đạn và chạm người chơi. */
     public static final int NUA_RONG_HITBOX = 58;
@@ -96,12 +97,7 @@ public final class DiChuyenBossRua {
                 && danY <= bossY;
     }
 
-    /** Trả về tọa độ bước kế tiếp, gồm cả đà ngang khi Rùa qua mép nền. */
-    /**
-     * Rùa giữ đà ngang khi vừa chạy khỏi mép địa hình. Nếu khóa X ngay tại
-     * mép thì client BigBoss không tới được đích CMD 21 và giữ packet bắn
-     * đứng sau nó.
-     */
+    /** Trả về tọa độ bước kế tiếp nhưng không cho Rùa bước khỏi mép nền. */
     public static short[] tinhBuocTiepTheo(
             ChickenChienBinh boss,
             ChickenChienBinh mucTieu,
@@ -122,8 +118,11 @@ public final class DiChuyenBossRua {
         }
 
         if (!coNenBenDuoi(boss.x, boss.y, banDo)) {
-            return roiTheoTrongLuc(
-                    boss.x, boss.y, huong, quangDuongConLai, banDo);
+            return phaiDungTaiMepPhai(huong, banDo)
+                    ? new short[]{boss.x, boss.y}
+                    : roiTheoTrongLuc(
+                            boss.x, boss.y, huong,
+                            quangDuongConLai, banDo);
         }
 
         int buocX = Math.min(TOC_DO_CHAY, quangDuongConLai) * huong;
@@ -136,7 +135,8 @@ public final class DiChuyenBossRua {
             return new short[]{boss.x, boss.y};
         }
 
-        if (!thanBiChan(xMoi, boss.y, huong, banDo)) {
+        if (!thanBiChan(xMoi, boss.y, huong, banDo)
+                && coNenBenDuoi(xMoi, boss.y, banDo)) {
             return new short[]{(short) xMoi, boss.y};
         }
 
@@ -149,7 +149,25 @@ public final class DiChuyenBossRua {
             }
         }
 
-        return new short[]{boss.x, boss.y};
+        // Cho phép đi xuống dốc thấp, nhưng không biến một mép vực thành cú rơi.
+        for (int ha = 1; ha <= BUOC_XUONG_TOI_DA; ha++) {
+            int yMoi = boss.y + ha;
+            if (!thanBiChan(xMoi, yMoi, huong, banDo)
+                    && coNenBenDuoi(xMoi, yMoi, banDo)) {
+                return new short[]{(short) xMoi, (short) yMoi};
+            }
+        }
+
+        // Gặp tường thật thì dừng; chỉ dùng trọng lực khi phía trước là mép trống.
+        if (thanBiChan(xMoi, boss.y, huong, banDo)) {
+            return new short[]{boss.x, boss.y};
+        }
+
+        return phaiDungTaiMepPhai(huong, banDo)
+                ? new short[]{boss.x, boss.y}
+                : roiTheoTrongLuc(
+                        boss.x, boss.y, huong,
+                        quangDuongConLai, banDo);
     }
 
     public static boolean daRoiKhoiMap(
@@ -185,6 +203,15 @@ public final class DiChuyenBossRua {
         }
         yMoi = Math.min(banDo.getHeight() + 40, yMoi);
         return new short[]{boss.x, (short) yMoi};
+    }
+
+    private static boolean phaiDungTaiMepPhai(
+            int huong,
+            ChickenQuanLyBanDo banDo
+    ) {
+        return huong > 0
+                && banDo != null
+                && (banDo.layMaBanDo() & 0xFF) == CauHinhBossRua.MAP_ID;
     }
 
     private static short[] roiTheoTrongLuc(

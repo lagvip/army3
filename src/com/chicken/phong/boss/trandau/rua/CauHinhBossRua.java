@@ -15,7 +15,6 @@ public final class CauHinhBossRua {
      * Phần rơi theo trọng lực không được tính vào quãng này.
      */
     public static final int QUANG_DUONG_MOI_LUOT = 130;
-    public static final int TRE_MOI_BUOC_MS = 70;
 
     public static final class CauHinh {
         private final byte slot;

@@ -364,50 +364,145 @@ public class ChickenNguoiChoi {
         }
     }
 
-    public void yeuCauMuaVatPham(ChickenTinNhan ms) throws IOException {
+    public synchronized void yeuCauMuaVatPham(
+            ChickenTinNhan ms) throws IOException {
         if (this.tuChoiThayDoiKinhTeTrongTran()) {
             return;
         }
-        if (ms == null || ms.boDoc().available() != 3) {
+        /*
+         * Client native gui 4 byte:
+         * loai tien (1) + ma vat pham (2) + so luong (1).
+         * Luon phan hoi khi sai packet de InfoDlg cua client khong quay mai.
+         */
+        if (ms == null || ms.boDoc().available() != 4) {
+            this.startOKDlg2("Dữ liệu mua vật phẩm không hợp lệ.");
             return;
         }
         byte loai = ms.boDoc().readByte();
         int ma = ms.boDoc().readUnsignedShort();
-ChickenMauVatPham vatPham = ChickenQuanLyMayChu.itemTemplates.get(ma);
+        int soLuong = ms.boDoc().readUnsignedByte();
+        if (soLuong < 1 || soLuong > 99) {
+            this.startOKDlg2("Số lượng mua không hợp lệ.");
+            return;
+        }
+
+        ChickenMauVatPham vatPham =
+                ChickenQuanLyMayChu.itemTemplates.get(ma);
         if (vatPham == null) {
             this.startOKDlg2("Có lỗi xảy ra.");
             return;
         }
-        if (loai == 0 && vatPham.buyGold > 0 || loai == 1 && vatPham.buyGem > 0) {
-            if (this.layOTrongTuiDo() == 0) {
-                this.startOKDlg2("Túi đã đầy.");
-                return;
-            }
-            if (loai == 0) {
-                if (vatPham.buyGold > this.vang) {
-                    this.startOKDlg2("Bạn không đủ vàng.");
-                    return;
-                }
-                this.updateGold(-vatPham.buyGold);
-            } else {
-                if (vatPham.buyGem > this.ngoc) {
-                    this.startOKDlg2("Bạn không đủ ngọc.");
-                    return;
-                }
-                this.updateGem(-vatPham.buyGem);
-            }
+
+        int donGia;
+        if (loai == 0 && vatPham.buyGold > 0) {
+            donGia = vatPham.buyGold;
+        } else if (loai == 1 && vatPham.buyGem > 0) {
+            donGia = vatPham.buyGem;
         } else {
             this.moHopThoaiOK("Có lỗi xảy ra.");
             return;
         }
-        ChickenVatPham add = new ChickenVatPham(ma);
-        add.HP = 100;
-        add.itemOptions = vatPham.thuocTinhs;
-        this.themVatPhamVaoTui(add);
+
+        long tongGia = (long) donGia * soLuong;
+        if (tongGia > Integer.MAX_VALUE) {
+            this.startOKDlg2("Giá mua không hợp lệ.");
+            return;
+        }
+        if (loai == 0 && tongGia > this.vang) {
+            this.startOKDlg2("Bạn không đủ vàng.");
+            return;
+        }
+        if (loai == 1 && tongGia > this.ngoc) {
+            this.startOKDlg2("Bạn không đủ ngọc.");
+            return;
+        }
+
+        int chiSoChong = -1;
+        if (vatPham.loai > 5) {
+            for (int i = 0; i < this.itemBag.length; i++) {
+                ChickenVatPham dangCo = this.itemBag[i];
+                if (dangCo != null && dangCo.ma == ma) {
+                    chiSoChong = i;
+                    break;
+                }
+            }
+            if (chiSoChong >= 0
+                    && (long) this.itemBag[chiSoChong].soLuong
+                            + soLuong > 99L) {
+                this.startOKDlg2(
+                        "Mỗi chồng vật phẩm chỉ chứa tối đa 99.");
+                return;
+            }
+        }
+
+        int soOCan = vatPham.loai > 5 && chiSoChong >= 0
+                ? 0 : (vatPham.loai > 5 ? 1 : soLuong);
+        if (this.layOTrongTuiDo() < soOCan) {
+            this.startOKDlg2("Túi đã đầy.");
+            return;
+        }
+
+        if (loai == 0) {
+            this.vang -= (int) tongGia;
+        } else {
+            this.ngoc -= (int) tongGia;
+        }
+
+        if (chiSoChong >= 0) {
+            this.itemBag[chiSoChong].soLuong += soLuong;
+        } else {
+            int conLai = soLuong;
+            for (int i = 0; i < this.itemBag.length && conLai > 0; i++) {
+                if (this.itemBag[i] != null) {
+                    continue;
+                }
+                ChickenVatPham them = new ChickenVatPham(ma);
+                them.HP = 100;
+                them.itemOptions = new Vector(vatPham.thuocTinhs);
+                them.chiSo = i;
+                if (vatPham.loai > 5) {
+                    them.soLuong = soLuong;
+                    conLai = 0;
+                } else {
+                    this.itemBag[i] = them;
+                    conLai--;
+                    continue;
+                }
+                this.itemBag[i] = them;
+            }
+        }
+
+        this.dichVu.capNhat();
+        this.dichVu.guiTuiDo();
+        ChickenQuanLyMayChu.log(
+                "[KINH_TE] Mua vat pham playerId=" + this.ma
+                + " itemId=" + ma
+                + " quantity=" + soLuong
+                + " currency=" + (loai == 0 ? "gold" : "gem")
+                + " total=" + tongGia
+                + " balance=" + (loai == 0 ? this.vang : this.ngoc));
         this.moHopThoaiOK("Bạn mua thành công " + vatPham.ten);
     }
 
     public void datTrangBiChoNhanVat(ChickenVatPham vatPham) {
+        if (vatPham == null) {
+            return;
+        }
+        /*
+         * JSON trang bi khong duoc phep phu thuoc thu tu phan tu. Neu o vu
+         * khi dang la AVG, moi lan dong bo mot mon khac van phai giu bo AVG
+         * lam hinh dang va quyen server, khong reset ve nhan vat di bo.
+         */
+        ChickenVatPham vuKhiDangTrangBi =
+                this.itemBody != null && this.itemBody.length > 5
+                        ? this.itemBody[5] : null;
+        if (vuKhiDangTrangBi != null
+                && vuKhiDangTrangBi != vatPham
+                && vuKhiDangTrangBi.ma >= 391
+                && vuKhiDangTrangBi.ma <= 398) {
+            this.datTrangBiChoNhanVat(vuKhiDangTrangBi);
+            return;
+        }
         int ma = vatPham.ma;
         this.avenger = 0;
         if (ma == 391) {

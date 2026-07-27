@@ -566,7 +566,8 @@ public class ChickenQuanLyChien {
                             ChickenChienBinh nguoiBan,
                             ChickenChienBinh mucTieu
                     ) {
-                        return !(nguoiBan.bot && mucTieu.bot);
+                        return mucTieu != nguoiBan
+                                && !(nguoiBan.bot && mucTieu.bot);
                     }
                 }
         );

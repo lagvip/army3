@@ -46,7 +46,7 @@ implements IChickenXuLyTin {
                             cmd, new IllegalStateException("Chua dang nhap"));
                     return;
                 }
-                if (this.ngatKetNoiNeuChuyenCanhKhiDangDanhBoss(cmd)) {
+                if (this.chanLenhChuyenSceneTreTrongTranBoss(cmd)) {
                     return;
                 }
                 switch (cmd) {
@@ -333,7 +333,10 @@ implements IChickenXuLyTin {
                                             + " loi="
                                             + loi.getClass().getSimpleName());
                                 } finally {
-                                    this.khach.hoanTatGuiNguyenLieuBoss();
+                                    if (this.khach
+                                            .hoanTatGuiNguyenLieuBoss()) {
+                                        this.moManHinhBossSauKhiTaiXong();
+                                    }
                                 }
                             }, treMs, TimeUnit.MILLISECONDS);
                             break;
@@ -400,9 +403,35 @@ implements IChickenXuLyTin {
                     case -92:
                         this.khach.user.nguoiChoi.handleTrainingHoleRequest(mss);
                         break;
-                    case -67:
-                        this.khach.user.nguoiChoi.handleTrainingClientReady();
+                    case -67: {
+                        ChickenNguoiChoi nguoiChoi =
+                                this.khach.user.nguoiChoi;
+                        SanhChoBoss sanhBoss =
+                                QuanLySanhChoBoss.timSanhCuaNguoiChoi(
+                                        nguoiChoi);
+                        if (dangTrongTranBoss(sanhBoss)) {
+                            /*
+                             * Client gui -67 khi anh dan cua CMD 20 da xong.
+                             * Anh terrain CMD 126 co hang doi rieng, nen chi
+                             * mo GameScr khi ca ACK nay va hang doi deu xong.
+                             */
+                            ChickenQuanLyMayChu.log(
+                                    "[BOSS ROOM][CLIENT_SAN_SANG_VAO_TRAN]"
+                                    + " playerId=" + nguoiChoi.ma
+                                    + " room="
+                                    + (sanhBoss.getMaBan() & 0xFF)
+                                    + " state="
+                                    + sanhBoss.getTrangThai());
+                            if (this.khach
+                                    .xacNhanSanSangMoManHinhBoss()) {
+                                nguoiChoi.dichVu
+                                        .guiHienManHinhGameLuyenTap();
+                            }
+                            break;
+                        }
+                        nguoiChoi.handleTrainingClientReady();
                         break;
+                    }
                     default:
                         this.khach.ghiNhanPacketLoi(
                                 cmd, new IllegalArgumentException(
@@ -416,31 +445,58 @@ implements IChickenXuLyTin {
         }
     }
 
+    private void moManHinhBossSauKhiTaiXong() {
+        try {
+            if (!this.khach.conKichHoat()
+                    || !this.khach.coNguoiChoiDaDangNhap()) {
+                return;
+            }
+            ChickenNguoiChoi nguoiChoi =
+                    this.khach.user.nguoiChoi;
+            SanhChoBoss sanh =
+                    QuanLySanhChoBoss.timSanhCuaNguoiChoi(nguoiChoi);
+            if (!dangTrongTranBoss(sanh)) {
+                return;
+            }
+            ChickenQuanLyMayChu.log(
+                    "[BOSS ROOM][TAI_XONG_MO_GAME]"
+                    + " playerId=" + nguoiChoi.ma
+                    + " room=" + (sanh.getMaBan() & 0xFF)
+                    + " state=" + sanh.getTrangThai());
+            nguoiChoi.dichVu.guiHienManHinhGameLuyenTap();
+        } catch (Exception loi) {
+            ChickenQuanLyMayChu.log(
+                    "Loi mo GameScr boss sau khi tai resource "
+                    + this.khach.moTa()
+                    + " loi=" + loi.getClass().getSimpleName());
+        }
+    }
+
     /**
-     * Client khong co quyen chuyen scene hay sua phong cho trong khi tran boss
-     * dang bat dau/dang chien. Nút Thoat (CMD 15) khong nam trong danh sach
-     * nay, vi do la chuyen trang thai hop le do UI va server cung xu ly.
+     * Client goc co the gui tre lenh mo danh sach/phong trong luc scene boss
+     * dang tai. Khong duoc chay handler vi packet phan hoi se day client ve
+     * sanh 8 nguoi trong khi tran server van song. Day chi la bo qua y dinh
+     * sai scene; khong tinh packet loi va khong ngat ket noi.
      */
-    private boolean ngatKetNoiNeuChuyenCanhKhiDangDanhBoss(int cmd) {
+    private boolean chanLenhChuyenSceneTreTrongTranBoss(int cmd) {
         ChickenNguoiChoi nguoiChoi = this.khach.coNguoiChoiDaDangNhap()
                 ? this.khach.user.nguoiChoi : null;
         SanhChoBoss sanh =
                 QuanLySanhChoBoss.timSanhCuaNguoiChoi(nguoiChoi);
-        if (!dangDanhBoss(sanh) || !laLenhCamKhiDangDanhBoss(cmd)) {
+        if (!dangTrongTranBoss(sanh)
+                || !laLenhChuyenScenePhong(cmd)) {
             return false;
         }
-
         ChickenQuanLyMayChu.log(
-                "[BAO_MAT] Ngat ket noi vi chuyen trang thai trai phep "
-                + this.khach.moTa()
+                "[BOSS ROOM][BO_QUA_LENH_CHUYEN_SCENE_TRE]"
+                + " playerId=" + nguoiChoi.ma
                 + " cmd=" + cmd
-                + " bossRoom=" + (sanh.getMaBan() & 0xFF)
+                + " room=" + (sanh.getMaBan() & 0xFF)
                 + " state=" + sanh.getTrangThai());
-        this.khach.dongTin();
         return true;
     }
 
-    static boolean dangDanhBoss(SanhChoBoss sanh) {
+    static boolean dangTrongTranBoss(SanhChoBoss sanh) {
         if (sanh == null) {
             return false;
         }
@@ -449,12 +505,8 @@ implements IChickenXuLyTin {
                 || trangThai == SanhChoBoss.TrangThai.DANG_CHIEN;
     }
 
-    static boolean laLenhCamKhiDangDanhBoss(int cmd) {
+    static boolean laLenhChuyenScenePhong(int cmd) {
         return switch (cmd) {
-            /*
-             * Chuyen scene/RPG, mo danh sach phong-ban, vao ban khac,
-             * thay doi phong cho, bat dau lai hoac tao phien luyen tap.
-             */
             case -98, -28, 6, 7, 8, 16, 18, 20, 71, 75, 83 -> true;
             default -> false;
         };

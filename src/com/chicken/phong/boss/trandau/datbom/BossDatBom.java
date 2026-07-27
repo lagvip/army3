@@ -19,6 +19,7 @@ import com.chicken.chien.ChickenPhatBanServer;
 import com.chicken.chien.ChickenQuanLyChien;
 import com.chicken.chien.ChickenQuanLyCongThucSung;
 import com.chicken.chien.ChickenQuanLyDanSung;
+import com.chicken.chien.ChickenThoiGianHoatAnhDan;
 import com.chicken.chien.ChickenYeuCauBanServer;
 import com.chicken.chien.ChickenYeuCauToaDoServer;
 import com.chicken.chien.ChickenToaDoDauNong;
@@ -30,14 +31,18 @@ import com.chicken.mohinh.ChickenNguoiChoi;
 import com.chicken.phong.boss.sanhcho.SanhChoBoss;
 import com.chicken.phong.boss.sanhcho.ThanhVienBoss;
 import com.chicken.phong.boss.trandau.ChickenKetQuaTranBoss;
+import com.chicken.phong.boss.trandau.ChickenLuatVaChamPhongBoss;
 import com.chicken.phong.boss.trandau.baovay.BossBanSung;
 import com.chicken.phong.boss.trandau.baovay.BossCamTu;
 import com.chicken.vatpham.ChickenVatPham;
 import com.chicken.vatpham.ChickenThuocTinhVatPham;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -45,15 +50,17 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Trận riêng của map 53 - Boss Đặt bom.
- * Bốn Phiến quân đi theo địa hình tới người chơi; đủ gần thì kích nổ,
- * tự chết và chuyển lượt. Lượt, gió và kỹ năng AVG dùng chung cơ chế phòng boss.
+ * Phiến quân đứng cố định tại vị trí spawn và tấn công bằng súng đang cầm.
+ * Số Phiến quân tăng theo mốc người chơi: 1→4, 2→6, 4→7 và 6→8.
+ * Lượt, gió và kỹ năng AVG dùng chung cơ chế phòng boss.
  */
 public final class BossDatBom extends ChickenQuanLyChien {
-    private static final int SO_SLOT = 12;
+    private static final int SO_SLOT = 16;
     private static final int SO_SLOT_NGUOI_CHOI = 8;
     /** Người chơi và boss đều có tối đa 25 giây cho một lượt. */
     private static final int GIAY_MOI_LUOT = 25;
     private static final int TRE_BOSS_BAT_DAU_MS = 550;
+    private static final int BOM_NUA_RONG = 7;
     private static final byte PHE_NGUOI_CHOI_THANG =
             ChickenKetQuaTranBoss.CLIENT_NGUOI_CHOI_THANG;
     private static final byte PHE_BOSS_THANG =
@@ -64,8 +71,16 @@ public final class BossDatBom extends ChickenQuanLyChien {
     private final ChickenChienBinh[] chienBinhs = new ChickenChienBinh[SO_SLOT];
     private final CauHinhBossDatBom.CauHinh[] cauHinhBoss =
             new CauHinhBossDatBom.CauHinh[SO_SLOT];
+    private final CauHinhBossDatBom.CauHinh[] danhSachBoss;
+    /** ID template súng do server random một lần khi tạo trận, không lấy từ client. */
+    private final int[] idSungBoss = new int[SO_SLOT];
     /** Thời gian nạp hiện tại của từng ghế/slot; lúc vào trận đều bằng 0. */
     private final int[] napDan = new int[SO_SLOT];
+    /** Timed bombs are derived only from the server's one-based global turn. */
+    private final BoDemBomBossDatBom boDemBom = new BoDemBomBossDatBom();
+    private final BoDemGoBomBossDatBom boDemGoBom =
+            new BoDemGoBomBossDatBom();
+    private int chiSoBossDatBomTiepTheo;
     private final ScheduledExecutorService boHenGio;
     /** Mỗi lượt tạo một trạng thái gió mới giống cơ chế luyện tập. */
     private ChickenHeThongGio.TrangThaiGio gioHienTai =
@@ -81,20 +96,31 @@ public final class BossDatBom extends ChickenQuanLyChien {
     private boolean daBatDau;
     private boolean daKetThuc;
     private boolean dangChoXacNhanThang;
+    /** Actual one-based turns started in this match; separate from action IDs. */
+    private long tongLuotDaBatDau;
     private long maPhienLuot;
     private ScheduledFuture<?> tacVuHetLuot;
+    private ScheduledFuture<?> tacVuChoKetThucBan;
+    private int slotDangChoKetThucBan = -1;
+    private long phienDangChoKetThucBan = -1L;
+    private int napDanSauPhatDangCho;
+    private long thoiDiemSomNhatXacNhanKetThucBan;
+    private final Set<Integer> nguoiChoiDaXacNhanHoatAnh = new HashSet<>();
 
     public BossDatBom(SanhChoBoss sanh) {
         super(null, layNguoiChoiTheoGhe(sanh),
                 (byte) CauHinhBossDatBom.MAP_ID, false);
         this.sanh = sanh;
         this.banDo = new ChickenQuanLyBanDo(CauHinhBossDatBom.MAP_ID);
+        this.danhSachBoss = CauHinhBossDatBom.layChoSoNguoi(
+                demNguoiChoiTrongSanh(sanh));
         this.boHenGio = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread thread = new Thread(r, "boss-dat-bom-P4-"
                     + (sanh == null ? -1 : sanh.getMaBan() & 0xFF));
             thread.setDaemon(true);
             return thread;
         });
+        Arrays.fill(this.idSungBoss, -1);
         this.taoNguoiChoi(sanh);
         this.taoBoss();
         this.khoiTaoKyNangAVG();
@@ -114,20 +140,31 @@ public final class BossDatBom extends ChickenQuanLyChien {
             return;
         }
         this.daBatDau = true;
-        for (CauHinhBossDatBom.CauHinh cauHinh : CauHinhBossDatBom.layTatCa()) {
+        for (CauHinhBossDatBom.CauHinh cauHinh : this.danhSachBoss) {
+            int slot = cauHinh.getSlot() & 0xFF;
+            ChickenChienBinh boss = this.chienBinhs[slot];
+            ChickenQuanLyDanSung.DuLieuSung duLieu =
+                    this.layDuLieuSungBoss(slot, boss);
             System.out.println("[BOSS DAT BOM][TAO_BOSS] slot="
-                    + (cauHinh.getSlot() & 0xFF)
+                    + slot
                     + " ten=" + cauHinh.getTen()
                     + " x=" + cauHinh.getX()
                     + " y=" + cauHinh.getY()
                     + " hp=" + CauHinhBossDatBom.MAU_BOSS
                     + " loai=" + cauHinh.getLoai()
-                    + " sungPart=" + cauHinh.getVuKhi());
+                    + " idSung=" + this.idSungBoss[slot]
+                    + " tenSung="
+                    + (duLieu == null ? "unknown" : duLieu.getTenSung())
+                    + " sungPart="
+                    + (boss == null ? -1 : boss.maVuKhi)
+                    + " napDan=" + this.layNapDanBoss(slot));
         }
         for (ChickenChienBinh nguoiNhan : this.nguoiChoiConPhien()) {
             nguoiNhan.nguoiChoi.dichVu.guiBatDauDau(
                     this.banDo.layMaBanDo(), this.chienBinhs, this.banDo.layMaNen());
-            for (CauHinhBossDatBom.CauHinh cauHinh : CauHinhBossDatBom.layTatCa()) {
+            for (CauHinhBossDatBom.CauHinh cauHinh : this.danhSachBoss) {
+                int slot = cauHinh.getSlot() & 0xFF;
+                ChickenChienBinh boss = this.chienBinhs[slot];
                 nguoiNhan.nguoiChoi.dichVu.guiTaoBossBaoVay(
                         cauHinh.getSlot(),
                         cauHinh.getId(),
@@ -137,18 +174,17 @@ public final class BossDatBom extends ChickenQuanLyChien {
                         cauHinh.getBody(),
                         cauHinh.getHat(),
                         cauHinh.getWing(),
-                        cauHinh.getVuKhi(),
+                        boss == null ? cauHinh.getVuKhi() : boss.maVuKhi,
                         cauHinh.getX(),
                         cauHinh.getY(),
                         CauHinhBossDatBom.MAU_BOSS
                 );
             }
-            nguoiNhan.nguoiChoi.dichVu.guiHienManHinhGameLuyenTap();
         }
         System.out.println("[BOSS DAT BOM][BAT_DAU] P4-"
                 + (this.sanh.getMaBan() & 0xFF)
                 + " map=53 players=" + this.demNguoiChoiSong()
-                + " bosses=4");
+                + " bosses=" + this.danhSachBoss.length);
         this.chuyenSangLuotTiepTheo(-1);
     }
 
@@ -287,8 +323,65 @@ public final class BossDatBom extends ChickenQuanLyChien {
     @Override
     public synchronized void kiemTraVaCham(ChickenNguoiChoi nguoiChoi, ChickenTinNhan ms)
             throws IOException {
+        int soByteConLai = ms.boDoc().available();
+        ChickenChienBinh chienBinh = this.layNguoiChoi(nguoiChoi);
+        if (chienBinh == null) {
+            while (ms.boDoc().available() > 0) {
+                ms.boDoc().readByte();
+            }
+            return;
+        }
+        int slotDangCho = this.slotDangChoKetThucBan;
+        boolean tinKetThucHopLe = slotDangCho >= 0
+                && this.docTinVaChamKetThuc(ms, soByteConLai);
         while (ms.boDoc().available() > 0) {
             ms.boDoc().readByte();
+        }
+        if (!tinKetThucHopLe) {
+            return;
+        }
+        this.nguoiChoiDaXacNhanHoatAnh.add(nguoiChoi.ma);
+        long phien = this.phienDangChoKetThucBan;
+        if (System.currentTimeMillis()
+                < this.thoiDiemSomNhatXacNhanKetThucBan
+                || !this.tatCaNguoiChoiDaXacNhanHoatAnh()) {
+            return;
+        }
+        System.out.println("[BOSS DAT BOM][CMD79_HIEN_THI_XONG] slotBan="
+                + slotDangCho + " nguoiBao=" + chienBinh.ten);
+        this.hoanTatChoKetThucPhatBan(slotDangCho, phien, false);
+    }
+
+    private boolean tatCaNguoiChoiDaXacNhanHoatAnh() {
+        for (int i = 0; i < SO_SLOT_NGUOI_CHOI; i++) {
+            ChickenChienBinh chienBinh = this.chienBinhs[i];
+            if (chienBinh != null && chienBinh.coPhien()
+                    && !this.nguoiChoiDaXacNhanHoatAnh.contains(
+                            chienBinh.nguoiChoi.ma)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean docTinVaChamKetThuc(ChickenTinNhan ms, int soByte) {
+        if (ms.layLenh() != 79 || soByte < 1 || soByte > 513
+                || (soByte - 1) % 8 != 0) {
+            return false;
+        }
+        try {
+            int soDiem = ms.boDoc().readUnsignedByte();
+            int soDiemTheoDoDai = (soByte - 1) / 8;
+            if (soDiem != soDiemTheoDoDai || soDiem > 64) {
+                return false;
+            }
+            for (int i = 0; i < soDiem; i++) {
+                ms.boDoc().readInt();
+                ms.boDoc().readInt();
+            }
+            return ms.boDoc().available() == 0;
+        } catch (IOException ignored) {
+            return false;
         }
     }
 
@@ -374,7 +467,12 @@ public final class BossDatBom extends ChickenQuanLyChien {
         if (this.daKetThuc && this.boHenGio.isShutdown()) {
             return;
         }
+        try {
+            this.xoaBomConLaiTrenClient();
+        } catch (IOException ignored) {
+        }
         this.daKetThuc = true;
+        this.huyChoKetThucPhatBan();
         this.huyTacVuHetLuot();
         for (ChickenChienBinh chienBinh : this.nguoiChoiConPhien()) {
             this.boDangKyNguoiChoi(chienBinh.nguoiChoi);
@@ -384,6 +482,10 @@ public final class BossDatBom extends ChickenQuanLyChien {
 
     public synchronized ChickenChienBinh[] chupChienBinh() {
         return this.chienBinhs.clone();
+    }
+
+    public synchronized int[] chupIdSungBoss() {
+        return this.idSungBoss.clone();
     }
 
     private void taoNguoiChoi(SanhChoBoss sanh) {
@@ -406,15 +508,51 @@ public final class BossDatBom extends ChickenQuanLyChien {
     }
 
     private void taoBoss() {
-        for (CauHinhBossDatBom.CauHinh cauHinh : CauHinhBossDatBom.layTatCa()) {
+        for (CauHinhBossDatBom.CauHinh cauHinh : this.danhSachBoss) {
             int slot = cauHinh.getSlot() & 0xFF;
-            int tanCong = CauHinhBossDatBom.SAT_THUONG_CAM_TU;
+            ChickenQuanLyDanSung.DuLieuSung duLieu =
+                    CauHinhBossDatBom.chonSungShopKhongAvg();
+            if (duLieu == null) {
+                duLieu = ChickenQuanLyDanSung.theoPartSung(
+                        cauHinh.getVuKhi());
+            }
+            int idSung = duLieu == null ? -1 : duLieu.getIdSung();
+            short partSung = duLieu == null
+                    ? cauHinh.getVuKhi()
+                    : duLieu.getPartSung();
+            int tanCong = CauHinhBossDatBom.layTanCongTheoIdSung(idSung);
+            this.idSungBoss[slot] = idSung;
             this.chienBinhs[slot] = new ChickenChienBinh(
                     cauHinh.getSlot(), cauHinh.getId(), cauHinh.getX(), cauHinh.getY(),
-                    cauHinh.getTen(), cauHinh.getVuKhi(),
+                    cauHinh.getTen(), partSung,
                     CauHinhBossDatBom.MAU_BOSS, tanCong, 0);
             this.cauHinhBoss[slot] = cauHinh;
         }
+    }
+
+    private ChickenQuanLyDanSung.DuLieuSung layDuLieuSungBoss(
+            int slot,
+            ChickenChienBinh boss
+    ) {
+        if (slot >= 0 && slot < this.idSungBoss.length) {
+            ChickenQuanLyDanSung.DuLieuSung theoId =
+                    ChickenQuanLyDanSung.theoIdSung(
+                            this.idSungBoss[slot]);
+            if (theoId != null) {
+                return theoId;
+            }
+        }
+        return boss == null
+                ? null
+                : ChickenQuanLyDanSung.theoPartSung(boss.maVuKhi);
+    }
+
+    private int layNapDanBoss(int slot) {
+        if (slot < 0 || slot >= this.idSungBoss.length) {
+            return 100;
+        }
+        return CauHinhBossDatBom.layNapDanTheoIdSung(
+                this.idSungBoss[slot]);
     }
 
     private void khoiTaoKyNangAVG() {
@@ -560,12 +698,18 @@ public final class BossDatBom extends ChickenQuanLyChien {
         if (this.daKetThuc || this.kiemTraKetThuc()) {
             return;
         }
+        this.huyChoKetThucPhatBan();
         this.huyTacVuHetLuot();
         int slotTiep = this.timSlotTheoNapDan(sauSlot);
         if (slotTiep < 0) {
             this.ketThuc(false);
             return;
         }
+        long soThuTuLuotMoi = this.tongLuotDaBatDau + 1L;
+        if (!this.xuLyBomKhiBatDauLuot(soThuTuLuotMoi)) {
+            return;
+        }
+        this.tongLuotDaBatDau = soThuTuLuotMoi;
         this.luotHienTai = (byte) slotTiep;
         this.maPhienLuot++;
         ChickenChienBinh hienTai = this.chienBinhs[slotTiep];
@@ -591,6 +735,211 @@ public final class BossDatBom extends ChickenQuanLyChien {
             this.boHenGio.schedule(() -> this.thucHienLuotBoss(slotTiep, phien),
                     TRE_BOSS_BAT_DAU_MS, TimeUnit.MILLISECONDS);
         }
+    }
+
+    /**
+     * CMD 109 protocol used by the native client:
+     * action 0 = create (id, x, y, turns), action 1 = explode, action 2 =
+     * defuse progress, action 3 = remove, action 4 = update remaining turns.
+     */
+    private boolean xuLyBomKhiBatDauLuot(long soThuTuLuot) throws IOException {
+        if (soThuTuLuot > 1) {
+            this.xuLyGoBomSauLuotHoanThanh();
+        }
+        BoDemBomBossDatBom.KetQuaBatDauLuot ketQua =
+                this.boDemBom.batDauLuot(soThuTuLuot);
+
+        for (BoDemBomBossDatBom.Bom bom : ketQua.getBomDaCapNhat()) {
+            this.phatCapNhatLuotBom(bom);
+        }
+        for (BoDemBomBossDatBom.Bom bom : ketQua.getBomDaNo()) {
+            this.boDemGoBom.xoaBom(bom.getId());
+            this.phatNoBom(bom);
+            this.ketLieuToanBoNguoiChoiBangBom(bom);
+            if (this.daKetThuc) {
+                return false;
+            }
+        }
+
+        BoDemBomBossDatBom.Bom bomMoi = ketQua.getBomMoi();
+        if (bomMoi != null) {
+            ChickenChienBinh nguoiDat = this.chonBossDatBomConSong();
+            if (nguoiDat == null) {
+                return !this.kiemTraKetThuc();
+            }
+            this.phatTaoBom(bomMoi, nguoiDat.x, nguoiDat.y);
+            this.boDemGoBom.dangKyBom(
+                    bomMoi.getId(), nguoiDat.x, nguoiDat.y);
+            System.out.println("[BOSS DAT BOM][CMD109_DAT] luot="
+                    + soThuTuLuot
+                    + " id=" + (bomMoi.getId() & 0xFF)
+                    + " x=" + nguoiDat.x
+                    + " y=" + nguoiDat.y
+                    + " demNguoc=" + bomMoi.getLuotConLai()
+                    + " nguoiDat=" + nguoiDat.ten);
+        }
+        return true;
+    }
+
+    private void xuLyGoBomSauLuotHoanThanh() throws IOException {
+        this.capNhatBomRoiTheoDiaHinh();
+        ArrayList<BoDemGoBomBossDatBom.ViTriNguoiChoi> viTris =
+                new ArrayList<>();
+        for (int slot = 0; slot < SO_SLOT_NGUOI_CHOI; slot++) {
+            ChickenChienBinh nguoiChoi = this.chienBinhs[slot];
+            if (nguoiChoi != null && !nguoiChoi.chet
+                    && nguoiChoi.hp > 0 && nguoiChoi.coPhien()) {
+                viTris.add(new BoDemGoBomBossDatBom.ViTriNguoiChoi(
+                        nguoiChoi.x, nguoiChoi.y));
+            }
+        }
+
+        BoDemGoBomBossDatBom.KetQuaKetThucLuot ketQua =
+                this.boDemGoBom.ketThucLuot(viTris);
+        for (BoDemGoBomBossDatBom.TienDo tienDo
+                : ketQua.getTienDoThayDoi()) {
+            this.phatTinBom(GiaoThucBomBossDatBom.capNhatTienDoGo(
+                    tienDo.getId(), tienDo.getPhanTram()));
+            System.out.println("[BOSS DAT BOM][CMD109_GO] id="
+                    + (tienDo.getId() & 0xFF)
+                    + " phanTram=" + tienDo.getPhanTram());
+        }
+        for (byte id : ketQua.getBomDaGo()) {
+            if (!this.boDemBom.xoaBom(id)) {
+                continue;
+            }
+            this.phatXoaBom(id);
+            System.out.println("[BOSS DAT BOM][CMD109_GO_XONG] id="
+                    + (id & 0xFF)
+                    + " soLuot="
+                    + BoDemGoBomBossDatBom.SO_LUOT_CAN_GO);
+        }
+    }
+
+    private void capNhatBomRoiTheoDiaHinh() {
+        for (BoDemGoBomBossDatBom.ViTriBom bom
+                : this.boDemGoBom.chupViTriBom()) {
+            int yMoi = this.timMatDatChoBom(bom.getX(), bom.getY());
+            if (yMoi == bom.getY()) {
+                continue;
+            }
+            this.boDemGoBom.capNhatViTriBom(
+                    bom.getId(), bom.getX(), yMoi);
+            System.out.println("[BOSS DAT BOM][BOM_ROI] id="
+                    + (bom.getId() & 0xFF)
+                    + " x=" + bom.getX()
+                    + " yCu=" + bom.getY()
+                    + " yMoi=" + yMoi);
+        }
+    }
+
+    private int timMatDatChoBom(int x, int yHienTai) {
+        int batDauY = Math.max(0, yHienTai);
+        int ketThucY = this.banDo.getHeight();
+        for (int y = batDauY; y < ketThucY; y++) {
+            for (int dx = -BOM_NUA_RONG; dx < BOM_NUA_RONG; dx++) {
+                int px = x + dx;
+                if (px >= 0 && px < this.banDo.getWidth()
+                        && this.banDo.coVaCham((short) px, (short) y)) {
+                    return y;
+                }
+            }
+        }
+        return this.banDo.getHeight() + 32;
+    }
+
+    private ChickenChienBinh chonBossDatBomConSong() {
+        if (this.danhSachBoss.length == 0) {
+            return null;
+        }
+        for (int thu = 0; thu < this.danhSachBoss.length; thu++) {
+            int chiSo = Math.floorMod(
+                    this.chiSoBossDatBomTiepTheo++,
+                    this.danhSachBoss.length);
+            int slot = this.danhSachBoss[chiSo].getSlot() & 0xFF;
+            ChickenChienBinh boss = this.chienBinhs[slot];
+            if (boss != null && !boss.chet && boss.hp > 0) {
+                return boss;
+            }
+        }
+        return null;
+    }
+
+    private void ketLieuToanBoNguoiChoiBangBom(
+            BoDemBomBossDatBom.Bom bom
+    ) throws IOException {
+        int soNguoiBiHa = 0;
+        for (int slot = 0; slot < SO_SLOT_NGUOI_CHOI; slot++) {
+            ChickenChienBinh mucTieu = this.chienBinhs[slot];
+            if (mucTieu == null || mucTieu.chet
+                    || mucTieu.hp <= 0 || !mucTieu.coPhien()) {
+                continue;
+            }
+            // Timed bomb is explicitly fatal: armor and HP above 6000 do not
+            // turn the server-authoritative result into a client-side guess.
+            mucTieu.hp = 0;
+            mucTieu.chet = true;
+            this.phatCapNhatMau(mucTieu);
+            soNguoiBiHa++;
+        }
+        System.out.println("[BOSS DAT BOM][CMD109_NO] id="
+                + (bom.getId() & 0xFF)
+                + " damageHienThi="
+                + CauHinhBossDatBom.SAT_THUONG_BOM_HEN_GIO
+                + " boQuaGiap=true ketLieu=true soNguoiBiHa="
+                + soNguoiBiHa);
+        this.kiemTraKetThuc();
+    }
+
+    private void phatTaoBom(
+            BoDemBomBossDatBom.Bom bom,
+            int x,
+            int y
+    ) throws IOException {
+        this.phatTinBom(GiaoThucBomBossDatBom.taoBom(
+                bom.getId(), x, y, bom.getLuotConLai()));
+    }
+
+    private void phatCapNhatLuotBom(
+            BoDemBomBossDatBom.Bom bom
+    ) throws IOException {
+        this.phatTinBom(GiaoThucBomBossDatBom.capNhatLuot(
+                bom.getId(), bom.getLuotConLai()));
+    }
+
+    private void phatNoBom(BoDemBomBossDatBom.Bom bom) throws IOException {
+        this.phatTinBom(GiaoThucBomBossDatBom.noBom(bom.getId()));
+    }
+
+    private void phatXoaBom(BoDemBomBossDatBom.Bom bom) throws IOException {
+        this.phatXoaBom(bom.getId());
+    }
+
+    private void phatXoaBom(byte id) throws IOException {
+        this.phatTinBom(GiaoThucBomBossDatBom.xoaBom(id));
+    }
+
+    private void phatTinBom(ChickenTinNhan tin) throws IOException {
+        for (ChickenChienBinh nguoiNhan : this.nguoiChoiConPhien()) {
+            try {
+                nguoiNhan.nguoiChoi.dichVu.guiTin(tin);
+            } catch (Exception loi) {
+                // A broken client must not stop the authoritative countdown,
+                // block turn progression, or prevent teammates receiving it.
+                System.err.println("[BOSS DAT BOM][LOI_GUI_CMD109] player="
+                        + nguoiNhan.ten
+                        + " loi=" + loi.getClass().getSimpleName());
+            }
+        }
+    }
+
+    private void xoaBomConLaiTrenClient() throws IOException {
+        for (BoDemBomBossDatBom.Bom bom
+                : this.boDemBom.chupBomDangHoatDong()) {
+            this.phatXoaBom(bom);
+        }
+        this.boDemBom.xoaTatCa();
+        this.boDemGoBom.xoaTatCa();
     }
 
     private void xuLyHetThoiGianLuot(int slot, long phien) {
@@ -632,7 +981,7 @@ public final class BossDatBom extends ChickenQuanLyChien {
         }
         return chienBinh == null
                 ? 100
-                : CauHinhBossDatBom.layNapDanTheoSung(chienBinh.maVuKhi);
+                : this.layNapDanBoss(slot);
     }
 
     private void thucHienLuotBoss(int slot, long phien) {
@@ -670,59 +1019,51 @@ public final class BossDatBom extends ChickenQuanLyChien {
         ChickenChienBinh mucTieu = BossBanSung.chonNgauNhienNguoiSong(this.chienBinhs);
         if (mucTieu == null) {
             this.sangLuotSauBoss(slot, phien,
-                    CauHinhBossDatBom.layNapDanTheoSung(boss.maVuKhi));
+                    this.layNapDanBoss(slot));
             return;
         }
-        int soVien = BossBanSung.laySoVien(boss);
-        int treVien = BossBanSung.layKhoangCachVienMs(boss);
+        ChickenQuanLyDanSung.DuLieuSung duLieu =
+                this.layDuLieuSungBoss(slot, boss);
+        boolean aimChuan = BossBanSung.chonCheDoAimChuan();
+        ChickenKetQuaDan ketQua =
+                BossBanSung.taoPhatBanTheoCongThucSung(
+                        boss,
+                        mucTieu,
+                        this.chienBinhs,
+                        duLieu,
+                        this.banDo,
+                        this.layWindXChoChienBinh(boss),
+                        this.layWindYChoChienBinh(boss),
+                        aimChuan
+                );
         System.out.println("[BOSS DAT BOM][BOSS_BAN] boss=" + boss.ten
-                + " target=" + mucTieu.ten + " soVien=" + soVien
-                + " sungPart=" + boss.maVuKhi + " damageMoiVien="
-                + Math.max(1, boss.tanCong - mucTieu.giap));
-        this.banVienBoss(boss, mucTieu, slot, phien, 0, soVien, treVien);
-    }
-
-    private void banVienBoss(
-            ChickenChienBinh boss,
-            ChickenChienBinh mucTieu,
-            int slot,
-            long phien,
-            int vien,
-            int soVien,
-            int treVien
-    ) {
-        synchronized (this) {
-            if (this.daKetThuc || this.maPhienLuot != phien
-                    || boss.chet || mucTieu.chet) {
-                this.sangLuotSauBoss(slot, phien,
-                        CauHinhBossDatBom.layNapDanTheoSung(boss.maVuKhi));
-                return;
-            }
-            ChickenKetQuaDan ketQua = BossBanSung.taoPhatBan(
-                    boss, mucTieu, this.banDo,
-                    this.layWindXChoChienBinh(boss),
-                    this.layWindYChoChienBinh(boss));
-            try {
-                this.phatBan(boss, ketQua, (byte) 1);
-                this.phaDiaHinhNeuCan(ketQua);
-                if (ketQua.mucTieu != null && ketQua.satThuong > 0) {
-                    this.gaySatThuong(ketQua.mucTieu, ketQua.satThuong);
+                + " target=" + mucTieu.ten
+                + " idSung=" + this.idSungBoss[slot]
+                + " tenSung="
+                + (duLieu == null ? "unknown" : duLieu.getTenSung())
+                + " sungPart=" + boss.maVuKhi
+                + " loaiDan=" + (ketQua.loaiDan & 0xFF)
+                + " soDuong=" + ketQua.cacDuongX.length
+                + " soLanBan=1"
+                + " cheDo=" + (aimChuan ? "AIM_CHUAN" : "BAN_BUA"));
+        try {
+            this.phatBan(boss, ketQua, (byte) 1);
+            this.phaDiaHinhNeuCan(ketQua);
+            for (Map.Entry<ChickenChienBinh, Integer> entry
+                    : ketQua.satThuongTheoMucTieu.entrySet()) {
+                if (!this.daKetThuc && entry.getKey() != null
+                        && !entry.getKey().chet && entry.getValue() > 0) {
+                    this.gaySatThuong(entry.getKey(), entry.getValue());
                 }
-            } catch (IOException ignored) {
             }
-            if (this.daKetThuc) {
-                return;
-            }
-            if (vien + 1 >= soVien || mucTieu.chet) {
-                this.boHenGio.schedule(() -> this.sangLuotSauBoss(
-                                slot, phien,
-                                CauHinhBossDatBom.layNapDanTheoSung(boss.maVuKhi)),
-                        180, TimeUnit.MILLISECONDS);
-                return;
-            }
-            this.boHenGio.schedule(() -> this.banVienBoss(
-                    boss, mucTieu, slot, phien, vien + 1, soVien, treVien),
-                    treVien, TimeUnit.MILLISECONDS);
+        } catch (IOException ignored) {
+        }
+        if (!this.daKetThuc) {
+            this.choServerKetThucPhatBan(
+                    boss,
+                    this.layNapDanBoss(slot),
+                    ChickenThoiGianHoatAnhDan.tinh(ketQua)
+            );
         }
     }
 
@@ -919,7 +1260,8 @@ public final class BossDatBom extends ChickenQuanLyChien {
                     @Override
                     public boolean chapNhan(
                             ChickenChienBinh nguoiBan, ChickenChienBinh mucTieu) {
-                        return !nguoiBan.bot || !mucTieu.bot;
+                        return ChickenLuatVaChamPhongBoss.chapNhan(
+                                nguoiBan, mucTieu);
                     }
                 });
     }
@@ -1036,7 +1378,9 @@ public final class BossDatBom extends ChickenQuanLyChien {
                 com.chicken.chien.ChickenLoatBanUltronServer.tao(
                         shooter, dauNong[0], dauNong[1], goc, luc,
                         this.banDo, this.chienBinhs,
-                        (nguoiBan, dich) -> dich.bot);
+                        (nguoiBan, dich) ->
+                                ChickenLuatVaChamPhongBoss.chapNhan(
+                                        nguoiBan, dich));
         hienThiX = loatMayChu.cacDuongX;
         hienThiY = loatMayChu.cacDuongY;
 
@@ -1115,12 +1459,16 @@ public final class BossDatBom extends ChickenQuanLyChien {
                 double t = (double) buoc / (double) soBuoc;
                 int x = (int) Math.round(x1 + (x2 - x1) * t);
                 int y = (int) Math.round(y1 + (y2 - y1) * t);
-                for (int slot = CauHinhBossDatBom.SLOT_BOSS_DAU;
-                        slot <= CauHinhBossDatBom.SLOT_BOSS_CUOI; slot++) {
-                    ChickenChienBinh boss = this.chienBinhs[slot];
-                    if (boss != null && !boss.chet
-                            && ChickenKichThuocNhanVat.trungBoss(x, y, boss.x, boss.y)) {
-                        return new VaChamBoss(boss, i, (short) x, (short) y);
+                for (ChickenChienBinh mucTieu : this.chienBinhs) {
+                    if (mucTieu != null && !mucTieu.chet
+                            && mucTieu.hp > 0
+                            && (mucTieu.bot
+                                    ? ChickenKichThuocNhanVat.trungBoss(
+                                            x, y, mucTieu.x, mucTieu.y)
+                                    : ChickenKichThuocNhanVat.trungNguoiChoi(
+                                            x, y, mucTieu.x, mucTieu.y))) {
+                        return new VaChamBoss(
+                                mucTieu, i, (short) x, (short) y);
                     }
                 }
             }
@@ -1196,7 +1544,15 @@ public final class BossDatBom extends ChickenQuanLyChien {
         int expHaBoss = ChickenKetQuaTranBoss.layExpHaBoss(
                 this.demBossSong());
         this.dangChoXacNhanThang = false;
+        try {
+            this.xoaBomConLaiTrenClient();
+        } catch (IOException loi) {
+            this.boDemBom.xoaTatCa();
+            System.err.println("[BOSS DAT BOM][LOI_XOA_CMD109] "
+                    + loi.getMessage());
+        }
         this.daKetThuc = true;
+        this.huyChoKetThucPhatBan();
         this.huyTacVuHetLuot();
         this.sanh.setTrangThai(SanhChoBoss.TrangThai.DA_KET_THUC);
         for (ThanhVienBoss thanhVien : this.sanh.chupThanhVien()) {
@@ -1264,7 +1620,88 @@ public final class BossDatBom extends ChickenQuanLyChien {
 
     private boolean coTheNhanLenhNguoiChoi(ChickenChienBinh chienBinh) {
         return chienBinh != null && !chienBinh.chet && !this.daKetThuc
-                && (chienBinh.chiSo == this.luotHienTai);
+                && (chienBinh.chiSo == this.luotHienTai)
+                && this.slotDangChoKetThucBan < 0;
+    }
+
+    private void choServerKetThucPhatBan(
+            ChickenChienBinh shooter,
+            int napDanSauBan,
+            long thoiGianHoatAnhMs
+    ) {
+        int slot = shooter == null ? -1 : shooter.chiSo & 0xFF;
+        if (slot < 0 || slot >= SO_SLOT
+                || this.daKetThuc
+                || (this.luotHienTai & 0xFF) != slot) {
+            return;
+        }
+        this.huyTacVuHetLuot();
+        this.huyChoKetThucPhatBan();
+        long phien = this.maPhienLuot;
+        this.slotDangChoKetThucBan = slot;
+        this.phienDangChoKetThucBan = phien;
+        this.napDanSauPhatDangCho = napDanSauBan;
+        long treMs = Math.max(
+                ChickenThoiGianHoatAnhDan.TOI_THIEU_MS,
+                Math.min(
+                        ChickenThoiGianHoatAnhDan.TOI_DA_MS,
+                        thoiGianHoatAnhMs
+                )
+        );
+        // CMD79 chi la tin hieu client da ve xong. Client khong duoc phep
+        // tua luot truoc moc server tinh tu do dai quy dao.
+        this.thoiDiemSomNhatXacNhanKetThucBan =
+                System.currentTimeMillis()
+                + Math.max(
+                        ChickenThoiGianHoatAnhDan.TOI_THIEU_MS,
+                        treMs - 80L
+                );
+        this.tacVuChoKetThucBan = this.boHenGio.schedule(
+                () -> this.hoanTatChoKetThucPhatBan(slot, phien, true),
+                treMs,
+                TimeUnit.MILLISECONDS
+        );
+    }
+
+    private void hoanTatChoKetThucPhatBan(
+            int slot,
+            long phien,
+            boolean hetHan
+    ) {
+        synchronized (this) {
+            if (this.daKetThuc
+                    || this.slotDangChoKetThucBan != slot
+                    || this.phienDangChoKetThucBan != phien
+                    || this.maPhienLuot != phien
+                    || (this.luotHienTai & 0xFF) != slot) {
+                return;
+            }
+            int napDanSauBan = this.napDanSauPhatDangCho;
+            this.huyChoKetThucPhatBan();
+            this.datNapDanSauHanhDong(slot, napDanSauBan);
+            if (hetHan) {
+                System.out.println(
+                        "[BOSS DAT BOM][ANIMATION_DAN_TIMEOUT] slot="
+                        + slot + " phien=" + phien
+                        + " serverChuyenLuot=true");
+            }
+            try {
+                this.chuyenSangLuotTiepTheo(slot);
+            } catch (IOException ignored) {
+            }
+        }
+    }
+
+    private void huyChoKetThucPhatBan() {
+        if (this.tacVuChoKetThucBan != null) {
+            this.tacVuChoKetThucBan.cancel(false);
+            this.tacVuChoKetThucBan = null;
+        }
+        this.slotDangChoKetThucBan = -1;
+        this.phienDangChoKetThucBan = -1L;
+        this.napDanSauPhatDangCho = 0;
+        this.thoiDiemSomNhatXacNhanKetThucBan = 0L;
+        this.nguoiChoiDaXacNhanHoatAnh.clear();
     }
 
     private ChickenChienBinh layNguoiChoi(ChickenNguoiChoi nguoiChoi) {
@@ -1538,7 +1975,8 @@ public final class BossDatBom extends ChickenQuanLyChien {
                     shooter.x,
                     shooter.y,
                     ketQua,
-                    soPhat <= 0 ? (byte) 1 : soPhat);
+                    soPhat <= 0 ? (byte) 1 : soPhat,
+                    shooter.avenger == ChickenKyNangDacBietUltron.AVG_ULTRON);
         }
     }
 
@@ -1614,6 +2052,19 @@ public final class BossDatBom extends ChickenQuanLyChien {
 
     private static short kepShort(int giaTri, int nhoNhat, int lonNhat) {
         return (short) Math.max(nhoNhat, Math.min(lonNhat, giaTri));
+    }
+
+    private static int demNguoiChoiTrongSanh(SanhChoBoss sanh) {
+        if (sanh == null) {
+            return 0;
+        }
+        int dem = 0;
+        for (ThanhVienBoss thanhVien : sanh.chupThanhVien()) {
+            if (thanhVien != null && thanhVien.getNguoiChoi() != null) {
+                dem++;
+            }
+        }
+        return dem;
     }
 
     private static ChickenNguoiChoi[] layNguoiChoiTheoGhe(SanhChoBoss sanh) {

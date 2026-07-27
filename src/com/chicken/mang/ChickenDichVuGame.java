@@ -721,7 +721,7 @@ implements IChickenDichVuGame {
         this.guiTin(ms);
     }
 
-    /** Tạo chiến binh boss động tại slot 8-12 bằng packet native CMD -63. */
+    /** Tạo chiến binh boss động tại một slot boss bằng packet native CMD -63. */
     public void guiTaoBossBaoVay(
             byte slot,
             int id,
@@ -959,6 +959,33 @@ implements IChickenDichVuGame {
     }
 
     /**
+     * Hoat anh native gap, mang va tha nguoi cua BigBoss Rong.
+     *
+     * <p>Packet nay chi dieu khien hinh anh client. Diem mang, diem tha, vi tri
+     * cuoi cung va sat thuong van do server tinh va cap nhat.</p>
+     */
+    public void guiGapThaBossRong(
+            byte slotRong,
+            short xMang,
+            short yMang,
+            byte slotMucTieu,
+            short xTha,
+            short yTha
+    ) throws IOException {
+        ChickenTinNhan ms = new ChickenTinNhan(-68);
+        DataOutputStream ds = ms.boGhi();
+        ds.writeByte(slotRong);
+        ds.writeByte(2); // BigBoss Rong action 2: gap, mang, tha.
+        ds.writeShort(xMang);
+        ds.writeShort(yMang);
+        ds.writeByte(slotMucTieu);
+        ds.writeShort(xTha);
+        ds.writeShort(yTha);
+        ds.flush();
+        this.guiTin(ms);
+    }
+
+    /**
      * Packet độc native của client: byte đầu là người bắn, byte sau là người
      * trúng độc. Packet chỉ bật hình ảnh; HP vẫn do server cập nhật bằng CMD 51.
      */
@@ -978,8 +1005,26 @@ implements IChickenDichVuGame {
             ChickenKetQuaDan ketQua,
             byte numShoot
     ) throws IOException {
-        this.guiKetQuaBanNoiBo(
+        this.guiKetQuaBanBossBaoVay(
                 whoShoot, shooterX, shooterY, ketQua, numShoot, false);
+    }
+
+    public void guiKetQuaBanBossBaoVay(
+            byte whoShoot,
+            short shooterX,
+            short shooterY,
+            ChickenKetQuaDan ketQua,
+            byte numShoot,
+            boolean neoDiemDauQuyDao
+    ) throws IOException {
+        this.guiKetQuaBanNoiBo(
+                whoShoot,
+                shooterX,
+                shooterY,
+                ketQua,
+                numShoot,
+                neoDiemDauQuyDao
+        );
     }
 
     /**

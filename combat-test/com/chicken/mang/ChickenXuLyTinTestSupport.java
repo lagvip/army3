@@ -5,40 +5,39 @@ import com.chicken.mohinh.ChickenNguoiDung;
 import com.chicken.phong.boss.sanhcho.QuanLySanhChoBoss;
 import com.chicken.phong.boss.sanhcho.SanhChoBoss;
 import com.chicken.phong.boss.sanhcho.VaoSanhChoBoss;
+import java.util.ArrayList;
+import java.util.List;
 
-/**
- * Hoi quy cho cong trang thai packet cua phong boss.
- */
+/** Hoi quy: packet scene tre khong duoc day client ra khoi tran boss. */
 public final class ChickenXuLyTinTestSupport {
-    private static final int[] LENH_CAM = {
+    private static final int[] LENH_CHUYEN_SCENE = {
         -98, -28, 6, 7, 8, 16, 18, 20, 71, 75, 83
-    };
-    private static final int[] LENH_HOP_LE_TRONG_TRAN = {
-        5, 15, 21, 22, 23, 53, 79, 91, -91, 126
     };
 
     private ChickenXuLyTinTestSupport() {
     }
 
     public static void tuKiemTra() throws Exception {
-        for (int cmd : LENH_CAM) {
-            dung(ChickenXuLyTin.laLenhCamKhiDangDanhBoss(cmd),
-                    "thieu lenh chuyen trang thai cmd=" + cmd);
+        for (int cmd : LENH_CHUYEN_SCENE) {
+            dung(ChickenXuLyTin.laLenhChuyenScenePhong(cmd),
+                    "thieu lenh scene cmd=" + cmd);
         }
-        for (int cmd : LENH_HOP_LE_TRONG_TRAN) {
-            dung(!ChickenXuLyTin.laLenhCamKhiDangDanhBoss(cmd),
-                    "chan nham lenh chien dau/thoat cmd=" + cmd);
-        }
+        dung(!ChickenXuLyTin.laLenhChuyenScenePhong(15),
+                "chan nham nut thoat hop le");
+        dung(!ChickenXuLyTin.laLenhChuyenScenePhong(21),
+                "chan nham lenh di chuyen");
+        dung(!ChickenXuLyTin.laLenhChuyenScenePhong(22),
+                "chan nham lenh ban");
 
         QuanLySanhChoBoss.khoiTao();
-        PhienBatNgatKetNoi phien =
-                new PhienBatNgatKetNoi(97_083);
-        ChickenDichVuGame dichVu =
-                (ChickenDichVuGame) phien.layDichVu();
+        PhienKhongDuocNgat phien =
+                new PhienKhongDuocNgat(97_006);
+        DichVuBatPacket dichVu = new DichVuBatPacket(phien);
         ChickenNguoiDung user = new ChickenNguoiDung(phien, dichVu);
         ChickenNguoiChoi nguoiChoi = new ChickenNguoiChoi(dichVu);
-        nguoiChoi.ma = 97_083;
-        nguoiChoi.ten = "BossStateSecurity";
+        nguoiChoi.ma = 97_006;
+        nguoiChoi.ten = "BossLateScene";
+        dichVu.datNguoiChoi(nguoiChoi);
         user.nguoiChoi = nguoiChoi;
         phien.user = user;
 
@@ -49,19 +48,55 @@ public final class ChickenXuLyTinTestSupport {
                     QuanLySanhChoBoss.timSanhCuaNguoiChoi(nguoiChoi);
             dung(sanh != null, "khong tim thay sanh boss test");
             sanh.setTrangThai(SanhChoBoss.TrangThai.DANG_CHIEN);
-            dung(ChickenXuLyTin.dangDanhBoss(sanh),
+            dung(ChickenXuLyTin.dangTrongTranBoss(sanh),
                     "khong nhan trang thai boss dang chien");
 
-            ChickenXuLyTin router = new ChickenXuLyTin(phien);
-            for (int cmd : LENH_CAM) {
-                phien.datLaiDauNgat();
-                router.khiCoTin(new ChickenTinNhan(
-                        (byte) cmd, new byte[0]));
-                dung(phien.daBiNgat(),
-                        "lenh trai phep khong ngat ket noi cmd=" + cmd);
-                dung(!nguoiChoi.inTraining,
-                        "CMD trai phep tao duoc phien luyen tap cmd=" + cmd);
-            }
+            dichVu.xoaPacket();
+            new ChickenXuLyTin(phien).khiCoTin(
+                    new ChickenTinNhan((byte) 6, new byte[0]));
+            dung(!phien.daBiNgat,
+                    "packet scene tre lam ngat ket noi");
+            dung(dichVu.cacLenh.isEmpty(),
+                    "packet scene tre van gui UI sanh 8 nguoi");
+
+            /*
+             * Client gui -67 sau khi da tai du anh dan. Server boss phai tra
+             * dung mot -67 de mo GameScr; khong duoc gui som trong batDau().
+             */
+            dichVu.xoaPacket();
+            new ChickenXuLyTin(phien).khiCoTin(
+                    new ChickenTinNhan((byte) -67, new byte[0]));
+            dung(!phien.daBiNgat,
+                    "ACK vao tran boss lam ngat ket noi");
+            dung(dichVu.cacLenh.size() == 1
+                            && dichVu.cacLenh.get(0) == -67,
+                    "ACK vao tran boss khong mo GameScr dung mot lan");
+
+            /*
+             * Neu terrain CMD 126 con trong hang doi, ACK -67 phai duoc giu
+             * lai den resource cuoi thay vi mo GameScr som.
+             */
+            dichVu.xoaPacket();
+            dung(phien.datLichGuiNguyenLieuBoss(
+                            System.currentTimeMillis()) >= 0L,
+                    "khong tao duoc resource boss dang cho");
+            new ChickenXuLyTin(phien).khiCoTin(
+                    new ChickenTinNhan((byte) -67, new byte[0]));
+            dung(dichVu.cacLenh.isEmpty(),
+                    "ACK mo GameScr khi terrain con dang cho");
+            dung(phien.hoanTatGuiNguyenLieuBoss(),
+                    "resource cuoi khong danh thuc ACK GameScr");
+
+            /*
+             * Ngoai tran boss van giu nguyen handshake cua luyen tap.
+             */
+            QuanLySanhChoBoss.khoiTao();
+            dichVu.xoaPacket();
+            new ChickenXuLyTin(phien).khiCoTin(
+                    new ChickenTinNhan((byte) -67, new byte[0]));
+            dung(dichVu.cacLenh.size() == 1
+                            && dichVu.cacLenh.get(0) == -67,
+                    "lam hong handshake -67 cua luyen tap");
         } finally {
             QuanLySanhChoBoss.khoiTao();
         }
@@ -73,10 +108,10 @@ public final class ChickenXuLyTinTestSupport {
         }
     }
 
-    private static final class PhienBatNgatKetNoi extends ChickenPhien {
+    private static final class PhienKhongDuocNgat extends ChickenPhien {
         private boolean daBiNgat;
 
-        private PhienBatNgatKetNoi(int ma) {
+        private PhienKhongDuocNgat(int ma) {
             super(null, ma);
         }
 
@@ -84,13 +119,23 @@ public final class ChickenXuLyTinTestSupport {
         public void dongTin() {
             this.daBiNgat = true;
         }
+    }
 
-        private boolean daBiNgat() {
-            return this.daBiNgat;
+    private static final class DichVuBatPacket
+            extends ChickenDichVuGame {
+        private final List<Integer> cacLenh = new ArrayList<>();
+
+        private DichVuBatPacket(ChickenPhien phien) {
+            super(phien);
         }
 
-        private void datLaiDauNgat() {
-            this.daBiNgat = false;
+        @Override
+        public void guiTin(ChickenTinNhan tin) {
+            this.cacLenh.add((int) tin.layLenh());
+        }
+
+        private void xoaPacket() {
+            this.cacLenh.clear();
         }
     }
 }

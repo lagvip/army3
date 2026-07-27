@@ -185,7 +185,38 @@ public final class ChickenTinhSatThuongNo {
         int lechDuoi = laBoss
                 ? ChickenKichThuocNhanVat.BOSS_LECH_DUOI
                 : ChickenKichThuocNhanVat.NGUOI_CHOI_LECH_DUOI;
+        return tinhPhanTramQuaDiaHinh(
+                hoSo,
+                xNo,
+                yNo,
+                nhanVatX,
+                nhanVatY,
+                nuaRong,
+                lechTren,
+                lechDuoi,
+                banDo,
+                khoangCach
+        );
+    }
 
+    public static int tinhPhanTramQuaDiaHinh(
+            HoSoSatThuong hoSo,
+            int xNo,
+            int yNo,
+            int nhanVatX,
+            int nhanVatY,
+            int nuaRong,
+            int lechTren,
+            int lechDuoi,
+            ChickenQuanLyCongThucSung.KiemTraBanDo banDo,
+            double khoangCach
+    ) {
+        if (hoSo == null
+                || !hoSo.biDiaHinhChe()
+                || banDo == null
+                || khoangCach <= hoSo.getBanKinhDayDu()) {
+            return 100;
+        }
         int dichX = kep(xNo, nhanVatX - nuaRong, nhanVatX + nuaRong);
         int dichY = kep(yNo, nhanVatY - lechTren, nhanVatY - lechDuoi);
         int doDay = demPixelDiaHinhTrenDoan(

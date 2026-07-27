@@ -44,11 +44,13 @@ public final class ChickenCoCheBayAVG {
     }
 
     /**
-     * Quyền bay của người chơi thật phải khớp cả ID AVG lẫn vật phẩm đang được
-     * server giữ ở ô vũ khí. Chỉ sửa trường avenger hoặc packet client là chưa đủ.
+     * Trường avenger được server tự suy ra khi nạp/đổi trang bị. Client không
+     * có packet nào được phép ghi trường này, nên đây là nguồn quyền tin cậy
+     * và không phụ thuộc thứ tự/độ trễ đồng bộ mảng itemBody.
      */
     public static boolean coTrangBiBayHopLe(ChickenNguoiChoi nguoiChoi) {
-        return laIdBayDuocPhep(layAvengerTuTrangBi(nguoiChoi));
+        return nguoiChoi != null
+                && laIdBayDuocPhep(nguoiChoi.avenger);
     }
 
     /** Quyền đã được server chốt khi tạo chiến binh; Loki sao chép cùng quyền này. */

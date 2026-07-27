@@ -24,6 +24,11 @@ public final class ChickenTiaLaserIronMan {
     private static final int BUOC_QUET_PX = 2;
     private static final int SO_MUI_TEN_HAWK = 4;
 
+    @FunctionalInterface
+    public interface KiemTraHitbox {
+        boolean trung(ChickenChienBinh mucTieu, int tiaX, int tiaY);
+    }
+
     public static final class KetQua {
         private final short batDauX;
         private final short batDauY;
@@ -79,34 +84,69 @@ public final class ChickenTiaLaserIronMan {
             int mapWidth,
             int mapHeight
     ) {
+        return taoTrongTran(
+                ironMan, chienBinhs, goc, mapWidth, mapHeight, null);
+    }
+
+    public static KetQua taoTrongTran(
+            ChickenChienBinh ironMan,
+            ChickenChienBinh[] chienBinhs,
+            short goc,
+            int mapWidth,
+            int mapHeight,
+            KiemTraHitbox kiemTraHitbox
+    ) {
         if (ironMan == null) {
             return tao((short) 0, (short) 0, goc, mapWidth, mapHeight,
                     null, null, null);
         }
-        int soMucTieu = chienBinhs == null ? 0 : chienBinhs.length;
-        short[] cacX = new short[soMucTieu];
-        short[] cacY = new short[soMucTieu];
-        boolean[] hopLe = new boolean[soMucTieu];
-        for (int i = 0; i < soMucTieu; i++) {
-            ChickenChienBinh mucTieu = chienBinhs[i];
-            if (mucTieu == null || mucTieu == ironMan || mucTieu.chet
-                    || mucTieu.hp <= 0) {
+        short batDauX = ironMan.x;
+        short batDauY = (short) (ironMan.y - LECH_NGUC_SO_VOI_CHAN);
+        int rong = Math.max(1, mapWidth);
+        int cao = Math.max(1, mapHeight);
+        double rad = Math.toRadians(chuanHoaGoc(goc));
+        double huongX = Math.cos(rad);
+        double huongY = -Math.sin(rad);
+        int gioiHanBuoc = Math.max(rong, cao) * 2 + 64;
+        int xCuoi = batDauX;
+        int yCuoi = batDauY;
+        for (int buoc = BUOC_QUET_PX; buoc <= gioiHanBuoc;
+                buoc += BUOC_QUET_PX) {
+            int x = (int) Math.round(batDauX + huongX * buoc);
+            int y = (int) Math.round(batDauY + huongY * buoc);
+            if (x < 0 || x >= rong || y < 0 || y >= cao) {
+                return new KetQua(
+                        batDauX, batDauY,
+                        kepShort(xCuoi), kepShort(yCuoi), -1);
+            }
+            xCuoi = x;
+            yCuoi = y;
+            if (chienBinhs == null) {
                 continue;
             }
-            cacX[i] = mucTieu.x;
-            cacY[i] = mucTieu.y;
-            hopLe[i] = true;
+            for (int i = 0; i < chienBinhs.length; i++) {
+                ChickenChienBinh mucTieu = chienBinhs[i];
+                if (mucTieu == null || mucTieu == ironMan || mucTieu.chet
+                        || mucTieu.hp <= 0) {
+                    continue;
+                }
+                boolean trung = kiemTraHitbox != null
+                        ? kiemTraHitbox.trung(mucTieu, x, y)
+                        : mucTieu.bot
+                                ? ChickenKichThuocNhanVat.trungBoss(
+                                        x, y, mucTieu.x, mucTieu.y)
+                                : ChickenKichThuocNhanVat.trungNguoiChoi(
+                                        x, y, mucTieu.x, mucTieu.y);
+                if (trung) {
+                    return new KetQua(
+                            batDauX, batDauY,
+                            kepShort(x), kepShort(y), i);
+                }
+            }
         }
-        return tao(
-                ironMan.x,
-                (short) (ironMan.y - LECH_NGUC_SO_VOI_CHAN),
-                goc,
-                mapWidth,
-                mapHeight,
-                cacX,
-                cacY,
-                hopLe
-        );
+        return new KetQua(
+                batDauX, batDauY,
+                kepShort(xCuoi), kepShort(yCuoi), -1);
     }
 
     public static KetQua tao(

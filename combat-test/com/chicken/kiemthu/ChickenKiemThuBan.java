@@ -37,17 +37,26 @@ import com.chicken.mang.ChickenPhien;
 import com.chicken.mang.ChickenTinNhan;
 import com.chicken.mang.ChickenXuLyTinTestSupport;
 import com.chicken.mohinh.ChickenLuyenTapTestSupport;
+import com.chicken.mohinh.ChickenCuaHangTestSupport;
 import com.chicken.mohinh.ChickenNguoiChoi;
 import com.chicken.nhapvai.ChickenKhu;
 import com.chicken.phong.boss.sanhcho.SanhChoBoss;
 import com.chicken.phong.boss.sanhcho.ThanhVienBoss;
 import com.chicken.phong.boss.sanhcho.ChickenKinhTeBossTestSupport;
 import com.chicken.phong.boss.trandau.ChickenKetQuaTranBoss;
+import com.chicken.phong.boss.trandau.ChickenLuatVaChamPhongBoss;
 import com.chicken.phong.boss.trandau.baovay.BossBaoVay;
+import com.chicken.phong.boss.trandau.datbom.BoDemBomBossDatBom;
+import com.chicken.phong.boss.trandau.datbom.BoDemGoBomBossDatBom;
 import com.chicken.phong.boss.trandau.datbom.BossDatBom;
+import com.chicken.phong.boss.trandau.datbom.CauHinhBossDatBom;
+import com.chicken.phong.boss.trandau.datbom.GiaoThucBomBossDatBom;
 import com.chicken.phong.boss.trandau.haitoathap.BossHaiToaThap;
 import com.chicken.phong.boss.trandau.khicau.BossKhiCau;
 import com.chicken.phong.boss.trandau.rong.BossRong;
+import com.chicken.phong.boss.trandau.rong.BossRongTanCong;
+import com.chicken.phong.boss.trandau.rong.CauHinhBossRong;
+import com.chicken.phong.boss.trandau.rong.DiChuyenBossRong;
 import com.chicken.phong.boss.trandau.rua.BossRua;
 import com.chicken.phong.boss.trandau.rua.CauHinhBossRua;
 import com.chicken.phong.boss.trandau.rua.ChieuBossRua;
@@ -64,12 +73,14 @@ import com.chicken.tienich.ChickenTienIch;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -84,8 +95,10 @@ public final class ChickenKiemThuBan {
     public static void main(String[] args) throws Exception {
         chay("phien gioi han spam, di chuyen, skill va resource",
                 ChickenKiemThuBan::kiemTraGioiHanPhien);
-        chay("dang danh boss thi cam chuyen phong va tao tran khac",
+        chay("packet scene tre khong day client khoi tran boss",
                 ChickenXuLyTinTestSupport::tuKiemTra);
+        chay("shop doc du 4 byte, tu tinh gia va luon dong InfoDlg",
+                ChickenCuaHangTestSupport::tuKiemTra);
         chay("PvP khong tin toa do, dan va luot tu client",
                 ChickenKiemThuBan::kiemTraPvPTheoTrangThaiServer);
         chay("luyen tap khong tin toa do, dan va luot tu client",
@@ -103,6 +116,10 @@ public final class ChickenKiemThuBan {
         chay("va cham va damage sung thuong", ChickenKiemThuBan::kiemTraVaChamDamage);
         chay("phong boss cho ban ban than va dong doi",
                 ChickenKiemThuBan::kiemTraFriendlyFirePhongBoss);
+        chay("toan bo 7 map: dan boss trung boss khac va chinh no",
+                ChickenKiemThuBan::kiemTraBossBanBossKhac);
+        chay("Boss Dat Bom dung yen va van tan cong",
+                ChickenKiemThuBan::kiemTraBossDatBomDungYen);
         chay("cong thuc duong dan AVG", ChickenKiemThuBan::kiemTraCongThucAvg);
         chay("Ultron x3 co ba va cham doc lap",
                 ChickenKiemThuBan::kiemTraLoatUltronDocLap);
@@ -121,10 +138,20 @@ public final class ChickenKiemThuBan {
                 ChickenKiemThuBan::kiemTraRoiKhuRpgKhongTinChiSo);
         chay("Rua ban dan doc va server tinh damage",
                 ChickenKiemThuBan::kiemTraDanRiengRuaMap54);
+        chay("loat hai vien Rong type 1 xuyen dia hinh",
+                ChickenKiemThuBan::kiemTraDanDacBietBossRong);
+        chay("Rong ban mot CMD22 co hai duong cung quy dao",
+                ChickenKiemThuBan::kiemTraLoatHaiVienBossRong);
+        chay("Ultron trong phong boss neo diem dau dan vao nhan vat",
+                ChickenKiemThuBan::kiemTraNeoDiemDauUltronBossRong);
+        chay("Rong map55 dung animation gap-tha native",
+                ChickenKiemThuBan::kiemTraRongKhongSpamDiemBay);
+        chay("Rong dung hitbox native va diem tha khong ket da",
+                ChickenKiemThuBan::kiemTraHitboxVaDiemThaRong);
         chay("Rua map 54 gui packet ban that",
                 ChickenKiemThuBan::kiemTraBossRuaGuiPacketBan);
-        chay("Rua giu da ngang de vuot khoi mep dia hinh",
-                ChickenKiemThuBan::kiemTraRuaVuotMepDiaHinh);
+        chay("Rua dung tai mep dia hinh thay vi roi",
+                ChickenKiemThuBan::kiemTraRuaDungTaiMepDiaHinh);
         chay("Rua map 54 tu di chuyen xong phai ban",
                 ChickenKiemThuBan::kiemTraBossRuaDiChuyenXongPhaiBan);
         chay("Rua map 58 tu di chuyen xong phai ban",
@@ -155,15 +182,17 @@ public final class ChickenKiemThuBan {
                 ChickenKiemThuBan::kiemTraThanhMauDau25Nac);
         chay("thoi gian animation dan theo quy dao server",
                 ChickenKiemThuBan::kiemTraThoiGianHoatAnhDan);
-        chay("map 54 server tu chuyen luot, CMD23 khong tua nhanh",
+        chay("map 54 CMD79 chi mo luot sau khi animation xong",
                 ChickenKiemThuBan::kiemTraDongBoCmd23BossRua);
-        chay("map 58 server tu chuyen luot, CMD23 khong tua nhanh",
+        chay("map 58 CMD79 chi mo luot sau khi animation xong",
                 ChickenKiemThuBan::kiemTraDongBoCmd23BossRuaRong);
+        chay("map 55 CMD79 chi mo luot sau khi animation xong",
+                ChickenKiemThuBan::kiemTraDongBoCmd23BossRong);
         chay("gui CMD24 de client doi sang luot boss",
                 ChickenKiemThuBan::kiemTraGuiLuotClientChoBoss);
-        chay("Rua map 54 thieu nua mat chan phai roi ve phia nguoi",
-                ChickenKiemThuBan::kiemTraRuaRoiKhoiMepMap54);
-        chay("Rua map 54 moi luot chi chay 130 va phai dap dat",
+        chay("Rua map 54 dung tai mep phai",
+                ChickenKiemThuBan::kiemTraRuaDungTaiMepPhaiMap54);
+        chay("Rua map 54 di trai xuong be thap va khong vuot 130",
                 ChickenKiemThuBan::kiemTraRuaKhongDiXaVaKhongTreo);
         chay("be va gach duong chay Boss Rua khong the bi pha",
                 ChickenKiemThuBan::kiemTraDiaHinhCoDinhBossRua);
@@ -525,6 +554,674 @@ public final class ChickenKiemThuBan {
                 "doc yeu hon lai ghi de muc doc manh dang co");
     }
 
+    private static void kiemTraDanDacBietBossRong() {
+        bang(25, CauHinhBossRong.TY_LE_GAP_NGUOI_PHAN_TRAM,
+                "ty le gap nguoi Rong khong phai 25 phan tram");
+        dung(BossRong.laChieuGapNguoi(0)
+                        && BossRong.laChieuGapNguoi(24)
+                        && !BossRong.laChieuGapNguoi(25)
+                        && !BossRong.laChieuGapNguoi(99),
+                "ranh gioi 25/75 gap nguoi va ban dan cua Rong bi sai");
+        bang(50, CauHinhBossRong.TY_LE_AIM_PHAN_TRAM,
+                "ty le aim Rong khong phai 50 phan tram");
+        dung(BossRongTanCong.laCheDoAim(0)
+                        && BossRongTanCong.laCheDoAim(49)
+                        && !BossRongTanCong.laCheDoAim(50)
+                        && !BossRongTanCong.laCheDoAim(99),
+                "ranh gioi 50/50 aim va ngau nhien cua Rong bi sai");
+
+        ChickenChienBinh rong = chienBinh(
+                (byte) 8, (short) -55, (byte) 0);
+        rong.x = 100;
+        rong.y = 500;
+        rong.tanCong = 700;
+
+        ChickenChienBinh mucTieu = chienBinh(
+                (byte) 0, (short) 57, (byte) 0);
+        mucTieu.x = 430;
+        mucTieu.y = 500;
+        mucTieu.giap = 100;
+
+        ChickenQuanLyBanDo mapCoTuongDay = new ChickenQuanLyBanDo(0) {
+            @Override
+            public int getWidth() { return 1_000; }
+
+            @Override
+            public int getHeight() { return 800; }
+
+            @Override
+            public synchronized boolean coVaCham(short x, short y) {
+                return x >= 220 && x <= 300;
+            }
+        };
+
+        ChickenKetQuaDan map55 = BossRongTanCong.taoPhatBanDacBiet(
+                rong, mucTieu, mapCoTuongDay, (byte) 0, (byte) 0);
+        ChickenKetQuaDan map58 = BossRuaRongTanCong.taoPhatBanRong(
+                rong, mucTieu, mapCoTuongDay, (byte) 0, (byte) 0);
+
+        for (ChickenKetQuaDan ketQua
+                : new ChickenKetQuaDan[]{map55, map58}) {
+            bang(CauHinhBossRong.LOAI_DAN_DAC_BIET, ketQua.loaiDan,
+                    "Rong khong dung bullet type 1 native hai vien");
+            bang(2, ketQua.cacDuongX.length,
+                    "mot CMD22 cua Rong phai co dung hai path");
+            bang(2, ketQua.cacDuongY.length,
+                    "mot CMD22 cua Rong sai so duong Y");
+            dung(Arrays.equals(ketQua.cacDuongX[0], ketQua.cacDuongX[1])
+                            && Arrays.equals(
+                                    ketQua.cacDuongY[0],
+                                    ketQua.cacDuongY[1]),
+                    "hai vien Rong khong dung cung goc luc quy dao");
+            dung(ketQua.cacDuongX[0].length >= 2,
+                    "vien Rong khong co duong bay");
+            int xCuoi = ketQua.cacDuongX[0][
+                    ketQua.cacDuongX[0].length - 1];
+            dung(xCuoi > 300,
+                    "dan Rong bi tuong day cat truoc hitbox");
+            dung(ketQua.mucTieu == mucTieu,
+                    "dan Rong xuyen tuong nhung server bo mat hit");
+            bang(600, ketQua.satThuong,
+                    "damage Rong khong do server lay cong tru giap");
+        }
+
+        ChickenKetQuaDan phatTruot55 =
+                BossRongTanCong.taoPhatBanDacBiet(
+                        rong,
+                        mucTieu,
+                        new ChickenChienBinh[0],
+                        mapCoTuongDay,
+                        (byte) 0,
+                        (byte) 0,
+                        false
+                );
+        ChickenKetQuaDan phatTruot58 =
+                BossRuaRongTanCong.taoPhatBanRong(
+                        rong,
+                        mucTieu,
+                        new ChickenChienBinh[0],
+                        mapCoTuongDay,
+                        (byte) 0,
+                        (byte) 0,
+                        false
+                );
+        for (ChickenKetQuaDan ketQua
+                : new ChickenKetQuaDan[]{phatTruot55, phatTruot58}) {
+            int chiSoCuoi = ketQua.cacDuongX[0].length - 1;
+            int xCuoi = ketQua.cacDuongX[0][chiSoCuoi];
+            int yCuoi = ketQua.cacDuongY[0][chiSoCuoi];
+            dung(xCuoi < 0 || xCuoi >= mapCoTuongDay.getWidth()
+                            || yCuoi < 0
+                            || yCuoi >= mapCoTuongDay.getHeight(),
+                    "phat Rong ngau nhien ket thuc trong map va gia va cham dia hinh");
+            laNull(ketQua.mucTieu,
+                    "phat Rong truot van gan nham muc tieu");
+            bang(0, ketQua.satThuong,
+                    "phat Rong truot van sinh damage");
+        }
+    }
+
+    private static void kiemTraLoatHaiVienBossRong() throws Exception {
+        DichVuBatPacket dichVu55 = new DichVuBatPacket();
+        ChickenNguoiChoi nguoi55 = new ChickenNguoiChoi(dichVu55);
+        nguoi55.ma = 92_155;
+        nguoi55.ten = "DragonTwoShot55";
+        SanhChoBoss sanh55 = new SanhChoBoss(
+                (byte) 4, (byte) 5, (byte) 55, (byte) 8, 1_000);
+        dung(sanh55.themThanhVien(new ThanhVienBoss(
+                        nguoi55, (byte) 0, 155L, true)),
+                "khong them duoc player test loat Rong map 55");
+        BossRong tran55 = new BossRong(sanh55);
+        try {
+            datByte(tran55, BossRong.class, "luotHienTai", (byte) 8);
+            datLong(tran55, BossRong.class, "maPhienLuot", 155L);
+            ChickenChienBinh[] chienBinhs = tran55.chupChienBinh();
+            ChickenChienBinh mucTieu = chienBinhs[0];
+            ChickenChienBinh rong = chienBinhs[8];
+            mucTieu.x = 180;
+            mucTieu.y = 500;
+            mucTieu.hp = mucTieu.mauToiDa = 10_000;
+            mucTieu.giap = 0;
+            int hpTruoc = mucTieu.hp;
+            int soCapNhatHpTruoc = dichVu55.demLenh(51);
+
+            ChickenKetQuaDan ketQuaAim =
+                    BossRongTanCong.taoPhatBanDacBiet(
+                            rong,
+                            mucTieu,
+                            null,
+                            (byte) 0,
+                            (byte) 0
+                    );
+            Method banTuXa = BossRong.class.getDeclaredMethod(
+                    "phatLoatHaiVienRong",
+                    ChickenChienBinh.class,
+                    int.class,
+                    long.class,
+                    ChickenKetQuaDan.class
+            );
+            banTuXa.setAccessible(true);
+            banTuXa.invoke(tran55, rong, 8, 155L, ketQuaAim);
+            Thread.sleep(850L);
+
+            bang(1, dichVu55.demLenh(22),
+                    "Rong map 55 khong gui dung mot CMD22");
+            kiemTraPacketHaiVienRong(dichVu55.layTinCuoi(22), 8);
+            bang(hpTruoc - 2 * Math.max(1, rong.tanCong),
+                    mucTieu.hp,
+                    "hai vien Rong map 55 khong duoc cong damage");
+            bang(soCapNhatHpTruoc + 1, dichVu55.demLenh(51),
+                    "Rong map 55 khong gop damage vao mot cap nhat HP");
+            dung(layByte(tran55, BossRong.class, "luotHienTai") != (byte) 8,
+                    "Rong map 55 ban du hai vien nhung van khoa luot");
+        } finally {
+            tran55.dungBot();
+        }
+
+        DichVuBatPacket dichVu58 = new DichVuBatPacket();
+        ChickenNguoiChoi nguoi58 = new ChickenNguoiChoi(dichVu58);
+        nguoi58.ma = 92_158;
+        nguoi58.ten = "DragonTwoShot58";
+        SanhChoBoss sanh58 = new SanhChoBoss(
+                (byte) 4, (byte) 8, (byte) 58, (byte) 8, 1_000);
+        dung(sanh58.themThanhVien(new ThanhVienBoss(
+                        nguoi58, (byte) 0, 158L, true)),
+                "khong them duoc player test loat Rong map 58");
+        BossRuaRong tran58 = new BossRuaRong(sanh58);
+        try {
+            int slotRong = 10;
+            datByte(
+                    tran58,
+                    BossRuaRong.class,
+                    "luotHienTai",
+                    (byte) slotRong
+            );
+            datLong(tran58, BossRuaRong.class, "maPhienLuot", 158L);
+            ChickenChienBinh[] chienBinhs = tran58.chupChienBinh();
+            ChickenChienBinh mucTieu = chienBinhs[0];
+            ChickenChienBinh rong = chienBinhs[slotRong];
+            mucTieu.x = 700;
+            mucTieu.y = 500;
+            mucTieu.hp = mucTieu.mauToiDa = 10_000;
+            mucTieu.giap = 0;
+            int hpTruoc = mucTieu.hp;
+            int soCapNhatHpTruoc = dichVu58.demLenh(51);
+
+            ChickenKetQuaDan ketQuaAim =
+                    BossRuaRongTanCong.taoPhatBanRong(
+                            rong,
+                            mucTieu,
+                            null,
+                            (byte) 0,
+                            (byte) 0
+                    );
+            Method banSauBay = BossRuaRong.class.getDeclaredMethod(
+                    "phatLoatHaiVienRong",
+                    ChickenChienBinh.class,
+                    int.class,
+                    long.class,
+                    ChickenKetQuaDan.class
+            );
+            banSauBay.setAccessible(true);
+            banSauBay.invoke(
+                    tran58, rong, slotRong, 158L, ketQuaAim);
+            Thread.sleep(850L);
+
+            bang(1, dichVu58.demLenh(22),
+                    "Rong map 58 khong gui dung mot CMD22");
+            kiemTraPacketHaiVienRong(
+                    dichVu58.layTinCuoi(22), slotRong);
+            bang(hpTruoc - 2 * Math.max(1, rong.tanCong),
+                    mucTieu.hp,
+                    "hai vien Rong map 58 khong duoc cong damage");
+            bang(soCapNhatHpTruoc + 1, dichVu58.demLenh(51),
+                    "Rong map 58 khong gop damage vao mot cap nhat HP");
+            dung(layByte(
+                            tran58,
+                            BossRuaRong.class,
+                            "luotHienTai") != (byte) slotRong,
+                    "Rong map 58 ban du hai vien nhung van khoa luot");
+        } finally {
+            tran58.dungBot();
+        }
+    }
+
+    private static void kiemTraNeoDiemDauUltronBossRong() throws Exception {
+        DichVuBatPacket dichVu = new DichVuBatPacket();
+        ChickenNguoiChoi nguoiChoi = new ChickenNguoiChoi(dichVu);
+        nguoiChoi.ma = 92_156;
+        nguoiChoi.ten = "UltronFirstShot55";
+        SanhChoBoss sanh = new SanhChoBoss(
+                (byte) 4, (byte) 5, (byte) 55, (byte) 8, 1_000);
+        dung(sanh.themThanhVien(new ThanhVienBoss(
+                        nguoiChoi, (byte) 0, 156L, true)),
+                "khong them duoc Ultron vao test map 55");
+        BossRong tran = new BossRong(sanh);
+        try {
+            ChickenChienBinh ultron = tran.chupChienBinh()[0];
+            ultron.avenger = ChickenKyNangDacBietUltron.AVG_ULTRON;
+            ultron.x = 146;
+            ultron.y = 481;
+            ChickenKetQuaDan ketQua = new ChickenKetQuaDan(
+                    (byte) 0,
+                    (short) 186,
+                    (short) 469,
+                    (short) 0,
+                    (byte) 2,
+                    new short[]{186, 216, 1_686},
+                    new short[]{469, 469, 469},
+                    null,
+                    0
+            );
+            Method phatBan = BossRong.class.getDeclaredMethod(
+                    "phatBan",
+                    ChickenChienBinh.class,
+                    ChickenKetQuaDan.class,
+                    byte.class
+            );
+            phatBan.setAccessible(true);
+            phatBan.invoke(tran, ultron, ketQua, (byte) 1);
+
+            ChickenTinNhan tinNhan = dichVu.layTinCuoi(22);
+            khacNull(tinNhan, "map 55 khong gui CMD22 cua Ultron");
+            DataInputStream doc = new ChickenTinNhan(
+                    (byte) 22, tinNhan.layDuLieu()).boDoc();
+            bang(1, doc.readUnsignedByte(), "CMD22 Ultron sai typeShoot");
+            doc.readUnsignedByte();
+            bang(0, doc.readUnsignedByte(), "CMD22 Ultron sai slot ban");
+            bang(0, doc.readUnsignedByte(), "CMD22 Ultron sai bullet type");
+            bang(146, doc.readShort(), "CMD22 Ultron sai neo X nguoi ban");
+            bang(481, doc.readShort(), "CMD22 Ultron sai neo Y nguoi ban");
+            doc.readShort();
+            bang(1, doc.readUnsignedByte(), "CMD22 Ultron sai so phat");
+            bang(1, doc.readUnsignedByte(), "CMD22 Ultron sai so duong dan");
+            bang(3, doc.readUnsignedShort(), "CMD22 Ultron sai so diem");
+            bang(146, doc.readShort(),
+                    "diem dau Ultron boss khong duoc neo vao X nhan vat");
+            bang(481, doc.readShort(),
+                    "diem dau Ultron boss khong duoc neo vao Y nhan vat");
+            bang(216, doc.readShort(),
+                    "neo Ultron lai lam thay doi diem X thu hai cua server");
+            bang(469, doc.readShort(),
+                    "neo Ultron lai lam thay doi diem Y thu hai cua server");
+        } finally {
+            tran.dungBot();
+        }
+    }
+
+    private static void kiemTraPacketHaiVienRong(
+            ChickenTinNhan tinNhan,
+            int slotBoss
+    ) throws Exception {
+        khacNull(tinNhan, "khong bat duoc CMD22 cua Rong");
+        DataInputStream doc = new ChickenTinNhan(
+                (byte) 22, tinNhan.layDuLieu()).boDoc();
+        bang(1, doc.readUnsignedByte(),
+                "CMD22 Rong sai typeShoot short-coordinate");
+        bang(0, doc.readUnsignedByte(),
+                "CMD22 Rong khong duoc bat critical");
+        bang(slotBoss, doc.readUnsignedByte(),
+                "CMD22 Rong sai slot nguoi ban");
+        bang(CauHinhBossRong.LOAI_DAN_DAC_BIET,
+                doc.readUnsignedByte(),
+                "CMD22 Rong sai bullet type hai vien");
+        doc.readShort();
+        doc.readShort();
+        doc.readShort();
+        bang(1, doc.readUnsignedByte(),
+                "CMD22 Rong lap lai ca loat bang numShoot");
+        bang(2, doc.readUnsignedByte(),
+                "CMD22 Rong khong co dung hai path");
+
+        short[][] xs = new short[2][];
+        short[][] ys = new short[2][];
+        for (int vien = 0; vien < 2; vien++) {
+            int soDiem = doc.readUnsignedShort();
+            dung(soDiem >= 2,
+                    "path Rong khong du diem de chay animation");
+            xs[vien] = new short[soDiem];
+            ys[vien] = new short[soDiem];
+            for (int diem = 0; diem < soDiem; diem++) {
+                xs[vien][diem] = doc.readShort();
+                ys[vien][diem] = doc.readShort();
+            }
+        }
+        dung(Arrays.equals(xs[0], xs[1])
+                        && Arrays.equals(ys[0], ys[1]),
+                "hai path trong CMD22 Rong khong trung nhau");
+    }
+
+    private static void kiemTraRongKhongSpamDiemBay() throws Exception {
+        DichVuBatPacket dichVu55 = new DichVuBatPacket();
+        ChickenNguoiChoi nguoi55 = new ChickenNguoiChoi(dichVu55);
+        nguoi55.ma = 92_055;
+        nguoi55.ten = "DragonStableFlight55";
+        SanhChoBoss sanh55 = new SanhChoBoss(
+                (byte) 4, (byte) 5, (byte) 55, (byte) 8, 1_000);
+        dung(sanh55.themThanhVien(new ThanhVienBoss(
+                        nguoi55, (byte) 0, 55L, true)),
+                "khong them duoc player test bay Rong map 55");
+        BossRong tran55 = new BossRong(sanh55);
+        try {
+            datByte(tran55, BossRong.class, "luotHienTai", (byte) 8);
+            datLong(tran55, BossRong.class, "maPhienLuot", 55L);
+            ChickenChienBinh[] chienBinhs55 = tran55.chupChienBinh();
+            ChickenChienBinh mucTieu55 = chienBinhs55[0];
+            ChickenChienBinh rong55 = chienBinhs55[8];
+            mucTieu55.x = 180;
+            mucTieu55.y = 500;
+
+            Method tinhThoiGian = BossRong.class.getDeclaredMethod(
+                    "tinhThoiGianGapTha",
+                    ChickenChienBinh.class,
+                    ChickenChienBinh.class,
+                    int.class,
+                    int.class,
+                    int.class,
+                    int.class
+            );
+            tinhThoiGian.setAccessible(true);
+            long treGapTha = (long) tinhThoiGian.invoke(
+                    tran55,
+                    rong55,
+                    mucTieu55,
+                    1_000,
+                    230,
+                    1_000,
+                    724
+            );
+            dung(treGapTha >= 2_800L && treGapTha <= 3_100L,
+                    "timeout gap-tha Rong khong khop toc do native: "
+                            + treGapTha + "ms");
+            bang(170L, DiChuyenBossRong.tinhThoiGianBayMs(
+                            0, 0, 120, 0),
+                    "Rong van tinh toc do bay cham hon 12 px/frame");
+            bang(420L, CauHinhBossRong.TRE_HOAT_ANH_KEP_MANG_MS,
+                    "thoi gian 8 frame kep-mang bi doi sai");
+
+            Method bayDenGap = BossRong.class.getDeclaredMethod(
+                    "bayDenGapNguoi",
+                    ChickenChienBinh.class,
+                    ChickenChienBinh.class,
+                    int.class,
+                    long.class
+            );
+            bayDenGap.setAccessible(true);
+            bayDenGap.invoke(tran55, rong55, mucTieu55, 8, 55L);
+            bang(1, dichVu55.demLenh(-68),
+                    "Rong map 55 khong gui animation gap-tha native");
+            bang(0, dichVu55.demLenh(-64),
+                    "Rong map 55 van teleport boss thay animation");
+            bang(0, dichVu55.demLenh(21),
+                    "Rong map 55 van teleport nguoi bi gap");
+            kiemTraPacketGapThaRong(
+                    dichVu55.layTinCuoi(-68),
+                    rong55.chiSo,
+                    mucTieu55.chiSo
+            );
+            Thread.sleep(260L);
+            bang(1, dichVu55.demLenh(-68),
+                    "Rong map 55 gui lap animation gap-tha");
+            bang(0, dichVu55.demLenh(21),
+                    "Rong map 55 gui diem teleport trong luc gap-tha");
+
+            Method hoanTatGapTha = BossRong.class.getDeclaredMethod(
+                    "hoanTatGapThaNguoi",
+                    ChickenChienBinh.class,
+                    ChickenChienBinh.class,
+                    int.class,
+                    long.class,
+                    short.class,
+                    short.class,
+                    short.class,
+                    short.class,
+                    boolean.class
+            );
+            hoanTatGapTha.setAccessible(true);
+            mucTieu55.hp = 10_000;
+            mucTieu55.mauToiDa = 10_000;
+            mucTieu55.giap = 100;
+            hoanTatGapTha.invoke(
+                    tran55,
+                    rong55,
+                    mucTieu55,
+                    8,
+                    55L,
+                    (short) 1_000,
+                    (short) 230,
+                    (short) 1_000,
+                    (short) 699,
+                    false
+            );
+            bang(
+                    10_000 - Math.max(
+                            1,
+                            CauHinhBossRong.TAN_CONG_THA_ROI - 100),
+                    mucTieu55.hp,
+                    "Rong tha cham nen khong doc damage tu cau hinh");
+            bang(1_000, mucTieu55.x,
+                    "server khong chot dung X sau animation gap-tha");
+            bang(699, mucTieu55.y,
+                    "server khong chot dung Y sau animation gap-tha");
+
+            mucTieu55.hp = 10_000;
+            mucTieu55.chet = false;
+            hoanTatGapTha.invoke(
+                    tran55,
+                    rong55,
+                    mucTieu55,
+                    8,
+                    55L,
+                    (short) 1_000,
+                    (short) 230,
+                    (short) 1_000,
+                    (short) 744,
+                    true
+            );
+            bang(0, mucTieu55.hp,
+                    "Rong tha xuong vuc khong tru toan bo HP");
+            dung(mucTieu55.chet,
+                    "Rong tha xuong vuc khong danh dau muc tieu da chet");
+        } finally {
+            tran55.dungBot();
+        }
+
+        DichVuBatPacket dichVu58 = new DichVuBatPacket();
+        ChickenNguoiChoi nguoi58 = new ChickenNguoiChoi(dichVu58);
+        nguoi58.ma = 92_058;
+        nguoi58.ten = "DragonStableFlight58";
+        SanhChoBoss sanh58 = new SanhChoBoss(
+                (byte) 4, (byte) 8, (byte) 58, (byte) 8, 1_000);
+        dung(sanh58.themThanhVien(new ThanhVienBoss(
+                        nguoi58, (byte) 0, 58L, true)),
+                "khong them duoc player test bay Rong map 58");
+        BossRuaRong tran58 = new BossRuaRong(sanh58);
+        try {
+            int slotRong = 10;
+            datByte(
+                    tran58,
+                    BossRuaRong.class,
+                    "luotHienTai",
+                    (byte) slotRong
+            );
+            datLong(tran58, BossRuaRong.class, "maPhienLuot", 58L);
+            ChickenChienBinh[] chienBinhs58 = tran58.chupChienBinh();
+            ChickenChienBinh mucTieu58 = chienBinhs58[0];
+            ChickenChienBinh rong58 = chienBinhs58[slotRong];
+            mucTieu58.x = 850;
+            mucTieu58.y = 500;
+
+            bang(CauHinhBossRuaRong.MAU_RONG, rong58.hp,
+                    "Rong map 58 khong giu HP cau hinh rieng");
+            bang(CauHinhBossRuaRong.SAT_THUONG_RONG, rong58.tanCong,
+                    "Rong map 58 khong giu damage dan rieng");
+
+            Method bayDenGap = BossRuaRong.class.getDeclaredMethod(
+                    "bayDenGapNguoiRong",
+                    ChickenChienBinh.class,
+                    ChickenChienBinh.class,
+                    int.class,
+                    long.class
+            );
+            bayDenGap.setAccessible(true);
+            bayDenGap.invoke(
+                    tran58,
+                    rong58,
+                    mucTieu58,
+                    slotRong,
+                    58L
+            );
+            bang(1, dichVu58.demLenh(-68),
+                    "Rong map 58 khong dung animation gap-tha nhu map 55");
+            bang(0, dichVu58.demLenh(21),
+                    "Rong map 58 van dung luong bay-cu truoc khi ban");
+            kiemTraPacketGapThaRong(
+                    dichVu58.layTinCuoi(-68),
+                    rong58.chiSo,
+                    mucTieu58.chiSo
+            );
+            Thread.sleep(260L);
+            bang(1, dichVu58.demLenh(-68),
+                    "Rong map 58 gui lap animation gap-tha");
+
+            Method hoanTatGapTha = BossRuaRong.class.getDeclaredMethod(
+                    "hoanTatGapThaNguoiRong",
+                    ChickenChienBinh.class,
+                    ChickenChienBinh.class,
+                    int.class,
+                    long.class,
+                    short.class,
+                    short.class,
+                    short.class,
+                    short.class,
+                    boolean.class
+            );
+            hoanTatGapTha.setAccessible(true);
+            mucTieu58.hp = mucTieu58.mauToiDa = 10_000;
+            mucTieu58.giap = 100;
+            hoanTatGapTha.invoke(
+                    tran58,
+                    rong58,
+                    mucTieu58,
+                    slotRong,
+                    58L,
+                    (short) 800,
+                    (short) 180,
+                    (short) 800,
+                    (short) 500,
+                    false
+            );
+            bang(
+                    10_000 - Math.max(
+                            1,
+                            CauHinhBossRuaRong.SAT_THUONG_GAP_THA_RONG - 100),
+                    mucTieu58.hp,
+                    "Rong map 58 khong dung damage gap-tha rieng");
+        } finally {
+            tran58.dungBot();
+        }
+    }
+
+    private static void kiemTraPacketGapThaRong(
+            ChickenTinNhan tinNhan,
+            int slotRong,
+            int slotMucTieu
+    ) throws Exception {
+        khacNull(tinNhan, "khong bat duoc CMD -68 gap-tha Rong");
+        DataInputStream doc = new ChickenTinNhan(
+                (byte) -68, tinNhan.layDuLieu()).boDoc();
+        bang(slotRong, doc.readUnsignedByte(),
+                "CMD -68 gap-tha sai slot Rong");
+        bang(2, doc.readUnsignedByte(),
+                "CMD -68 gap-tha sai action native");
+        doc.readShort();
+        doc.readShort();
+        bang(slotMucTieu, doc.readUnsignedByte(),
+                "CMD -68 gap-tha sai slot muc tieu");
+        doc.readShort();
+        doc.readShort();
+        bang(0, doc.available(),
+                "CMD -68 gap-tha co du lieu thua");
+    }
+
+    private static void kiemTraHitboxVaDiemThaRong() {
+        int bossX = 500;
+        int bossY = 300;
+        dung(DiChuyenBossRong.trungBossRong(
+                        bossX - 25, bossY - 50, bossX, bossY),
+                "hitbox Rong bo sot mep tren-trai native");
+        dung(DiChuyenBossRong.trungBossRong(
+                        bossX + 24, bossY + 14, bossX, bossY),
+                "hitbox Rong bo sot mep duoi-phai native");
+        dung(!DiChuyenBossRong.trungBossRong(
+                        bossX - 26, bossY, bossX, bossY),
+                "hitbox Rong van rong hon client o ben trai");
+        dung(!DiChuyenBossRong.trungBossRong(
+                        bossX + 25, bossY, bossX, bossY),
+                "hitbox Rong van rong hon client o ben phai");
+        dung(!DiChuyenBossRong.trungBossRong(
+                        bossX, bossY - 51, bossX, bossY),
+                "hitbox Rong van cao hon client");
+        dung(!DiChuyenBossRong.trungBossRong(
+                        bossX, bossY + 15, bossX, bossY),
+                "hitbox Rong van thap hon client");
+
+        ChickenQuanLyBanDo banDoCoDa = new ChickenQuanLyBanDo(-1) {
+            @Override
+            public int getWidth() {
+                return 240;
+            }
+
+            @Override
+            public int getHeight() {
+                return 220;
+            }
+
+            @Override
+            public synchronized boolean coVaCham(short x, short y) {
+                if (x < 0 || x >= this.getWidth() || y < 0) {
+                    return false;
+                }
+                if (y >= this.getHeight()) {
+                    return true;
+                }
+                boolean tangDa = x >= 105 && x <= 135
+                        && y >= 80 && y < 180;
+                boolean nen = y >= 180;
+                return tangDa || nen;
+            }
+        };
+        short[] diemTha = DiChuyenBossRong.chonDiemThaAnToan(
+                120, 130, banDoCoDa);
+        khacNull(diemTha,
+                "Rong khong tim duoc diem tha an toan quanh tang da");
+        dung(diemTha[0] - 12 > 135 || diemTha[0] + 12 < 105,
+                "Rong van tha than nguoi choi chen vao tang da");
+        dung(DiChuyenBossRong.laDiemThaAnToan(
+                        diemTha[0], diemTha[1], banDoCoDa),
+                "diem tha Rong khong co khoang trong toan than");
+
+        ChickenQuanLyBanDo banDoKhongNen = new ChickenQuanLyBanDo(-1) {
+            @Override
+            public int getWidth() {
+                return 240;
+            }
+
+            @Override
+            public int getHeight() {
+                return 220;
+            }
+
+            @Override
+            public synchronized boolean coVaCham(short x, short y) {
+                return y >= this.getHeight();
+            }
+        };
+        dung(DiChuyenBossRong.chonDiemThaAnToan(
+                        120, 130, banDoKhongNen) == null,
+                "map khong nen lai bi coi la co diem tha an toan");
+    }
+
     private static void kiemTraBossRuaGuiPacketBan() throws Exception {
         DichVuBatPacket dichVu = new DichVuBatPacket();
         ChickenNguoiChoi nguoiChoi = new ChickenNguoiChoi(dichVu);
@@ -585,8 +1282,8 @@ public final class ChickenKiemThuBan {
         tran.dungBot();
     }
 
-    private static void kiemTraRuaVuotMepDiaHinh() {
-        ChickenQuanLyBanDo mapCoMep = new ChickenQuanLyBanDo(0) {
+    private static void kiemTraRuaDungTaiMepDiaHinh() {
+        ChickenQuanLyBanDo mapCoMep = new ChickenQuanLyBanDo(54) {
             @Override
             public int getWidth() {
                 return 500;
@@ -599,20 +1296,20 @@ public final class ChickenKiemThuBan {
 
             @Override
             public synchronized boolean coVaCham(short x, short y) {
-                return x >= 200 && x < 500 && y >= 200;
+                return x >= 0 && x < 300 && y >= 200;
             }
         };
         ChickenChienBinh rua = chienBinh((byte) 8, (short) 1563, (byte) 0);
-        rua.x = 260;
+        rua.x = 240;
         rua.y = 199;
         ChickenChienBinh mucTieu = chienBinh((byte) 0, (short) 110, (byte) 0);
-        mucTieu.x = 60;
+        mucTieu.x = 440;
         mucTieu.y = 199;
 
         int conLai = DiChuyenBossRua.QUANG_DUONG_MOI_LUOT;
         while (conLai > 0) {
             short[] buoc = DiChuyenBossRua.tinhBuocTiepTheo(
-                    rua, mucTieu, conLai, -1, mapCoMep);
+                    rua, mucTieu, conLai, 1, mapCoMep);
             int daDi = Math.abs(buoc[0] - rua.x);
             boolean coDichChuyen = buoc[0] != rua.x || buoc[1] != rua.y;
             if (!coDichChuyen) {
@@ -623,13 +1320,33 @@ public final class ChickenKiemThuBan {
             conLai = Math.max(0, conLai - daDi);
         }
 
-        dung(rua.x < 200 - DiChuyenBossRua.NUA_RONG_HITBOX,
-                "Rua van dung giua hitbox tren mep nen va khoa animation client");
-        dung(rua.y > 199,
-                "Rua qua mep nhung khong roi theo trong luc server");
+        dung(rua.x > 240 && rua.x < 300,
+                "Rua khong tien den mep nen hoac da buoc ra khoi be");
+        bang(199, rua.y,
+                "Rua van roi xuong sau khi da toi mep nen");
+        short[] buocNgoaiMep = DiChuyenBossRua.tinhBuocTiepTheo(
+                rua, mucTieu, conLai, 1, mapCoMep);
+        bang(rua.x, buocNgoaiMep[0],
+                "Rua van co the buoc tiep ra ngoai mep nen");
+        bang(rua.y, buocNgoaiMep[1],
+                "Rua bi ha thap xuong vuc tai mep nen");
     }
 
     private static void kiemTraBossRuaDiChuyenXongPhaiBan() throws Exception {
+        ArrayList<ChickenDuLieuBanDo.MapDataEntry> entrysCu =
+                ChickenDuLieuBanDo.entrys;
+        ArrayList<ChickenDuLieuBanDo.MapBrickEntry> bricksCu =
+                ChickenDuLieuBanDo.brickEntrys;
+        try {
+            byte[] duLieu = ChickenTienIch.layTep("res/map/54");
+            dung(duLieu != null && duLieu.length > 5,
+                    "thieu res/map/54 cho test luong di chuyen va ban");
+            ChickenDuLieuBanDo.entrys = new ArrayList<>();
+            ChickenDuLieuBanDo.brickEntrys = new ArrayList<>();
+            ChickenDuLieuBanDo.entrys.add(
+                    new ChickenDuLieuBanDo.MapDataEntry(
+                            duLieu, (byte) 54, "Rua test",
+                            (short) 0, (byte) 7));
         DichVuBatPacket dichVu = new DichVuBatPacket();
         ChickenNguoiChoi nguoiChoi = new ChickenNguoiChoi(dichVu);
         nguoiChoi.ma = 92_002;
@@ -662,10 +1379,16 @@ public final class ChickenKiemThuBan {
         Method thucHienLuotBoss = BossRua.class.getDeclaredMethod(
                 "thucHienLuotBoss", int.class, long.class);
         thucHienLuotBoss.setAccessible(true);
+        long batDauXuLyBoss = System.nanoTime();
         thucHienLuotBoss.invoke(tran, 8, 2L);
 
         dung(dichVu.choLenh(22, 5, TimeUnit.SECONDS),
-                "Rua di chuyen het 260px nhung khong gui CMD 22");
+                "Rua di chuyen xong nhung khong gui CMD 22");
+        long thoiGianXuLyBossMs = TimeUnit.NANOSECONDS.toMillis(
+                System.nanoTime() - batDauXuLyBoss);
+        dung(thoiGianXuLyBossMs < 500L,
+                "server van cho tung buoc di chuyen an, gay delay "
+                        + thoiGianXuLyBossMs + "ms truoc CMD21/CMD22");
         bang(1, dichVu.demLenh(21),
                 "Rua map 54 phai gui dung mot dich di chuyen CMD21");
         bang(0, dichVu.demLenh(53),
@@ -692,12 +1415,28 @@ public final class ChickenKiemThuBan {
         }
         dung(luot.getByte(tran) != (byte) 8,
                 "Rua da ban xong nhung khong giai phong luot");
-        bang(9_400, mucTieu.hp,
-                "server khong tru ca damage dan va damage doc dau luot");
         tran.dungBot();
+        } finally {
+            ChickenDuLieuBanDo.entrys = entrysCu;
+            ChickenDuLieuBanDo.brickEntrys = bricksCu;
+        }
     }
 
     private static void kiemTraBossRuaRongDiChuyenXongPhaiBan() throws Exception {
+        ArrayList<ChickenDuLieuBanDo.MapDataEntry> entrysCu =
+                ChickenDuLieuBanDo.entrys;
+        ArrayList<ChickenDuLieuBanDo.MapBrickEntry> bricksCu =
+                ChickenDuLieuBanDo.brickEntrys;
+        try {
+            byte[] duLieu = ChickenTienIch.layTep("res/map/58");
+            dung(duLieu != null && duLieu.length > 5,
+                    "thieu res/map/58 cho test luong di chuyen va ban");
+            ChickenDuLieuBanDo.entrys = new ArrayList<>();
+            ChickenDuLieuBanDo.brickEntrys = new ArrayList<>();
+            ChickenDuLieuBanDo.entrys.add(
+                    new ChickenDuLieuBanDo.MapDataEntry(
+                            duLieu, (byte) 58, "Rua Rong test",
+                            (short) 0, (byte) 7));
         DichVuBatPacket dichVu = new DichVuBatPacket();
         ChickenNguoiChoi nguoiChoi = new ChickenNguoiChoi(dichVu);
         nguoiChoi.ma = 92_003;
@@ -755,6 +1494,10 @@ public final class ChickenKiemThuBan {
         dung(luot.getByte(tran) != (byte) CauHinhBossRuaRong.SLOT_BOSS_DAU,
                 "Rua map 58 da het animation nhung server khong giai phong luot");
         tran.dungBot();
+        } finally {
+            ChickenDuLieuBanDo.entrys = entrysCu;
+            ChickenDuLieuBanDo.brickEntrys = bricksCu;
+        }
     }
 
     private static void kiemTraChuKyChieuRua() {
@@ -1063,7 +1806,7 @@ public final class ChickenKiemThuBan {
         }
     }
 
-    private static void kiemTraRuaRoiKhoiMepMap54() {
+    private static void kiemTraRuaDungTaiMepPhaiMap54() {
         ArrayList<ChickenDuLieuBanDo.MapDataEntry> entrysCu =
                 ChickenDuLieuBanDo.entrys;
         ArrayList<ChickenDuLieuBanDo.MapBrickEntry> bricksCu =
@@ -1080,19 +1823,40 @@ public final class ChickenKiemThuBan {
                             (short) 0, (byte) 7));
             ChickenQuanLyBanDo banDo = new ChickenQuanLyBanDo(54);
             ChickenChienBinh rua = new ChickenChienBinh(
-                    (byte) 8, -54, (short) 736, (short) 270,
+                    (byte) 8, -54, (short) 817, (short) 253,
                     "Rua", (short) 1563, 10_000, 500, 0);
             ChickenChienBinh mucTieu = chienBinh(
                     (byte) 0, (short) 110, (byte) 0);
-            mucTieu.x = 145;
+            mucTieu.x = 960;
             mucTieu.y = 481;
 
-            short[] buocVeNguoi = DiChuyenBossRua.tinhBuocTiepTheo(
-                    rua, mucTieu, 260, -1, banDo);
-            dung(buocVeNguoi[0] <= rua.x,
-                    "Rua lai di nguoc, xa nguoi choi o ben trai");
-            dung(buocVeNguoi[1] > rua.y,
-                    "Rua con bam 2-3 diem chan o mep gach nen khong roi xuong");
+            int conLai = CauHinhBossRua.QUANG_DUONG_MOI_LUOT;
+            int baoHiem = 0;
+            while (conLai > 0 && baoHiem++ < 100) {
+                short xCu = rua.x;
+                short yCu = rua.y;
+                short[] buoc = DiChuyenBossRua.tinhBuocTiepTheo(
+                        rua, mucTieu, conLai, 1, banDo);
+                if (buoc[0] == xCu && buoc[1] == yCu) {
+                    break;
+                }
+                rua.x = buoc[0];
+                rua.y = buoc[1];
+                conLai = Math.max(0, conLai - Math.abs(rua.x - xCu));
+            }
+            dung(baoHiem < 100, "Rua khong dung lai o mep phai map 54");
+            dung(rua.x > 817,
+                    "Rua khong di ve phia nguoi choi o ben phai");
+            dung(rua.x < 900,
+                    "Rua da buoc ra ngoai be phai map 54");
+            bang(253, rua.y,
+                    "Rua da roi khoi be phai map 54");
+            short[] buocNgoaiMep = DiChuyenBossRua.tinhBuocTiepTheo(
+                    rua, mucTieu, conLai, 1, banDo);
+            bang(rua.x, buocNgoaiMep[0],
+                    "Rua van di tiep sau khi toi mep phai map 54");
+            bang(rua.y, buocNgoaiMep[1],
+                    "Rua van roi sau khi toi mep phai map 54");
         } finally {
             ChickenDuLieuBanDo.entrys = entrysCu;
             ChickenDuLieuBanDo.brickEntrys = bricksCu;
@@ -1118,7 +1882,7 @@ public final class ChickenKiemThuBan {
                             (short) 0, (byte) 7));
             ChickenQuanLyBanDo banDo = new ChickenQuanLyBanDo(54);
             ChickenChienBinh rua = new ChickenChienBinh(
-                    (byte) 8, -54, (short) 736, (short) 270,
+                    (byte) 8, -54, (short) 817, (short) 253,
                     "Rua", (short) 1563, 10_000, 500, 0);
             ChickenChienBinh mucTieu = chienBinh(
                     (byte) 0, (short) 110, (byte) 0);
@@ -1150,13 +1914,15 @@ public final class ChickenKiemThuBan {
                 }
                 rua.y = buocRoi[1];
             }
-            dung(baoHiem < 300, "Rua roi mai ma khong cham nen");
+            dung(baoHiem < 300, "Rua roi mai ma khong cham be thap ben trai");
 
             int daChayNgang = Math.abs(rua.x - xBatDau);
             dung(daChayNgang <= CauHinhBossRua.QUANG_DUONG_MOI_LUOT,
                     "Rua da chay qua quang duong server cho phep");
-            dung(rua.x > mucTieu.x + DiChuyenBossRua.NUA_RONG_HITBOX,
-                    "Rua van den sat nguoi chi trong mot luot");
+            dung(rua.x < xBatDau,
+                    "Rua khong di ve phia nguoi choi o ben trai");
+            dung(rua.y > 253,
+                    "Rua dung ban tren mep trai thay vi xuong be thap");
             short[] kiemTraNen = DiChuyenBossRua.tinhBuocRoiThangDung(
                     rua, banDo);
             bang(rua.y, kiemTraNen[1],
@@ -1236,6 +2002,20 @@ public final class ChickenKiemThuBan {
     }
 
     private static void kiemTraBossRuaLuotHaiDamDa() throws Exception {
+        ArrayList<ChickenDuLieuBanDo.MapDataEntry> entrysCu =
+                ChickenDuLieuBanDo.entrys;
+        ArrayList<ChickenDuLieuBanDo.MapBrickEntry> bricksCu =
+                ChickenDuLieuBanDo.brickEntrys;
+        try {
+            byte[] duLieu = ChickenTienIch.layTep("res/map/54");
+            dung(duLieu != null && duLieu.length > 5,
+                    "thieu res/map/54 cho test Rua di chuyen roi dam da");
+            ChickenDuLieuBanDo.entrys = new ArrayList<>();
+            ChickenDuLieuBanDo.brickEntrys = new ArrayList<>();
+            ChickenDuLieuBanDo.entrys.add(
+                    new ChickenDuLieuBanDo.MapDataEntry(
+                            duLieu, (byte) 54, "Rua test",
+                            (short) 0, (byte) 7));
         DichVuBatPacket dichVu = new DichVuBatPacket();
         ChickenNguoiChoi nguoiChoi = new ChickenNguoiChoi(dichVu);
         nguoiChoi.ma = 92_004;
@@ -1251,6 +2031,8 @@ public final class ChickenKiemThuBan {
         BossRua tran = new BossRua(sanh);
         datTrangThaiLuotThuHai(tran, BossRua.class, 8, 4L);
         ChickenChienBinh mucTieu = tran.chupChienBinh()[0];
+        // AVG bay duoc phep vuot da, nhung khong duoc lam boss bo pha truy duoi.
+        mucTieu.avenger = ChickenCoCheBayAVG.AVG_IRON_MAN;
         mucTieu.x = 245;
         mucTieu.y = 481;
         mucTieu.hp = 10_000;
@@ -1284,9 +2066,27 @@ public final class ChickenKiemThuBan {
         bang(yCu, mucTieu.y,
                 "CMD di chuyen lam lech Y nguoi dang bi da ghim map 54");
         tran.dungBot();
+        } finally {
+            ChickenDuLieuBanDo.entrys = entrysCu;
+            ChickenDuLieuBanDo.brickEntrys = bricksCu;
+        }
     }
 
     private static void kiemTraBossRuaRongLuotHaiDamDa() throws Exception {
+        ArrayList<ChickenDuLieuBanDo.MapDataEntry> entrysCu =
+                ChickenDuLieuBanDo.entrys;
+        ArrayList<ChickenDuLieuBanDo.MapBrickEntry> bricksCu =
+                ChickenDuLieuBanDo.brickEntrys;
+        try {
+            byte[] duLieu = ChickenTienIch.layTep("res/map/58");
+            dung(duLieu != null && duLieu.length > 5,
+                    "thieu res/map/58 cho test Rua Rong di chuyen roi dam da");
+            ChickenDuLieuBanDo.entrys = new ArrayList<>();
+            ChickenDuLieuBanDo.brickEntrys = new ArrayList<>();
+            ChickenDuLieuBanDo.entrys.add(
+                    new ChickenDuLieuBanDo.MapDataEntry(
+                            duLieu, (byte) 58, "Rua Rong test",
+                            (short) 0, (byte) 7));
         DichVuBatPacket dichVu = new DichVuBatPacket();
         ChickenNguoiChoi nguoiChoi = new ChickenNguoiChoi(dichVu);
         nguoiChoi.ma = 92_005;
@@ -1303,6 +2103,8 @@ public final class ChickenKiemThuBan {
         int slotRua = CauHinhBossRuaRong.SLOT_BOSS_DAU;
         datTrangThaiLuotThuHai(tran, BossRuaRong.class, slotRua, 5L);
         ChickenChienBinh mucTieu = tran.chupChienBinh()[0];
+        // Bao ve rieng luong Ultron de ca hai AVG bay deu khong lam Rua dung yen.
+        mucTieu.avenger = ChickenCoCheBayAVG.AVG_ULTRON;
         mucTieu.x = 480;
         mucTieu.y = 248;
         mucTieu.hp = 10_000;
@@ -1337,6 +2139,10 @@ public final class ChickenKiemThuBan {
         bang(yCu, mucTieu.y,
                 "CMD di chuyen lam lech Y nguoi dang bi da ghim map 58");
         tran.dungBot();
+        } finally {
+            ChickenDuLieuBanDo.entrys = entrysCu;
+            ChickenDuLieuBanDo.brickEntrys = bricksCu;
+        }
     }
 
     private static void kiemTraThanhMauDau25Nac() throws Exception {
@@ -1412,15 +2218,20 @@ public final class ChickenKiemThuBan {
                         new short[][]{new short[1]},
                         new short[][]{new short[1]}),
                 "quy dao ngan hon muc toi thieu");
-        bang(240L,
+        bang(1_200L,
                 ChickenThoiGianHoatAnhDan.tinh(
                         new short[][]{new short[5], new short[30]},
                         new short[][]{new short[5], new short[30]}),
                 "khong lay duong dan dai nhat");
+        bang(2_040L,
+                ChickenThoiGianHoatAnhDan.tinh(
+                        new short[][]{new short[51]},
+                        new short[][]{new short[51]}),
+                "quy dao Ultron 51 diem bi cat som nhu moc 450 ms cu");
         bang(ChickenThoiGianHoatAnhDan.TOI_DA_MS,
                 ChickenThoiGianHoatAnhDan.tinh(
-                        new short[][]{new short[100]},
-                        new short[][]{new short[100]}),
+                        new short[][]{new short[200]},
+                        new short[][]{new short[200]}),
                 "quy dao dai vuot muc toi da");
         bang(ChickenThoiGianHoatAnhDan.HIEU_UNG_KHONG_CO_QUY_DAO_MS,
                 ChickenThoiGianHoatAnhDan.tinh(null, null),
@@ -1435,6 +2246,17 @@ public final class ChickenKiemThuBan {
         BossRuaRong tran = new BossRuaRong(sanh);
         kiemTraDongBoCmd23(
                 tran, BossRuaRong.class, nguoiBan, nguoiKhac, 201L);
+        tran.dungBot();
+    }
+
+    private static void kiemTraDongBoCmd23BossRong() throws Exception {
+        ChickenNguoiChoi nguoiBan = taoNguoiChoiBossTest(92_251, "RongShooter");
+        ChickenNguoiChoi nguoiKhac = taoNguoiChoiBossTest(92_252, "RongOther");
+        SanhChoBoss sanh = taoSanhBossHaiNguoi(
+                55, nguoiBan, nguoiKhac, 251L);
+        BossRong tran = new BossRong(sanh);
+        kiemTraDongBoCmd23(
+                tran, BossRong.class, nguoiBan, nguoiKhac, 251L);
         tran.dungBot();
     }
 
@@ -1537,7 +2359,7 @@ public final class ChickenKiemThuBan {
                 tran,
                 nguoiBanTrongTran,
                 100,
-                ChickenThoiGianHoatAnhDan.TOI_THIEU_MS);
+                2_000L);
 
         bang(0, luot.getByte(tran),
                 "server chuyen luot truoc khi client ket thuc duong dan");
@@ -1557,32 +2379,40 @@ public final class ChickenKiemThuBan {
                 "dang cho CMD23 ma client co the bo luot de mo khoa action");
         ((com.chicken.chien.ChickenQuanLyChien) tran).kiemTraVaCham(
                 nguoiBan, new ChickenTinNhan((byte) 79, new byte[0]));
-        bang(0, luot.getByte(tran), "CMD79 lai duoc dung de mo khoa luot");
+        bang(0, luot.getByte(tran), "CMD79 sai khuon lai mo khoa luot");
+        ((com.chicken.chien.ChickenQuanLyChien) tran).kiemTraVaCham(
+                nguoiBan, new ChickenTinNhan((byte) 79, new byte[]{1}));
+        bang(0, luot.getByte(tran),
+                "CMD79 thieu toa do va cham lai mo khoa luot");
+        ((com.chicken.chien.ChickenQuanLyChien) tran).kiemTraVaCham(
+                nguoiBan, new ChickenTinNhan((byte) 79, new byte[514]));
+        bang(0, luot.getByte(tran),
+                "CMD79 vuot kich thuoc toi da lai mo khoa luot");
         ((com.chicken.chien.ChickenQuanLyChien) tran).kiemTraVaCham(
                 nguoiBan, new ChickenTinNhan((byte) 23, new byte[]{1}));
         bang(0, luot.getByte(tran), "CMD23 co byte thua lai mo duoc khoa luot");
         ((com.chicken.chien.ChickenQuanLyChien) tran).kiemTraVaCham(
-                nguoiKhac, new ChickenTinNhan((byte) 23, new byte[0]));
-        bang(0, luot.getByte(tran), "nguoi khac gui CMD23 mo duoc khoa luot");
+                nguoiKhac, new ChickenTinNhan((byte) 79, new byte[]{0}));
+        bang(0, luot.getByte(tran),
+                "mot nguoi gui CMD79 da mo luot khi chua du ca phong");
 
         ((com.chicken.chien.ChickenQuanLyChien) tran).kiemTraVaCham(
-                nguoiBan, new ChickenTinNhan((byte) 23, new byte[0]));
+                nguoiBan, new ChickenTinNhan((byte) 79, new byte[]{0}));
         bang(0, luot.getByte(tran),
-                "CMD23 dung van tua nhanh dong ho server");
+                "CMD79 den qua som van tua nhanh dong ho server");
 
-        long hanCho = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-        while (luot.getByte(tran) == 0 && System.nanoTime() < hanCho) {
-            Thread.sleep(10L);
-        }
+        Thread.sleep(ChickenThoiGianHoatAnhDan.TOI_THIEU_MS + 30L);
+        ((com.chicken.chien.ChickenQuanLyChien) tran).kiemTraVaCham(
+                nguoiBan, new ChickenTinNhan((byte) 79, new byte[]{0}));
         byte luotSau = luot.getByte(tran);
         dung(luotSau != 0,
-                "server khong tu chuyen luot sau khi animation ket thuc");
+                "CMD79 hop le khong chuyen luot sau khi animation ket thuc");
         long phienSau = phien.getLong(tran);
 
         ((com.chicken.chien.ChickenQuanLyChien) tran).kiemTraVaCham(
-                nguoiBan, new ChickenTinNhan((byte) 23, new byte[0]));
-        bang(luotSau, luot.getByte(tran), "CMD23 lap bi xu ly hai lan");
-        bang(phienSau, phien.getLong(tran), "CMD23 lap lam tang ma phien");
+                nguoiBan, new ChickenTinNhan((byte) 79, new byte[]{0}));
+        bang(luotSau, luot.getByte(tran), "CMD79 lap bi xu ly hai lan");
+        bang(phienSau, phien.getLong(tran), "CMD79 lap lam tang ma phien");
     }
 
     private static ChickenNguoiChoi taoNguoiChoiBossTest(int ma, String ten) {
@@ -1972,18 +2802,33 @@ public final class ChickenKiemThuBan {
             ChickenQuanLyMayChu.itemTemplates.put(392, mauSungThuNghiem(392));
 
             ChickenNguoiChoi nguoiIronMan = new ChickenNguoiChoi(null);
-            nguoiIronMan.avenger = 8;
+            nguoiIronMan.avenger = 1;
             nguoiIronMan.itemBody[5] = new ChickenVatPham(391);
             bang(1, ChickenCoCheBayAVG.layAvengerTuTrangBi(nguoiIronMan),
                     "server khong suy ra Iron Man tu trang bi that");
             dung(ChickenCoCheBayAVG.coTrangBiBayHopLe(nguoiIronMan),
                     "trang bi Iron Man that lai khong co quyen bay");
+            nguoiIronMan.avenger = 0;
+            nguoiIronMan.datTrangBiChoNhanVat(new ChickenVatPham(392));
+            bang(1, nguoiIronMan.avenger,
+                    "thu tu JSON trang bi lam Iron Man thanh di bo");
 
-            ChickenNguoiChoi nguoiGia = new ChickenNguoiChoi(null);
-            nguoiGia.avenger = 1;
-            nguoiGia.itemBody[5] = new ChickenVatPham(392);
-            dung(!ChickenCoCheBayAVG.coTrangBiBayHopLe(nguoiGia),
-                    "Hulk sua bien avenger da gia duoc trang bi bay");
+            ChickenNguoiChoi nguoiHulk = new ChickenNguoiChoi(null);
+            nguoiHulk.avenger = 2;
+            nguoiHulk.itemBody[5] = new ChickenVatPham(392);
+            dung(!ChickenCoCheBayAVG.coTrangBiBayHopLe(nguoiHulk),
+                    "Hulk server lai co quyen bay");
+
+            ChickenChienBinh ironManNguoiChoi =
+                    new ChickenChienBinh(
+                            nguoiIronMan,
+                            (byte) 0,
+                            (short) 100,
+                            (short) 200);
+            bang(1, ironManNguoiChoi.avenger,
+                    "tao tran lam mat ID Iron Man");
+            dung(ChickenCoCheBayAVG.coTheBay(ironManNguoiChoi),
+                    "tao tran bien Iron Man thanh nhan vat di bo");
         } finally {
             khoiPhucMap(ChickenQuanLyMayChu.itemTemplates, 391, ironManCu);
             khoiPhucMap(ChickenQuanLyMayChu.itemTemplates, 392, hulkCu);
@@ -2181,12 +3026,930 @@ public final class ChickenKiemThuBan {
                 (byte) 0,
                 BAN_DO_TRONG,
                 new ChickenChienBinh[]{shooter, dongDoi},
-                (nguoiBan, mucTieu) -> !nguoiBan.bot || !mucTieu.bot
+                ChickenLuatVaChamPhongBoss::chapNhan
         );
         dung(ketQua.satThuongTheoMucTieu.containsKey(dongDoi),
                 "phong boss van loai dong doi khoi va cham/damage");
         dung(ketQua.satThuongTheoMucTieu.containsKey(shooter),
                 "vu no phong boss van loai chinh nguoi ban");
+
+        ChickenQuanLyDanSung.DuLieuSung laser = batBuocCoSung(200);
+        ChickenChienBinh nguoiBanLaser =
+                nguoiChoiThat((byte) 0, laser.getPartSung(), (byte) 0);
+        nguoiBanLaser.x = 300;
+        nguoiBanLaser.y = 520;
+        ChickenKetQuaDan ketQuaBanThangVaoMinh =
+                ChickenPhatBanServer.tao(
+                        nguoiBanLaser,
+                        (short) 200,
+                        (short) 500,
+                        (short) 0,
+                        (byte) 40,
+                        (byte) 40,
+                        laser,
+                        (byte) 0,
+                        (byte) 0,
+                        BAN_DO_TRONG,
+                        new ChickenChienBinh[]{nguoiBanLaser},
+                        ChickenLuatVaChamPhongBoss::chapNhan
+                );
+        dung(ketQuaBanThangVaoMinh.satThuongTheoMucTieu
+                        .containsKey(nguoiBanLaser),
+                "dan truc tiep trong phong boss van bo qua hitbox nguoi ban");
+
+        ChickenKetQuaDan ketQuaPvPKhongBanMinh =
+                ChickenPhatBanServer.tao(
+                        nguoiBanLaser,
+                        (short) 200,
+                        (short) 500,
+                        (short) 0,
+                        (byte) 40,
+                        (byte) 40,
+                        laser,
+                        (byte) 0,
+                        (byte) 0,
+                        BAN_DO_TRONG,
+                        new ChickenChienBinh[]{nguoiBanLaser},
+                        (nguoiBan, mucTieu) -> mucTieu != nguoiBan
+                );
+        dung(!ketQuaPvPKhongBanMinh.satThuongTheoMucTieu
+                        .containsKey(nguoiBanLaser),
+                "sua friendly fire boss lam PvP cung tu ban trung minh");
+    }
+
+    private static void kiemTraBossDatBomDungYen() throws Exception {
+        kiemTraLichBomBossDatBom();
+        bang(25,
+                com.chicken.phong.boss.trandau.baovay.BossBanSung
+                        .TY_LE_AIM_CHUAN_PHAN_TRAM,
+                "ty le aim chuan cua Phien quan khong phai 25 phan tram");
+        int soGiaTriAim = 0;
+        for (int giaTri = 0; giaTri < 100; giaTri++) {
+            if (com.chicken.phong.boss.trandau.baovay.BossBanSung
+                    .laCheDoAimChuan(giaTri)) {
+                soGiaTriAim++;
+            }
+        }
+        bang(25, soGiaTriAim,
+                "ranh gioi random Phien quan khong dung 25 aim / 75 ban bua");
+        dung(!com.chicken.phong.boss.trandau.baovay.BossBanSung
+                        .laCheDoAimChuan(-1)
+                        && !com.chicken.phong.boss.trandau.baovay.BossBanSung
+                                .laCheDoAimChuan(100),
+                "gia tri random ngoai 0..99 van duoc tinh la aim");
+
+        CauHinhBossDatBom.CauHinh[] cauHinhMotNguoi =
+                CauHinhBossDatBom.layChoSoNguoi(1);
+        CauHinhBossDatBom.CauHinh[] cauHinhHaiNguoi =
+                CauHinhBossDatBom.layChoSoNguoi(2);
+        CauHinhBossDatBom.CauHinh[] cauHinhBonNguoi =
+                CauHinhBossDatBom.layChoSoNguoi(4);
+        CauHinhBossDatBom.CauHinh[] cauHinhSauNguoi =
+                CauHinhBossDatBom.layChoSoNguoi(6);
+        bang(4, cauHinhMotNguoi.length,
+                "map 53 mot nguoi khong tao dung bon Phien quan");
+        bang(6, cauHinhHaiNguoi.length,
+                "map 53 hai nguoi khong tao dung sau Phien quan");
+        bang(6, CauHinhBossDatBom.layChoSoNguoi(3).length,
+                "map 53 ba nguoi khong giu muc sau Phien quan");
+        bang(7, cauHinhBonNguoi.length,
+                "map 53 bon nguoi khong tao dung bay Phien quan");
+        bang(7, CauHinhBossDatBom.layChoSoNguoi(5).length,
+                "map 53 nam nguoi khong giu muc bay Phien quan");
+        bang(8, cauHinhSauNguoi.length,
+                "map 53 sau nguoi khong tao dung tam Phien quan");
+        bang(8, CauHinhBossDatBom.layChoSoNguoi(8).length,
+                "map 53 tam nguoi khong gioi han o tam Phien quan");
+        bang(12, cauHinhHaiNguoi[4].getSlot() & 0xFF,
+                "Phien quan thu nam sai slot");
+        bang(243, cauHinhHaiNguoi[4].getX(),
+                "Phien quan thu nam sai toa do X theo log tham chieu");
+        bang(416, cauHinhHaiNguoi[4].getY(),
+                "Phien quan thu nam sai toa do Y theo log tham chieu");
+        bang(13, cauHinhHaiNguoi[5].getSlot() & 0xFF,
+                "Phien quan thu sau sai slot");
+        bang(335, cauHinhHaiNguoi[5].getX(),
+                "Phien quan thu sau sai toa do X theo log tham chieu");
+        bang(416, cauHinhHaiNguoi[5].getY(),
+                "Phien quan thu sau sai toa do Y theo log tham chieu");
+        bang(14, cauHinhBonNguoi[6].getSlot() & 0xFF,
+                "Phien quan thu bay sai slot");
+        bang(120, cauHinhBonNguoi[6].getX(),
+                "Phien quan thu bay sai toa do X theo log bon nguoi");
+        bang(175, cauHinhBonNguoi[6].getY(),
+                "Phien quan thu bay sai toa do Y theo log bon nguoi");
+        bang(15, cauHinhSauNguoi[7].getSlot() & 0xFF,
+                "Phien quan thu tam sai slot");
+        bang(169, cauHinhSauNguoi[7].getX(),
+                "Phien quan thu tam sai toa do X trong map 53");
+        bang(175, cauHinhSauNguoi[7].getY(),
+                "Phien quan thu tam sai toa do Y trong map 53");
+
+        for (CauHinhBossDatBom.CauHinh cauHinh
+                : CauHinhBossDatBom.layTatCa()) {
+            dung(cauHinh.laBossBanSung(),
+                    "Phien quan map 53 khong duoc cau hinh tan cong dung yen"
+                            + " slot=" + (cauHinh.getSlot() & 0xFF));
+            dung(!cauHinh.laCamTu(),
+                    "Phien quan map 53 van bi cau hinh vao luong Cam tu"
+                            + " slot=" + (cauHinh.getSlot() & 0xFF));
+        }
+
+        HashMap<Integer, ChickenMauVatPham> itemTemplatesCu =
+                ChickenQuanLyMayChu.itemTemplates;
+        HashMap<Integer, ChickenMauVatPham> itemTemplatesTest =
+                new HashMap<>();
+        ChickenMauVatPham at4 = mauSungShopBossTest(
+                110, (short) 57, 333, 777, 2_000);
+        ChickenMauVatPham k98 = mauSungShopBossTest(
+                120, (short) 27, 444, 666, 2_000);
+        ChickenMauVatPham avg = mauSungShopBossTest(
+                391, (short) 223, 999, 999, 150_000);
+        ChickenMauVatPham khongBan = mauSungShopBossTest(
+                160, (short) 56, 555, 555, 0);
+        itemTemplatesTest.put(110, at4);
+        itemTemplatesTest.put(120, k98);
+        itemTemplatesTest.put(391, avg);
+        itemTemplatesTest.put(160, khongBan);
+
+        List<ChickenQuanLyDanSung.DuLieuSung> ungViens =
+                CauHinhBossDatBom.layDanhSachSungShopKhongAvg(
+                        itemTemplatesTest);
+        bang(2, ungViens.size(),
+                "bo loc sung map 53 nhan AVG hoac item khong ban");
+        bang(110, ungViens.get(0).getIdSung(),
+                "bo loc sung map 53 sai thu tu ID dau");
+        bang(120, ungViens.get(1).getIdSung(),
+                "bo loc sung map 53 sai thu tu ID sau");
+
+        ChickenQuanLyMayChu.itemTemplates = itemTemplatesTest;
+        BossDatBom tran = null;
+        BossDatBom tranHaiNguoi = null;
+        BossDatBom tranBonNguoi = null;
+        BossDatBom tranSauNguoi = null;
+        try {
+            DichVuBatPacket dichVu = new DichVuBatPacket();
+            ChickenNguoiChoi nguoiChoi = new ChickenNguoiChoi(dichVu);
+            nguoiChoi.ma = 92_053;
+            nguoiChoi.ten = "BossDatBomStationaryTarget";
+
+            SanhChoBoss sanh = new SanhChoBoss(
+                    (byte) 4, (byte) 3, (byte) CauHinhBossDatBom.MAP_ID,
+                    (byte) 8, 1_000);
+            dung(sanh.themThanhVien(new ThanhVienBoss(
+                            nguoiChoi, (byte) 0, 53L, true)),
+                    "khong them duoc nguoi choi vao sanh test Dat Bom");
+
+            tran = new BossDatBom(sanh);
+            Field luot = BossDatBom.class.getDeclaredField("luotHienTai");
+            luot.setAccessible(true);
+            luot.setByte(tran, (byte) 8);
+            Field phien = BossDatBom.class.getDeclaredField("maPhienLuot");
+            phien.setAccessible(true);
+            phien.setLong(tran, 53L);
+
+            ChickenChienBinh[] chienBinhs = tran.chupChienBinh();
+            int[] idSungBoss = tran.chupIdSungBoss();
+            Method layNapDanBoss = BossDatBom.class.getDeclaredMethod(
+                    "layNapDanBoss", int.class);
+            layNapDanBoss.setAccessible(true);
+            for (CauHinhBossDatBom.CauHinh cauHinh : cauHinhMotNguoi) {
+                int slot = cauHinh.getSlot() & 0xFF;
+                int idSung = idSungBoss[slot];
+                dung(idSung == 110 || idSung == 120,
+                        "Phien quan random ngoai danh sach shop khong AVG"
+                                + " slot=" + slot + " id=" + idSung);
+                ChickenQuanLyDanSung.DuLieuSung duLieu =
+                        ChickenQuanLyDanSung.theoIdSung(idSung);
+                khacNull(duLieu,
+                        "ID sung random khong co mapping slot=" + slot);
+                bang(duLieu.getPartSung(), chienBinhs[slot].maVuKhi,
+                        "part hien thi khong khop ID sung slot=" + slot);
+                int napDanMongDoi = idSung == 110 ? 777 : 666;
+                bang(napDanMongDoi,
+                        (int) layNapDanBoss.invoke(tran, slot),
+                        "khong lay dung option 14 theo ID sung slot=" + slot);
+                int tanCongMongDoi = idSung == 110 ? 333 : 444;
+                bang(tanCongMongDoi, chienBinhs[slot].tanCong,
+                        "khong lay dung option 1 theo ID sung slot=" + slot);
+            }
+            dung(chienBinhs[12] == null && chienBinhs[13] == null
+                            && chienBinhs[14] == null
+                            && chienBinhs[15] == null,
+                    "tran mot nguoi lai tao them Phien quan 4 den 7");
+
+            ChickenChienBinh boss = chienBinhs[8];
+            ChickenChienBinh mucTieu = chienBinhs[0];
+            khacNull(boss, "thieu Phien quan slot 8 map 53");
+            khacNull(mucTieu, "thieu nguoi choi map 53");
+            ChickenQuanLyDanSung.DuLieuSung chuoi =
+                    ChickenQuanLyDanSung.theoIdSung(140);
+            khacNull(chuoi, "thieu mapping sung chuoi ID 140");
+            Field idSungBossNoiBo =
+                    BossDatBom.class.getDeclaredField("idSungBoss");
+            idSungBossNoiBo.setAccessible(true);
+            ((int[]) idSungBossNoiBo.get(tran))[8] = 140;
+            boss.maVuKhi = chuoi.getPartSung();
+            mucTieu.hp = 10_000;
+            mucTieu.mauToiDa = 10_000;
+            short xBanDau = boss.x;
+            short yBanDau = boss.y;
+
+            Method thucHienLuotBoss = BossDatBom.class.getDeclaredMethod(
+                    "thucHienLuotBoss", int.class, long.class);
+            thucHienLuotBoss.setAccessible(true);
+            thucHienLuotBoss.invoke(tran, 8, 53L);
+
+            dung(dichVu.choLenh(22, 2, TimeUnit.SECONDS),
+                    "Phien quan map 53 dung yen nhung khong tan cong");
+            ChickenTinNhan packetBan = dichVu.layTinCuoi(22);
+            khacNull(packetBan, "khong bat duoc packet ban sung chuoi");
+            ChickenTinNhan packetDoc = new ChickenTinNhan(
+                    (byte) 22, packetBan.layDuLieu());
+            DataInputStream data = packetDoc.boDoc();
+            data.readUnsignedByte();
+            data.readUnsignedByte();
+            data.readUnsignedByte();
+            int loaiDan = data.readUnsignedByte();
+            data.readShort();
+            data.readShort();
+            data.readShort();
+            if (loaiDan == 17 || loaiDan == 19) {
+                data.readUnsignedByte();
+            }
+            int soLanBan = data.readUnsignedByte();
+            int soDuongDan = data.readUnsignedByte();
+            bang(9, loaiDan,
+                    "Phien quan cam chuoi nhung gui sai loai dan");
+            bang(1, soLanBan,
+                    "Phien quan tach loat chuoi thanh nhieu lan ban");
+            bang(4, soDuongDan,
+                    "Phien quan khong gui du bon quy dao chuoi trong mot loat");
+            Field slotDangChoKetThucBan = BossDatBom.class.getDeclaredField(
+                    "slotDangChoKetThucBan");
+            slotDangChoKetThucBan.setAccessible(true);
+            bang(8, slotDangChoKetThucBan.getInt(tran),
+                    "map 53 khong khoa luot cho animation dan Phien quan");
+            tran.kiemTraVaCham(
+                    nguoiChoi,
+                    new ChickenTinNhan((byte) 79, new byte[]{0})
+            );
+            bang(8, luot.getByte(tran) & 0xFF,
+                    "CMD79 gui som da tua qua animation dan Phien quan");
+            Field thoiDiemSomNhat = BossDatBom.class.getDeclaredField(
+                    "thoiDiemSomNhatXacNhanKetThucBan");
+            thoiDiemSomNhat.setAccessible(true);
+            thoiDiemSomNhat.setLong(tran, 0L);
+            tran.kiemTraVaCham(
+                    nguoiChoi,
+                    new ChickenTinNhan((byte) 79, new byte[]{0})
+            );
+            dung((luot.getByte(tran) & 0xFF) != 8,
+                    "map 53 khong chuyen luot khi animation da hoan tat");
+            bang(0, dichVu.demLenh(21),
+                    "Phien quan map 53 van gui animation di chuyen");
+            bang(xBanDau, boss.x,
+                    "Phien quan map 53 bi doi X khi den luot");
+            bang(yBanDau, boss.y,
+                    "Phien quan map 53 bi doi Y khi den luot");
+
+            DichVuBatPacket dichVuHaiChu = new DichVuBatPacket();
+            ChickenNguoiChoi nguoiChoiHaiChu =
+                    new ChickenNguoiChoi(dichVuHaiChu);
+            nguoiChoiHaiChu.ma = 92_054;
+            nguoiChoiHaiChu.ten = "BossDatBomTwoPlayerOwner";
+            DichVuBatPacket dichVuHai = new DichVuBatPacket();
+            ChickenNguoiChoi nguoiChoiHai =
+                    new ChickenNguoiChoi(dichVuHai);
+            nguoiChoiHai.ma = 92_055;
+            nguoiChoiHai.ten = "BossDatBomSecondPlayer";
+            SanhChoBoss sanhHaiNguoi = new SanhChoBoss(
+                    (byte) 5, (byte) 3, (byte) CauHinhBossDatBom.MAP_ID,
+                    (byte) 8, 1_000);
+            dung(sanhHaiNguoi.themThanhVien(new ThanhVienBoss(
+                            nguoiChoiHaiChu, (byte) 0, 54L, true))
+                            && sanhHaiNguoi.themThanhVien(new ThanhVienBoss(
+                                    nguoiChoiHai, (byte) 1, 54L, true)),
+                    "khong tao duoc sanh hai nguoi de test map 53");
+            tranHaiNguoi = new BossDatBom(sanhHaiNguoi);
+            ChickenChienBinh[] chienBinhHaiNguoi =
+                    tranHaiNguoi.chupChienBinh();
+            int demPhienQuan = 0;
+            for (int slot = CauHinhBossDatBom.SLOT_BOSS_DAU;
+                    slot <= CauHinhBossDatBom.SLOT_BOSS_CUOI; slot++) {
+                if (chienBinhHaiNguoi[slot] != null) {
+                    demPhienQuan++;
+                }
+            }
+            bang(6, demPhienQuan,
+                    "tran hai nguoi khong tao du sau Phien quan that");
+            khacNull(chienBinhHaiNguoi[12],
+                    "tran hai nguoi thieu Phien quan slot 12");
+            khacNull(chienBinhHaiNguoi[13],
+                    "tran hai nguoi thieu Phien quan slot 13");
+            dung(chienBinhHaiNguoi[14] == null
+                            && chienBinhHaiNguoi[15] == null,
+                    "tran hai nguoi lai tao Phien quan danh cho phong dong");
+            bang(243, chienBinhHaiNguoi[12].x,
+                    "Phien quan slot 12 sai X khi tao tran");
+            bang(416, chienBinhHaiNguoi[12].y,
+                    "Phien quan slot 12 sai Y khi tao tran");
+            bang(335, chienBinhHaiNguoi[13].x,
+                    "Phien quan slot 13 sai X khi tao tran");
+            bang(416, chienBinhHaiNguoi[13].y,
+                    "Phien quan slot 13 sai Y khi tao tran");
+            tranHaiNguoi.batDau();
+            bang(6, dichVuHaiChu.demLenh(-63),
+                    "chu phong khong nhan du sau packet tao Phien quan");
+            bang(6, dichVuHai.demLenh(-63),
+                    "nguoi thu hai khong nhan du sau packet tao Phien quan");
+            ChickenTinNhan tinTaoCuoi =
+                    dichVuHai.layTinCuoi(-63);
+            khacNull(tinTaoCuoi,
+                    "thieu packet tao Phien quan cuoi cung");
+            DataInputStream duLieuTaoCuoi =
+                    new ChickenTinNhan(
+                            (byte) -63, tinTaoCuoi.layDuLieu()).boDoc();
+            duLieuTaoCuoi.readUnsignedByte();
+            bang(13, duLieuTaoCuoi.readUnsignedByte(),
+                    "client khong nhan Phien quan slot 13");
+
+            DichVuBatPacket[] dichVuBonNguoi = new DichVuBatPacket[4];
+            ChickenNguoiChoi[] nguoiChoiBonNguoi =
+                    new ChickenNguoiChoi[4];
+            SanhChoBoss sanhBonNguoi = new SanhChoBoss(
+                    (byte) 6, (byte) 3, (byte) CauHinhBossDatBom.MAP_ID,
+                    (byte) 8, 1_000);
+            for (int i = 0; i < nguoiChoiBonNguoi.length; i++) {
+                dichVuBonNguoi[i] = new DichVuBatPacket();
+                nguoiChoiBonNguoi[i] =
+                        new ChickenNguoiChoi(dichVuBonNguoi[i]);
+                nguoiChoiBonNguoi[i].ma = 92_060 + i;
+                nguoiChoiBonNguoi[i].ten =
+                        "BossDatBomFourPlayer" + i;
+                dung(sanhBonNguoi.themThanhVien(new ThanhVienBoss(
+                                nguoiChoiBonNguoi[i],
+                                (byte) i,
+                                55L,
+                                i == 0)),
+                        "khong them duoc nguoi thu " + i
+                                + " vao sanh bon nguoi map 53");
+            }
+            tranBonNguoi = new BossDatBom(sanhBonNguoi);
+            ChickenChienBinh[] chienBinhBonNguoi =
+                    tranBonNguoi.chupChienBinh();
+            int demPhienQuanBonNguoi = 0;
+            for (int slot = CauHinhBossDatBom.SLOT_BOSS_DAU;
+                    slot <= CauHinhBossDatBom.SLOT_BOSS_CUOI; slot++) {
+                if (chienBinhBonNguoi[slot] != null) {
+                    demPhienQuanBonNguoi++;
+                }
+            }
+            bang(7, demPhienQuanBonNguoi,
+                    "tran bon nguoi khong tao du bay Phien quan");
+            khacNull(chienBinhBonNguoi[14],
+                    "tran bon nguoi thieu Phien quan slot 14");
+            dung(chienBinhBonNguoi[15] == null,
+                    "tran bon nguoi lai tao Phien quan danh cho sau nguoi");
+            bang(120, chienBinhBonNguoi[14].x,
+                    "Phien quan slot 14 sai X khi tao tran");
+            bang(175, chienBinhBonNguoi[14].y,
+                    "Phien quan slot 14 sai Y khi tao tran");
+            tranBonNguoi.batDau();
+            for (int i = 0; i < dichVuBonNguoi.length; i++) {
+                bang(7, dichVuBonNguoi[i].demLenh(-63),
+                        "nguoi thu " + i
+                                + " khong nhan du bay packet Phien quan");
+            }
+            ChickenTinNhan tinTaoThuBay =
+                    dichVuBonNguoi[3].layTinCuoi(-63);
+            khacNull(tinTaoThuBay,
+                    "client bon nguoi thieu packet Phien quan thu bay");
+            DataInputStream duLieuTaoThuBay =
+                    new ChickenTinNhan(
+                            (byte) -63,
+                            tinTaoThuBay.layDuLieu()).boDoc();
+            duLieuTaoThuBay.readUnsignedByte();
+            bang(14, duLieuTaoThuBay.readUnsignedByte(),
+                    "client bon nguoi khong nhan Phien quan slot 14");
+
+            DichVuBatPacket[] dichVuSauNguoi = new DichVuBatPacket[6];
+            ChickenNguoiChoi[] nguoiChoiSauNguoi =
+                    new ChickenNguoiChoi[6];
+            SanhChoBoss sanhSauNguoi = new SanhChoBoss(
+                    (byte) 7, (byte) 3, (byte) CauHinhBossDatBom.MAP_ID,
+                    (byte) 8, 1_000);
+            for (int i = 0; i < nguoiChoiSauNguoi.length; i++) {
+                dichVuSauNguoi[i] = new DichVuBatPacket();
+                nguoiChoiSauNguoi[i] =
+                        new ChickenNguoiChoi(dichVuSauNguoi[i]);
+                nguoiChoiSauNguoi[i].ma = 92_070 + i;
+                nguoiChoiSauNguoi[i].ten =
+                        "BossDatBomSixPlayer" + i;
+                dung(sanhSauNguoi.themThanhVien(new ThanhVienBoss(
+                                nguoiChoiSauNguoi[i],
+                                (byte) i,
+                                56L,
+                                i == 0)),
+                        "khong them duoc nguoi thu " + i
+                                + " vao sanh sau nguoi map 53");
+            }
+            tranSauNguoi = new BossDatBom(sanhSauNguoi);
+            ChickenChienBinh[] chienBinhSauNguoi =
+                    tranSauNguoi.chupChienBinh();
+            int demPhienQuanSauNguoi = 0;
+            for (int slot = CauHinhBossDatBom.SLOT_BOSS_DAU;
+                    slot <= CauHinhBossDatBom.SLOT_BOSS_CUOI; slot++) {
+                if (chienBinhSauNguoi[slot] != null) {
+                    demPhienQuanSauNguoi++;
+                }
+            }
+            bang(8, demPhienQuanSauNguoi,
+                    "tran sau nguoi khong tao du tam Phien quan");
+            khacNull(chienBinhSauNguoi[15],
+                    "tran sau nguoi thieu Phien quan slot 15");
+            bang(169, chienBinhSauNguoi[15].x,
+                    "Phien quan slot 15 sai X khi tao tran");
+            bang(175, chienBinhSauNguoi[15].y,
+                    "Phien quan slot 15 sai Y khi tao tran");
+            tranSauNguoi.batDau();
+            for (int i = 0; i < dichVuSauNguoi.length; i++) {
+                bang(8, dichVuSauNguoi[i].demLenh(-63),
+                        "nguoi thu " + i
+                                + " khong nhan du tam packet Phien quan");
+            }
+            ChickenTinNhan tinTaoThuTam =
+                    dichVuSauNguoi[5].layTinCuoi(-63);
+            khacNull(tinTaoThuTam,
+                    "client sau nguoi thieu packet Phien quan thu tam");
+            DataInputStream duLieuTaoThuTam =
+                    new ChickenTinNhan(
+                            (byte) -63,
+                            tinTaoThuTam.layDuLieu()).boDoc();
+            duLieuTaoThuTam.readUnsignedByte();
+            bang(15, duLieuTaoThuTam.readUnsignedByte(),
+                    "client sau nguoi khong nhan Phien quan slot 15");
+        } finally {
+            if (tran != null) {
+                tran.dungBot();
+            }
+            if (tranHaiNguoi != null) {
+                tranHaiNguoi.dungBot();
+            }
+            if (tranBonNguoi != null) {
+                tranBonNguoi.dungBot();
+            }
+            if (tranSauNguoi != null) {
+                tranSauNguoi.dungBot();
+            }
+            ChickenQuanLyMayChu.itemTemplates = itemTemplatesCu;
+        }
+    }
+
+    private static void kiemTraLichBomBossDatBom() {
+        kiemTraGiaoThucCmd109();
+        kiemTraGoBomBonLuot();
+        bang(6, BoDemBomBossDatBom.CHU_KY_DAT_BOM,
+                "Boss Dat Bom khong dat theo moc 6 luot");
+        bang(10, BoDemBomBossDatBom.SO_LUOT_TRUOC_KHI_NO,
+                "bom hen gio khong dem du 10 luot");
+        bang(6_000, CauHinhBossDatBom.SAT_THUONG_BOM_HEN_GIO,
+                "damage hien thi bom hen gio khong phai 6000");
+
+        BoDemBomBossDatBom boDem = new BoDemBomBossDatBom();
+        int soBomDaDat = 0;
+        int soBomDaNo = 0;
+        for (int luot = 1; luot <= 18; luot++) {
+            BoDemBomBossDatBom.KetQuaBatDauLuot ketQua =
+                    boDem.batDauLuot(luot);
+            BoDemBomBossDatBom.Bom bomMoi = ketQua.getBomMoi();
+            if (luot % 6 == 0) {
+                khacNull(bomMoi,
+                        "thieu bom tai luot " + luot);
+                bang(10, bomMoi.getLuotConLai(),
+                        "bom moi khong bat dau tu 10 luot");
+                soBomDaDat++;
+            } else {
+                laNull(bomMoi,
+                        "dat bom sai moc tai luot " + luot);
+            }
+            soBomDaNo += ketQua.getBomDaNo().size();
+
+            if (luot == 12) {
+                bang(2, boDem.chupBomDangHoatDong().size(),
+                        "CMD109 khong cho hai bom ton tai dong thoi");
+                bang(4,
+                        boDem.chupBomDangHoatDong().get(0).getLuotConLai(),
+                        "bom luot 6 dem sai sau khi sang luot 12");
+            }
+            if (luot == 16) {
+                bang(1, ketQua.getBomDaNo().size(),
+                        "bom luot 6 khong no sau 10 luot hoan thanh");
+                bang(0, ketQua.getBomDaNo().get(0).getId() & 0xFF,
+                        "bom dau tien no sai ID");
+            }
+        }
+        bang(3, soBomDaDat,
+                "khong dat dung bom o cac luot 6, 12 va 18");
+        bang(1, soBomDaNo,
+                "so bom no den dau luot 18 khong dung");
+        bang(2, boDem.chupBomDangHoatDong().size(),
+                "sai so bom con lai tai luot 18");
+        bang(4, boDem.chupBomDangHoatDong().get(0).getLuotConLai(),
+                "bom dat luot 12 sai dem nguoc tai luot 18");
+        bang(10, boDem.chupBomDangHoatDong().get(1).getLuotConLai(),
+                "bom dat luot 18 khong giu nguyen 10");
+        boDem.xoaTatCa();
+        bang(0, boDem.chupBomDangHoatDong().size(),
+                "ket thuc tran khong xoa het bom");
+    }
+
+    private static void kiemTraGoBomBonLuot() {
+        bang(4, BoDemGoBomBossDatBom.SO_LUOT_CAN_GO,
+                "go bom khong can dung bon luot");
+        bang(25, BoDemGoBomBossDatBom.PHAN_TRAM_MOI_LUOT,
+                "moi luot go bom khong tang 25 phan tram");
+
+        BoDemGoBomBossDatBom goBom = new BoDemGoBomBossDatBom();
+        byte id = 9;
+        goBom.dangKyBom(id, 100, 200);
+        List<BoDemGoBomBossDatBom.ViTriNguoiChoi> haiNguoiCungDung =
+                Arrays.asList(
+                        new BoDemGoBomBossDatBom.ViTriNguoiChoi(100, 200),
+                        new BoDemGoBomBossDatBom.ViTriNguoiChoi(101, 200));
+        BoDemGoBomBossDatBom.KetQuaKetThucLuot mot =
+                goBom.ketThucLuot(haiNguoiCungDung);
+        bang(1, mot.getTienDoThayDoi().size(),
+                "hai nguoi lam tien do bom tang hai lan");
+        bang(25, mot.getTienDoThayDoi().get(0).getPhanTram(),
+                "luot dung dau tien khong tang 25 phan tram");
+
+        BoDemGoBomBossDatBom.KetQuaKetThucLuot roiBom =
+                goBom.ketThucLuot(List.of());
+        bang(1, roiBom.getTienDoThayDoi().size(),
+                "roi bom khong gui tin hieu an thanh tien do");
+        bang(0, roiBom.getTienDoThayDoi().get(0).getPhanTram(),
+                "roi bom khong reset tien do ve 0");
+
+        for (int luot = 1; luot <= 3; luot++) {
+            BoDemGoBomBossDatBom.KetQuaKetThucLuot ketQua =
+                    goBom.ketThucLuot(haiNguoiCungDung);
+            bang(luot * 25,
+                    ketQua.getTienDoThayDoi().get(0).getPhanTram(),
+                    "tien do go bom sai sau khi quay lai");
+            bang(0, ketQua.getBomDaGo().size(),
+                    "go bom truoc khi du bon luot lien tiep");
+        }
+        BoDemGoBomBossDatBom.KetQuaKetThucLuot bon =
+                goBom.ketThucLuot(haiNguoiCungDung);
+        bang(100, bon.getTienDoThayDoi().get(0).getPhanTram(),
+                "luot thu tu khong gui 100 phan tram");
+        bang(1, bon.getBomDaGo().size(),
+                "du bon luot nhung bom chua duoc go");
+        bang(id & 0xFF, bon.getBomDaGo().get(0) & 0xFF,
+                "go nham ID bom");
+        bang(0, goBom.demBomDangTheoDoi(),
+                "bom da go van con trang thai server");
+
+        goBom.dangKyBom((byte) 10, 100, 200);
+        BoDemGoBomBossDatBom.KetQuaKetThucLuot ngoaiHitbox =
+                goBom.ketThucLuot(List.of(
+                        new BoDemGoBomBossDatBom.ViTriNguoiChoi(113, 200)));
+        bang(0, ngoaiHitbox.getTienDoThayDoi().size(),
+                "dung ngoai be rong nguoi choi van go duoc bom");
+        BoDemGoBomBossDatBom.KetQuaKetThucLuot satHitbox =
+                goBom.ketThucLuot(List.of(
+                        new BoDemGoBomBossDatBom.ViTriNguoiChoi(112, 200)));
+        bang(25, satHitbox.getTienDoThayDoi().get(0).getPhanTram(),
+                "dung tren mep hitbox lai khong go duoc bom");
+
+        goBom.dangKyBom((byte) 11, 300, 200);
+        BoDemGoBomBossDatBom.KetQuaKetThucLuot dungDuoiSan =
+                goBom.ketThucLuot(List.of(
+                        new BoDemGoBomBossDatBom.ViTriNguoiChoi(300, 207)));
+        dung(dungDuoiSan.getTienDoThayDoi().stream()
+                        .noneMatch(tienDo -> tienDo.getId() == (byte) 11),
+                "chan khac cao do bom van go duoc qua san mong");
+        BoDemGoBomBossDatBom.KetQuaKetThucLuot dungDungCaoDo =
+                goBom.ketThucLuot(List.of(
+                        new BoDemGoBomBossDatBom.ViTriNguoiChoi(300, 206)));
+        bang(25, dungDungCaoDo.getTienDoThayDoi().stream()
+                        .filter(tienDo -> tienDo.getId() == (byte) 11)
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError(
+                                "dung sat cao do bom khong tang tien do"))
+                        .getPhanTram(),
+                "sai so chan hop le khong tang 25 phan tram");
+
+        goBom.dangKyBom((byte) 12, 400, 200);
+        goBom.capNhatViTriBom((byte) 12, 400, 260);
+        BoDemGoBomBossDatBom.KetQuaKetThucLuot viTriBomCu =
+                goBom.ketThucLuot(List.of(
+                        new BoDemGoBomBossDatBom.ViTriNguoiChoi(400, 200)));
+        dung(viTriBomCu.getTienDoThayDoi().stream()
+                        .noneMatch(tienDo -> tienDo.getId() == (byte) 12),
+                "bom da roi nhung server van cho go o vi tri cu");
+        BoDemGoBomBossDatBom.KetQuaKetThucLuot viTriBomMoi =
+                goBom.ketThucLuot(List.of(
+                        new BoDemGoBomBossDatBom.ViTriNguoiChoi(400, 260)));
+        bang(25, viTriBomMoi.getTienDoThayDoi().stream()
+                        .filter(tienDo -> tienDo.getId() == (byte) 12)
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError(
+                                "server khong theo vi tri bom sau khi roi"))
+                        .getPhanTram(),
+                "dung tren vi tri bom moi khong tang tien do");
+
+        BoDemBomBossDatBom lich = new BoDemBomBossDatBom();
+        BoDemBomBossDatBom.Bom bomLich = null;
+        for (int luot = 1; luot <= 6; luot++) {
+            BoDemBomBossDatBom.KetQuaBatDauLuot ketQua =
+                    lich.batDauLuot(luot);
+            if (ketQua.getBomMoi() != null) {
+                bomLich = ketQua.getBomMoi();
+            }
+        }
+        khacNull(bomLich, "khong tao duoc bom de test uu tien go");
+        BoDemGoBomBossDatBom goTruocKhiNo =
+                new BoDemGoBomBossDatBom();
+        goTruocKhiNo.dangKyBom(bomLich.getId(), 200, 300);
+        int soBomNo = 0;
+        for (int luot = 7; luot <= 10; luot++) {
+            BoDemGoBomBossDatBom.KetQuaKetThucLuot ketQuaGo =
+                    goTruocKhiNo.ketThucLuot(List.of(
+                            new BoDemGoBomBossDatBom.ViTriNguoiChoi(
+                                    200, 300)));
+            for (byte idDaGo : ketQuaGo.getBomDaGo()) {
+                lich.xoaBom(idDaGo);
+            }
+            soBomNo += lich.batDauLuot(luot).getBomDaNo().size();
+        }
+        bang(0, soBomNo,
+                "bom da go du bon luot van no");
+        bang(0, lich.chupBomDangHoatDong().size(),
+                "lich van giu bom da go");
+    }
+
+    private static void kiemTraGiaoThucCmd109() {
+        try {
+            ChickenTinNhan tao = GiaoThucBomBossDatBom.taoBom(
+                    (byte) 7, 321, 654, 10);
+            bang(109, tao.layLenh() & 0xFF,
+                    "packet tao bom khong dung CMD109");
+            DataInputStream docTao = new ChickenTinNhan(
+                    (byte) 109, tao.layDuLieu()).boDoc();
+            bang(0, docTao.readUnsignedByte(),
+                    "CMD109 tao bom sai action");
+            bang(7, docTao.readUnsignedByte(),
+                    "CMD109 tao bom sai ID");
+            bang(321, docTao.readInt(),
+                    "CMD109 tao bom sai X");
+            bang(654, docTao.readInt(),
+                    "CMD109 tao bom sai Y");
+            bang(10, docTao.readUnsignedByte(),
+                    "CMD109 tao bom sai dem nguoc");
+            bang(0, docTao.available(),
+                    "CMD109 tao bom co byte thua");
+
+            ChickenTinNhan capNhat =
+                    GiaoThucBomBossDatBom.capNhatLuot((byte) 7, 9);
+            DataInputStream docCapNhat = new ChickenTinNhan(
+                    (byte) 109, capNhat.layDuLieu()).boDoc();
+            bang(4, docCapNhat.readUnsignedByte(),
+                    "CMD109 cap nhat sai action");
+            bang(7, docCapNhat.readUnsignedByte(),
+                    "CMD109 cap nhat sai ID");
+            bang(9, docCapNhat.readUnsignedByte(),
+                    "CMD109 cap nhat sai so luot");
+            bang(0, docCapNhat.available(),
+                    "CMD109 cap nhat co byte thua");
+
+            ChickenTinNhan no =
+                    GiaoThucBomBossDatBom.noBom((byte) 7);
+            DataInputStream docNo = new ChickenTinNhan(
+                    (byte) 109, no.layDuLieu()).boDoc();
+            bang(1, docNo.readUnsignedByte(),
+                    "CMD109 no bom sai action");
+            bang(7, docNo.readUnsignedByte(),
+                    "CMD109 no bom sai ID");
+            bang(0, docNo.readUnsignedByte(),
+                    "CMD109 no bom khong chon mot qua");
+            bang(0, docNo.available(),
+                    "CMD109 no bom co byte thua");
+
+            ChickenTinNhan tienDo =
+                    GiaoThucBomBossDatBom.capNhatTienDoGo((byte) 7, 75);
+            DataInputStream docTienDo = new ChickenTinNhan(
+                    (byte) 109, tienDo.layDuLieu()).boDoc();
+            bang(2, docTienDo.readUnsignedByte(),
+                    "CMD109 tien do go bom sai action");
+            bang(7, docTienDo.readUnsignedByte(),
+                    "CMD109 tien do go bom sai ID");
+            bang(75, docTienDo.readUnsignedByte(),
+                    "CMD109 tien do go bom sai phan tram");
+            bang(0, docTienDo.available(),
+                    "CMD109 tien do go bom co byte thua");
+
+            ChickenTinNhan xoa =
+                    GiaoThucBomBossDatBom.xoaBom((byte) 7);
+            DataInputStream docXoa = new ChickenTinNhan(
+                    (byte) 109, xoa.layDuLieu()).boDoc();
+            bang(3, docXoa.readUnsignedByte(),
+                    "CMD109 xoa bom sai action");
+            bang(7, docXoa.readUnsignedByte(),
+                    "CMD109 xoa bom sai ID");
+            bang(0, docXoa.available(),
+                    "CMD109 xoa bom co byte thua");
+        } catch (IOException loi) {
+            throw new AssertionError("khong ma hoa duoc CMD109", loi);
+        }
+    }
+
+    private static ChickenMauVatPham mauSungShopBossTest(
+            int id,
+            short part,
+            int tanCong,
+            int napDan,
+            int giaVang
+    ) {
+        ChickenMauVatPham mau = new ChickenMauVatPham(
+                (short) id, (byte) 5, (byte) 0,
+                "BossShopGun" + id, "", (byte) 1,
+                0, part, part, false);
+        mau.buyGold = giaVang;
+        ChickenMauThuocTinhVatPham mauTanCong =
+                new ChickenMauThuocTinhVatPham();
+        mauTanCong.ma = 1;
+        ChickenThuocTinhVatPham optionTanCong =
+                new ChickenThuocTinhVatPham(1, tanCong);
+        optionTanCong.optionTemplate = mauTanCong;
+        mau.thuocTinhs.add(optionTanCong);
+
+        ChickenMauThuocTinhVatPham mauNapDan =
+                new ChickenMauThuocTinhVatPham();
+        mauNapDan.ma = 14;
+        ChickenThuocTinhVatPham optionNapDan =
+                new ChickenThuocTinhVatPham(14, napDan);
+        optionNapDan.optionTemplate = mauNapDan;
+        mau.thuocTinhs.add(optionNapDan);
+        return mau;
+    }
+
+    private static void kiemTraBossBanBossKhac() {
+        ChickenChienBinh bossBan =
+                chienBinh((byte) 8, (short) 57, (byte) 0);
+        ChickenChienBinh bossKhac =
+                chienBinh((byte) 9, (short) 57, (byte) 0);
+        ChickenChienBinh nguoiChoi =
+                nguoiChoiThat((byte) 0, (short) 57, (byte) 0);
+
+        dung(ChickenLuatVaChamPhongBoss.chapNhan(bossBan, bossBan),
+                "phong boss van mien damage cho chinh boss ban");
+        dung(ChickenLuatVaChamPhongBoss.chapNhan(bossBan, bossKhac),
+                "phong boss van chan boss ban boss khac");
+        dung(ChickenLuatVaChamPhongBoss.chapNhan(bossBan, nguoiChoi),
+                "phong boss chan boss ban nguoi choi");
+        dung(ChickenLuatVaChamPhongBoss.chapNhan(nguoiChoi, nguoiChoi),
+                "phong boss van chan nguoi choi tu ban");
+
+        bossBan.x = 100;
+        bossBan.y = 500;
+        bossBan.tanCong = 500;
+        bossKhac.x = 600;
+        bossKhac.y = 500;
+        ChickenQuanLyBanDo mapTrong = new ChickenQuanLyBanDo(0) {
+            @Override
+            public int getWidth() {
+                return 1_000;
+            }
+
+            @Override
+            public int getHeight() {
+                return 800;
+            }
+
+            @Override
+            public synchronized boolean coVaCham(short x, short y) {
+                return false;
+            }
+        };
+
+        ChickenKetQuaDan duongChuan =
+                com.chicken.phong.boss.trandau.baovay.BossBanSung
+                        .taoPhatBan(
+                                bossBan,
+                                bossKhac,
+                                new ChickenChienBinh[]{bossKhac},
+                                mapTrong,
+                                (byte) 0,
+                                (byte) 0
+                        );
+        int giua = Math.max(
+                1, duongChuan.cacDuongX[0].length / 2);
+        ChickenChienBinh bossChanDuong =
+                chienBinh((byte) 10, (short) 57, (byte) 0);
+        bossChanDuong.x = duongChuan.cacDuongX[0][giua];
+        bossChanDuong.y = (short) (
+                duongChuan.cacDuongY[0][giua] + 18);
+        ChickenKetQuaDan trungBossKhac =
+                com.chicken.phong.boss.trandau.baovay.BossBanSung
+                        .taoPhatBan(
+                                bossBan,
+                                bossKhac,
+                                new ChickenChienBinh[]{
+                                    bossBan, bossChanDuong, bossKhac
+                                },
+                                mapTrong,
+                                (byte) 0,
+                                (byte) 0
+                        );
+        dung(trungBossKhac.mucTieu == bossChanDuong,
+                "dan boss thuong xuyen qua boss dung chan duong");
+
+        bossBan.x = 500;
+        bossBan.y = 500;
+        boolean bossTuBanTrung = false;
+        for (int lechX = 30; lechX <= 120 && !bossTuBanTrung;
+                lechX += 5) {
+            bossKhac.x = (short) (bossBan.x + lechX);
+            bossKhac.y = bossBan.y;
+            for (int gio = -128; gio <= -40; gio++) {
+                ChickenKetQuaDan tuBan =
+                        com.chicken.phong.boss.trandau.baovay.BossBanSung
+                                .taoPhatBan(
+                                        bossBan,
+                                        bossKhac,
+                                        new ChickenChienBinh[]{bossBan},
+                                        mapTrong,
+                                        (byte) gio,
+                                        (byte) 0
+                                );
+                if (tuBan.mucTieu == bossBan) {
+                    bossTuBanTrung = true;
+                    break;
+                }
+            }
+        }
+        dung(bossTuBanTrung,
+                "dan boss vong lai van khong va cham chinh boss ban");
+
+        ChickenKetQuaDan duongRua =
+                BossRuaRongTanCong.taoPhatBanRua(
+                        bossBan,
+                        bossKhac,
+                        new ChickenChienBinh[]{bossKhac},
+                        mapTrong,
+                        (byte) 0,
+                        (byte) 0
+                );
+        int giuaRua = Math.max(
+                1, duongRua.cacDuongX[0].length / 2);
+        bossChanDuong.x = duongRua.cacDuongX[0][giuaRua];
+        bossChanDuong.y = (short) (
+                duongRua.cacDuongY[0][giuaRua] + 18);
+        ChickenKetQuaDan ruaTrungBossKhac =
+                BossRuaRongTanCong.taoPhatBanRua(
+                        bossBan,
+                        bossKhac,
+                        new ChickenChienBinh[]{
+                            bossBan, bossChanDuong, bossKhac
+                        },
+                        mapTrong,
+                        (byte) 0,
+                        (byte) 0
+                );
+        dung(ruaTrungBossKhac.mucTieu == bossChanDuong,
+                "dan Rua xuyen qua boss dung chan duong");
+
+        ChickenKetQuaDan duongRong =
+                BossRongTanCong.taoPhatBanDacBiet(
+                        bossBan,
+                        bossKhac,
+                        new ChickenChienBinh[]{bossKhac},
+                        mapTrong,
+                        (byte) 0,
+                        (byte) 0,
+                        true
+                );
+        int giuaRong = Math.max(
+                1, duongRong.cacDuongX[0].length / 2);
+        bossChanDuong.x = duongRong.cacDuongX[0][giuaRong];
+        bossChanDuong.y = (short) (
+                duongRong.cacDuongY[0][giuaRong] + 18);
+        ChickenKetQuaDan rongTrungBossKhac =
+                BossRongTanCong.taoPhatBanDacBiet(
+                        bossBan,
+                        bossKhac,
+                        new ChickenChienBinh[]{
+                            bossBan, bossChanDuong, bossKhac
+                        },
+                        mapTrong,
+                        (byte) 0,
+                        (byte) 0,
+                        true
+                );
+        dung(rongTrungBossKhac.mucTieu == bossChanDuong,
+                "dan Rong xuyen qua boss dung chan duong");
     }
 
     private static void kiemTraCongThucAvg() {
@@ -2274,7 +4037,7 @@ public final class ChickenKiemThuBan {
                 (byte) 30,
                 mapTrong,
                 new ChickenChienBinh[]{ultron, mucTieu},
-                (nguoiBan, dich) -> true
+                (nguoiBan, dich) -> dich != nguoiBan
         );
         bang(3, trungNguoi.cacDuongX.length,
                 "Ultron x3 khong co du ba quy dao");
@@ -2309,7 +4072,7 @@ public final class ChickenKiemThuBan {
                 (byte) 30,
                 mapBaLop,
                 new ChickenChienBinh[]{ultron},
-                (nguoiBan, dich) -> true
+                (nguoiBan, dich) -> dich != nguoiBan
         );
         bang(3, soLanPha[0], "Ultron x3 chi pha dia hinh mot lan");
         int x1 = trungMap.cacDuongX[0][trungMap.cacDuongX[0].length - 1];
@@ -2319,6 +4082,39 @@ public final class ChickenKiemThuBan {
                 "vien sau Ultron khong duoc tinh lai sau lo vien truoc");
         dung(trungMap.satThuongTheoMucTieu.isEmpty(),
                 "ban vao dia hinh lai tao damage nhan vat gia");
+
+        ChickenChienBinh ultronTuBan =
+                chienBinh((byte) 0, (short) 230, (byte) 8);
+        ultronTuBan.x = 300;
+        ultronTuBan.y = 520;
+        ultronTuBan.tanCong = 100;
+        ChickenKetQuaDan bossChoTuBan = ChickenLoatBanUltronServer.tao(
+                ultronTuBan,
+                (short) 200,
+                (short) 500,
+                (short) 0,
+                (byte) 30,
+                mapTrong,
+                new ChickenChienBinh[]{ultronTuBan},
+                (nguoiBan, dich) -> true
+        );
+        dung(bossChoTuBan.satThuongTheoMucTieu
+                        .containsKey(ultronTuBan),
+                "Ultron x3 phong boss van loai chinh nguoi ban");
+
+        ChickenKetQuaDan pvpChanTuBan = ChickenLoatBanUltronServer.tao(
+                ultronTuBan,
+                (short) 200,
+                (short) 500,
+                (short) 0,
+                (byte) 30,
+                mapTrong,
+                new ChickenChienBinh[]{ultronTuBan},
+                (nguoiBan, dich) -> dich != nguoiBan
+        );
+        dung(!pvpChanTuBan.satThuongTheoMucTieu
+                        .containsKey(ultronTuBan),
+                "mo self-hit Ultron boss lam ro sang PvP");
     }
 
     private static void kiemTraNoLanSkillAvg() {
@@ -2729,6 +4525,38 @@ public final class ChickenKiemThuBan {
 
     private static void khacNull(Object giaTri, String thongBao) {
         dung(giaTri != null, thongBao);
+    }
+
+    private static void datByte(
+            Object doiTuong,
+            Class<?> loai,
+            String ten,
+            byte giaTri
+    ) throws Exception {
+        Field field = loai.getDeclaredField(ten);
+        field.setAccessible(true);
+        field.setByte(doiTuong, giaTri);
+    }
+
+    private static void datLong(
+            Object doiTuong,
+            Class<?> loai,
+            String ten,
+            long giaTri
+    ) throws Exception {
+        Field field = loai.getDeclaredField(ten);
+        field.setAccessible(true);
+        field.setLong(doiTuong, giaTri);
+    }
+
+    private static byte layByte(
+            Object doiTuong,
+            Class<?> loai,
+            String ten
+    ) throws Exception {
+        Field field = loai.getDeclaredField(ten);
+        field.setAccessible(true);
+        return field.getByte(doiTuong);
     }
 
     private static void laNull(Object giaTri, String thongBao) {

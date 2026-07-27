@@ -1,19 +1,86 @@
 package com.chicken.phong.boss.trandau.rong;
 
-/** Cấu hình cố định Boss Rồng map 55. */
+/**
+ * Toàn bộ thông số có thể cân bằng của Boss Rồng map 55.
+ *
+ * <p>Khi chỉnh boss, chỉ sửa các hằng số trong file này. Các class
+ * {@link BossRong}, {@link BossRongTanCong} và {@link DiChuyenBossRong}
+ * chỉ chứa luồng xử lý và đọc lại cấu hình tại đây.</p>
+ */
 public final class CauHinhBossRong {
+    // ==================== CHỈ SỐ CHÍNH ====================
     public static final int MAP_ID = 55;
-    /** Giữ đúng lượng máu mặc định quan sát được từ BigBoss Rồng native. */
-    public static final int MAU_BOSS = 10_471;
-    /** Công cơ bản; sau khi trừ giáp thường còn khoảng 193 như log thử nghiệm. */
-    public static final int TAN_CONG_BAN_TU_XA = 500;
-    /** Lực va đập khi bị kẹp, mang đi rồi thả xuống. */
-    public static final int TAN_CONG_THA_ROI = 700;
+    public static final int MAU_BOSS = 1;
+    public static final int GIAP_BOSS = 0;
+    /** Damage gốc của từng viên trong loạt bắn xa, trước khi trừ giáp. */
+    public static final int TAN_CONG_BAN_TU_XA = 250;
+    /** Damage gốc khi bị kẹp rồi thả xuống nền, trước khi trừ giáp. */
+    public static final int TAN_CONG_THA_ROI = 500;
+    /** Rơi xuống vực vẫn chết ngay, không dùng TAN_CONG_THA_ROI. */
+    public static final int SO_VIEN_DAN_DAC_BIET = 2;
+    public static final int NAP_DAN_SAU_HANH_DONG = 300;
+    public static final int GIAY_MOI_LUOT = 25;
+    /** Mỗi lượt có 25% dùng skill gắp-thả, 75% bắn loạt. */
+    public static final int TY_LE_GAP_NGUOI_PHAN_TRAM = 25;
+
+    // ==================== ĐẠN BẮN XA ====================
+    /** Một lần tung cho cả loạt: 50% aim, 50% bắn vào điểm ngẫu nhiên. */
+    public static final int TY_LE_AIM_PHAN_TRAM = 50;
+    public static final int LE_DIEM_NGAU_NHIEN_X = 20;
+    public static final int LE_DIEM_NGAU_NHIEN_Y = 40;
+    public static final int KHOANG_CACH_DIEM_NGAU_NHIEN_TOI_THIEU = 160;
+    /**
+     * Phat ban truot phai ket thuc ngoai map de client khong tao hieu ung
+     * no type 60 ngay trong mot khoi dia hinh.
+     */
+    public static final int LE_KET_THUC_NGOAI_BAN_DO = 32;
+    public static final byte LOAI_DAN_DAC_BIET = 1;
+    public static final byte LUC_HIEN_THI_DAN = 30;
+    public static final int LECH_X_NO_DAN = 62;
+    public static final int LECH_Y_NO_DAN = 70;
+    public static final int SO_DIEM_DUONG_DAN_TOI_THIEU = 12;
+    public static final int SO_DIEM_DUONG_DAN_TOI_DA = 96;
+    public static final int KHOANG_CACH_MOI_DIEM_DAN = 12;
+    public static final double HE_SO_GIO_DUONG_DAN = 0.65D;
+    public static final double DO_CONG_DUONG_DAN = 18.0D;
+
+    // ==================== HITBOX RỒNG ====================
+    public static final int HITBOX_LECH_TRAI = 25;
+    public static final int HITBOX_LECH_PHAI = 24;
+    public static final int HITBOX_LECH_TREN = 50;
+    public static final int HITBOX_LECH_DUOI = 14;
+
+    // ==================== DI CHUYỂN / GẮP THẢ ====================
+    public static final int BUOC_BAY_TOI_DA = 50;
+    public static final int TOC_DO_BAY_CLIENT_MOI_FRAME = 12;
+    public static final int TOC_DO_THA_NGUOI_MOI_FRAME = 40;
+    public static final int THOI_GIAN_FRAME_CLIENT_MS = 17;
+    public static final int THOI_GIAN_BAY_TOI_THIEU_MS = 100;
+    public static final int THOI_GIAN_BAY_TOI_DA_MS = 3_500;
+    public static final int LECH_Y_NGUOI_BI_KEP = 47;
+    public static final int BUOC_TIM_X_THA_AN_TOAN = 4;
+    public static final int LECH_NUA_MAP_DIEM_MANG = 120;
+    public static final int CACH_RIA_MAP_DIEM_MANG = 200;
+    public static final int Y_DIEM_MANG_TOI_THIEU = 130;
+    public static final int Y_DIEM_MANG_TOI_DA = 230;
+    public static final int DO_CAO_NANG_NGUOI_KHI_MANG = 170;
+
+    // ==================== THỜI GIAN ANIMATION ====================
+    public static final int TRE_BOSS_BAT_DAU_MS = 550;
+    /** Cho client chạy xong cả hai viên native trước khi phát lượt tiếp theo. */
+    public static final int TRE_KET_THUC_LOAT_DAN_MS = 650;
+    /**
+     * BigBoss native giữ mỗi frame fCarry khoảng 3 tick ở 60 FPS
+     * (hoặc 6 tick ở high-frame-rate), tổng 8 frame xấp xỉ 408 ms.
+     */
+    public static final int TRE_HOAT_ANH_KEP_MANG_MS = 420;
+    public static final int TRE_DU_PHONG_GAP_THA_MS = 120;
+    /** Đủ để client vẽ impact/HP trước khi nhận CMD 24 của lượt kế tiếp. */
+    public static final int TRE_SAU_DAMAGE_GAP_THA_MS = 120;
+
+    // ==================== VỊ TRÍ / NHẬN DIỆN ====================
     public static final int SLOT_BOSS_DAU = 8;
     public static final int SLOT_BOSS_CUOI = 8;
-    public static final int NAP_DAN_SAU_HANH_DONG = 300;
-    public static final int TRE_MOI_BUOC_BAY_MS = 70;
-    public static final int TRE_MOI_BUOC_ROI_MS = 55;
 
     public static final class CauHinh {
         private final byte slot;

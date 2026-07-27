@@ -58,6 +58,7 @@ implements IChickenPhien {
     private int soLoiTrongCuaSo;
     private long mocGuiNguyenLieuBossTiepTheoMs;
     private int soNguyenLieuBossDangCho;
+    private boolean choMoManHinhBossSauKhiTaiXong;
 
     private static final int GIOI_HAN_TIN_MOI_GIAY = 300;
     private static final int GIOI_HAN_TIN_MOI_TAI_KHOAN_MOI_GIAY = 450;
@@ -188,10 +189,34 @@ implements IChickenPhien {
         return Math.max(0L, mocGui - hienTaiMs);
     }
 
-    public synchronized void hoanTatGuiNguyenLieuBoss() {
+    /**
+     * Ghi nhan ACK -67 cua client. Chi cho mo GameScr khi moi packet CMD 126
+     * da duoc dua ra kenh; neu khong anh terrain toi muon se goi
+     * PrepareScr.show() va day client nguoc ve phong cho trong khi tran van
+     * dang chay.
+     */
+    public synchronized boolean xacNhanSanSangMoManHinhBoss() {
+        if (this.soNguyenLieuBossDangCho == 0) {
+            this.choMoManHinhBossSauKhiTaiXong = false;
+            return true;
+        }
+        this.choMoManHinhBossSauKhiTaiXong = true;
+        return false;
+    }
+
+    /**
+     * @return true khi day la resource cuoi va client dang cho mo GameScr.
+     */
+    public synchronized boolean hoanTatGuiNguyenLieuBoss() {
         if (this.soNguyenLieuBossDangCho > 0) {
             this.soNguyenLieuBossDangCho--;
         }
+        if (this.soNguyenLieuBossDangCho == 0
+                && this.choMoManHinhBossSauKhiTaiXong) {
+            this.choMoManHinhBossSauKhiTaiXong = false;
+            return true;
+        }
+        return false;
     }
 
     public boolean coNguoiChoiDaDangNhap() {

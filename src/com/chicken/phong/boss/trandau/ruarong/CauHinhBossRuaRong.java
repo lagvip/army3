@@ -16,7 +16,10 @@ public final class CauHinhBossRuaRong {
     public static final int MAU_PHIEN_QUAN = 2_875;
 
     public static final int SAT_THUONG_RUA = 900;
+    /** Damage gốc mỗi viên của loạt hai viên Rồng. */
     public static final int SAT_THUONG_RONG = 980;
+    /** Damage gốc khi Rồng gắp rồi thả trúng nền. */
+    public static final int SAT_THUONG_GAP_THA_RONG = SAT_THUONG_RONG;
     public static final int MAU_BOSS = MAU_PHIEN_QUAN;
     public static final int SAT_THUONG_CAM_TU = SAT_THUONG_RUA;
     public static final int BAN_KINH_KICH_NO = 90;
