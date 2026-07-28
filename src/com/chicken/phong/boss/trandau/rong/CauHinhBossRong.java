@@ -20,7 +20,7 @@ public final class CauHinhBossRong {
     public static final int SO_VIEN_DAN_DAC_BIET = 2;
     public static final int NAP_DAN_SAU_HANH_DONG = 300;
     public static final int GIAY_MOI_LUOT = 25;
-    /** Mỗi lượt có 25% dùng skill gắp-thả, 75% bắn loạt. */
+    /** Mỗi lượt có 25% dùng skill gắp-thả, 75% bay quanh rồi bắn loạt. */
     public static final int TY_LE_GAP_NGUOI_PHAN_TRAM = 25;
 
     // ==================== ĐẠN BẮN XA ====================
@@ -64,6 +64,13 @@ public final class CauHinhBossRong {
     public static final int Y_DIEM_MANG_TOI_THIEU = 130;
     public static final int Y_DIEM_MANG_TOI_DA = 230;
     public static final int DO_CAO_NANG_NGUOI_KHI_MANG = 170;
+    /** Khoang ngang ngau nhien de Rong bay quanh muc tieu truoc khi ban. */
+    public static final int KHOANG_X_BAY_QUANH_TOI_THIEU = 110;
+    public static final int KHOANG_X_BAY_QUANH_TOI_DA = 190;
+    /** Rong dung cao hon chan nguoi choi de dau dan khong nam trong dia hinh. */
+    public static final int DO_CAO_BAY_QUANH_TOI_THIEU = 85;
+    public static final int DO_CAO_BAY_QUANH_TOI_DA = 145;
+    public static final int SO_LAN_THU_DIEM_BAY_QUANH = 12;
 
     // ==================== THỜI GIAN ANIMATION ====================
     public static final int TRE_BOSS_BAT_DAU_MS = 550;
@@ -77,6 +84,8 @@ public final class CauHinhBossRong {
     public static final int TRE_DU_PHONG_GAP_THA_MS = 120;
     /** Đủ để client vẽ impact/HP trước khi nhận CMD 24 của lượt kế tiếp. */
     public static final int TRE_SAU_DAMAGE_GAP_THA_MS = 120;
+    /** Dem nho sau khi client bay toi dich roi moi tao va phat duong dan. */
+    public static final int TRE_DU_PHONG_BAY_QUANH_TRUOC_BAN_MS = 70;
 
     // ==================== VỊ TRÍ / NHẬN DIỆN ====================
     public static final int SLOT_BOSS_DAU = 8;

@@ -5,10 +5,35 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /** Di chuyển bay tự do của khí cầu; không áp dụng trọng lực hoặc địa hình. */
 public final class DiChuyenBossKhiCau {
-    private static final int BUOC_TOI_DA = 55;
-    private static final int KHOANG_CACH_DA_DEN = 18;
+    /**
+     * Client native noi suy khi cau khoang 3 px moi frame. Lay moc 180 px/s
+     * cho client PC 60 FPS va them du phong de server khong doi luot khi hinh
+     * anh van con dang bay.
+     */
+    private static final int TOC_DO_HIEN_THI_PIXEL_GIAY = 180;
+    private static final int TRE_DU_PHONG_MS = 250;
+    private static final int THOI_GIAN_TOI_THIEU_MS = 350;
+    private static final int THOI_GIAN_TOI_DA_MS = 7_000;
 
     private DiChuyenBossKhiCau() {
+    }
+
+    public static short[] chonDiemXuatHien(ChickenQuanLyBanDo banDo) {
+        int rong = Math.max(1, banDo.getWidth());
+        int cao = Math.max(1, banDo.getHeight());
+        int bienX = Math.min(120, Math.max(25, rong / 10));
+        int xMin = Math.min(rong - 1, bienX);
+        int xMax = Math.max(xMin, rong - bienX - 1);
+        int yMin = Math.min(
+                cao - 1,
+                CauHinhBossKhiCau.Y_BAY_CAO_NHAT);
+        int yMax = Math.max(
+                yMin,
+                Math.min(cao - 1, CauHinhBossKhiCau.Y_BAY_THAP_NHAT));
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        int x = random.nextInt(xMin, xMax + 1);
+        int y = random.nextInt(yMin, yMax + 1);
+        return new short[]{(short) x, (short) y};
     }
 
     public static short[] chonDiemBay(short xHienTai, short yHienTai,
@@ -16,8 +41,12 @@ public final class DiChuyenBossKhiCau {
         int rong = Math.max(1, banDo.getWidth());
         int cao = Math.max(1, banDo.getHeight());
         int bienX = Math.min(120, Math.max(25, rong / 10));
-        int yMin = Math.min(cao - 1, 205);
-        int yMax = Math.min(cao - 1, 340);
+        int yMin = Math.min(
+                cao - 1,
+                CauHinhBossKhiCau.Y_BAY_CAO_NHAT);
+        int yMax = Math.min(
+                cao - 1,
+                CauHinhBossKhiCau.Y_BAY_THAP_NHAT);
         if (yMax < yMin) {
             yMin = Math.max(0, cao / 4);
             yMax = Math.max(yMin, cao * 2 / 3);
@@ -38,23 +67,19 @@ public final class DiChuyenBossKhiCau {
         return new short[]{kep(dichX, 0, rong - 1), kep(dichY, 0, cao - 1)};
     }
 
-    public static boolean daDenGan(short x, short y, short dichX, short dichY) {
-        return Math.abs(dichX - x) <= KHOANG_CACH_DA_DEN
-                && Math.abs(dichY - y) <= KHOANG_CACH_DA_DEN;
-    }
-
-    public static short[] tinhBuoc(short x, short y, short dichX, short dichY,
-            ChickenQuanLyBanDo banDo) {
-        double dx = dichX - x;
-        double dy = dichY - y;
-        double doDai = Math.max(1.0D, Math.hypot(dx, dy));
-        double tiLe = Math.min(1.0D, BUOC_TOI_DA / doDai);
-        int xMoi = (int) Math.round(x + dx * tiLe);
-        int yMoi = (int) Math.round(y + dy * tiLe);
-        return new short[]{
-            kep(xMoi, 0, banDo.getWidth() - 1),
-            kep(yMoi, 0, banDo.getHeight() - 1)
-        };
+    public static long tinhThoiGianBayMs(
+            short xCu,
+            short yCu,
+            short xMoi,
+            short yMoi
+    ) {
+        double khoangCach = Math.hypot(xMoi - xCu, yMoi - yCu);
+        long thoiGian = (long) Math.ceil(
+                khoangCach * 1_000.0D / TOC_DO_HIEN_THI_PIXEL_GIAY)
+                + TRE_DU_PHONG_MS;
+        return Math.max(
+                THOI_GIAN_TOI_THIEU_MS,
+                Math.min(THOI_GIAN_TOI_DA_MS, thoiGian));
     }
 
     private static short kep(int giaTri, int nhoNhat, int lonNhat) {

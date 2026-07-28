@@ -1,8 +1,6 @@
 param(
     [string[]]$JarPaths = @(
-        'client\1 Aim local_1.jar',
-        'client\Chicken_LT_Local_JavaME.jar',
-        'client\Chicken_LT_Local_JavaME_x1.jar'
+        'client\1 Aim local_1.jar'
     )
 )
 
@@ -13,7 +11,8 @@ $javac = Join-Path $javaHome 'bin\javac.exe'
 $java = Join-Path $javaHome 'bin\java.exe'
 $sourceRoot = Join-Path $root 'client-patches\javame'
 $buildRoot = Join-Path $root 'build\ironman-laser-javame'
-$helperSource = Join-Path $sourceRoot 'src\chibikun\IronManLaserVfx.java'
+$skillStateSource = Join-Path $sourceRoot 'src\chibikun\IronManSkillClientState.java'
+$vfxSource = Join-Path $sourceRoot 'src\chibikun\IronManLaserVfx.java'
 $patcherSource = Join-Path $sourceRoot 'PatchIronManLaser.java'
 $toolsRoot = Join-Path $root 'build\tools'
 $proguardVersion = '7.9.1'
@@ -61,9 +60,10 @@ foreach ($relativeJar in $JarPaths) {
         '-Xlint:-options' `
         -classpath $jarPath `
         -d $helperBuild `
-        $helperSource
+        $skillStateSource `
+        $vfxSource
     if ($LASTEXITCODE -ne 0) {
-        throw "Khong bien dich duoc IronManLaserVfx cho $jarPath"
+        throw "Khong bien dich duoc IronMan skill helpers cho $jarPath"
     }
 
     $patcherBuild = Join-Path $buildRoot 'patcher'
@@ -84,13 +84,15 @@ foreach ($relativeJar in $JarPaths) {
     Copy-Item -LiteralPath $jarPath -Destination $runBackup -Force
 
     try {
-        $helperClass = Join-Path $helperBuild 'chibikun\IronManLaserVfx.class'
+        $skillStateClass = Join-Path $helperBuild 'chibikun\IronManSkillClientState.class'
+        $vfxClass = Join-Path $helperBuild 'chibikun\IronManLaserVfx.class'
         & $java `
             --add-exports java.base/jdk.internal.org.objectweb.asm=ALL-UNNAMED `
             -classpath $patcherBuild `
             PatchIronManLaser `
             $jarPath `
-            $helperClass
+            $skillStateClass `
+            $vfxClass
         if ($LASTEXITCODE -ne 0) {
             throw "Va bytecode JAR that bai: $jarPath"
         }

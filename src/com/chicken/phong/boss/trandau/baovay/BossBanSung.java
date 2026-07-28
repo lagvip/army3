@@ -135,13 +135,29 @@ public final class BossBanSung {
     }
 
     public static boolean laCheDoAimChuan(int giaTriNgauNhien) {
+        return laCheDoAimChuan(
+                giaTriNgauNhien,
+                TY_LE_AIM_CHUAN_PHAN_TRAM);
+    }
+
+    public static boolean laCheDoAimChuan(
+            int giaTriNgauNhien,
+            int tyLeAimPhanTram
+    ) {
+        int tyLe = Math.max(0, Math.min(100, tyLeAimPhanTram));
         return giaTriNgauNhien >= 0
-                && giaTriNgauNhien < TY_LE_AIM_CHUAN_PHAN_TRAM;
+                && giaTriNgauNhien < 100
+                && giaTriNgauNhien < tyLe;
     }
 
     public static boolean chonCheDoAimChuan() {
+        return chonCheDoAimChuan(TY_LE_AIM_CHUAN_PHAN_TRAM);
+    }
+
+    public static boolean chonCheDoAimChuan(int tyLeAimPhanTram) {
         return laCheDoAimChuan(
-                ThreadLocalRandom.current().nextInt(100));
+                ThreadLocalRandom.current().nextInt(100),
+                tyLeAimPhanTram);
     }
 
     public static ChickenKetQuaDan taoPhatBan(

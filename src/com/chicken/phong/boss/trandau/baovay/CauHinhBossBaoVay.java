@@ -2,16 +2,24 @@ package com.chicken.phong.boss.trandau.baovay;
 
 import com.chicken.chien.ChickenQuanLyDanSung;
 import com.chicken.loi.ChickenQuanLyMayChu;
+import com.chicken.phong.boss.trandau.ChickenHoatAnhNoCamTu;
 import com.chicken.vatpham.ChickenMauVatPham;
 import com.chicken.vatpham.ChickenThuocTinhVatPham;
 
-/** Dữ liệu cố định của năm boss trên map 50 - Boss Bao vây. */
+/** Du lieu co dinh cua muoi boss tren map 50 - Boss Bao vay. */
 public final class CauHinhBossBaoVay {
     public static final int MAP_ID = 50;
     public static final int MAU_BOSS = 1_000;
     public static final int SAT_THUONG_CAM_TU = MAU_BOSS / 2;
+    /** GUN_BOMB_BIG cua client; packet phai co du bay duong dan. */
+    public static final byte LOAI_DAN_HIEU_UNG_NO_CAM_TU =
+            ChickenHoatAnhNoCamTu.LOAI_DAN;
+    /** Dong bo tam no Cam tu voi map Hai toa thap. */
+    public static final int BAN_KINH_NO_CAM_TU = 90;
+    /** Tai ria vu no van con 20% damage. */
+    public static final int PHAN_TRAM_DAMAGE_RIA_CAM_TU = 20;
     public static final int SLOT_BOSS_DAU = 8;
-    public static final int SLOT_BOSS_CUOI = 12;
+    public static final int SLOT_BOSS_CUOI = 17;
 
     public enum LoaiBoss {
         BAN_SUNG,
@@ -81,7 +89,22 @@ public final class CauHinhBossBaoVay {
         new CauHinh((byte) 11, -301, "Cảm tử 4", (short) 883, (short) 155,
                 (short) -1, (short) 179, (short) 178, (short) 177, (short) 180,
                 (short) -1, (byte) 0, LoaiBoss.CAM_TU),
-        new CauHinh((byte) 12, -401, "Cảm tử 5", (short) 649, (short) 248,
+        new CauHinh((byte) 12, -401, "Cảm tử 5", (short) 649, (short) 155,
+                (short) -1, (short) 179, (short) 178, (short) 177, (short) 180,
+                (short) -1, (byte) 0, LoaiBoss.CAM_TU),
+        new CauHinh((byte) 13, -501, "Cảm tử 6", (short) 475, (short) 155,
+                (short) -1, (short) 179, (short) 178, (short) 177, (short) 180,
+                (short) -1, (byte) 0, LoaiBoss.CAM_TU),
+        new CauHinh((byte) 14, -601, "Cảm tử 7", (short) 523, (short) 358,
+                (short) -1, (short) 179, (short) 178, (short) 177, (short) 180,
+                (short) -1, (byte) 0, LoaiBoss.CAM_TU),
+        new CauHinh((byte) 15, -701, "Cảm tử 8", (short) 648, (short) 356,
+                (short) -1, (short) 179, (short) 178, (short) 177, (short) 180,
+                (short) -1, (byte) 0, LoaiBoss.CAM_TU),
+        new CauHinh((byte) 16, -801, "Cảm tử 9", (short) 755, (short) 356,
+                (short) -1, (short) 179, (short) 178, (short) 177, (short) 180,
+                (short) -1, (byte) 0, LoaiBoss.CAM_TU),
+        new CauHinh((byte) 17, -901, "Cảm tử 10", (short) 900, (short) 244,
                 (short) -1, (short) 179, (short) 178, (short) 177, (short) 180,
                 (short) -1, (byte) 0, LoaiBoss.CAM_TU)
     };

@@ -7,13 +7,15 @@ import java.util.List;
 /**
  * Server-authoritative schedule for map 53 timed bombs.
  *
- * <p>A bomb is created at the start of turns 6, 12, 18, ... and expires after
- * ten completed turns, including the turn on which it was created. More than
- * one bomb may therefore be active at the same time.</p>
+ * <p>The first bomb is created at turn 6, then another placement opportunity
+ * occurs every 12 turns (6, 18, 30, ...). A new bomb is skipped while one is
+ * still active, so the map can never be flooded with overlapping bombs.</p>
  */
 public final class BoDemBomBossDatBom {
-    public static final int CHU_KY_DAT_BOM = 6;
+    public static final int LUOT_DAT_BOM_DAU = 6;
+    public static final int CHU_KY_DAT_BOM = 12;
     public static final int SO_LUOT_TRUOC_KHI_NO = 10;
+    public static final int SO_BOM_HOAT_DONG_TOI_DA = 1;
 
     private final ArrayList<Bom> bomDangHoatDong = new ArrayList<>();
     private int idTiepTheo;
@@ -43,7 +45,10 @@ public final class BoDemBomBossDatBom {
         }
 
         Bom bomMoi = null;
-        if (soThuTuLuot % CHU_KY_DAT_BOM == 0) {
+        boolean denMocDatBom = soThuTuLuot >= LUOT_DAT_BOM_DAU
+                && (soThuTuLuot - LUOT_DAT_BOM_DAU) % CHU_KY_DAT_BOM == 0;
+        if (denMocDatBom
+                && this.bomDangHoatDong.size() < SO_BOM_HOAT_DONG_TOI_DA) {
             bomMoi = new Bom(this.layIdTrong(), SO_LUOT_TRUOC_KHI_NO);
             this.bomDangHoatDong.add(bomMoi);
             bomMoi = bomMoi.chup();

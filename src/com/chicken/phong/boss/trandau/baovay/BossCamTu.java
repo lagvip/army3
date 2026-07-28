@@ -3,17 +3,39 @@ package com.chicken.phong.boss.trandau.baovay;
 import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.chien.ChickenChienBinh;
 import com.chicken.chiso.ChickenKichThuocNhanVat;
-import com.chicken.luyentap.ChickenLuyenTapToaDo;
 
-/** Logic riêng của ba boss Cảm tử. */
+/**
+ * Cong thuc Cam tu cua map Bao vay.
+ *
+ * Lop nay uy quyen truc tiep sang cong thuc Hai toa thap de hai che do
+ * khong the lech quang duong, va cham, thoi gian animation hay damage no
+ * trong nhung lan sua sau.
+ */
 public final class BossCamTu {
-    public static final int QUANG_DUONG_MOI_LUOT = 230;
-    public static final int BUOC_DI_CHUYEN = 18;
-    public static final int TRE_MOI_BUOC_MS = 70;
-    /** Sai số nhỏ quanh trục X không được dùng để đảo hướng liên tục. */
-    private static final int NGUONG_DOI_HUONG_X = 4;
-    /** Nạp đạn tạm thời sau một lượt di chuyển chưa chạm mục tiêu. */
-    public static final int NAP_DAN_SAU_DI_CHUYEN = 300;
+    private static final int SAI_SO_NEO_CHAN_Y = 4;
+    /** Mat nen day map 50 lien tuc tu X=97 den X=994. */
+    private static final int MEP_NEN_TRAI_MAP_50 = 97;
+    private static final int MEP_NEN_PHAI_MAP_50 = 994;
+    /**
+     * Tam hitbox phai cach mep nen it nhat nua chieu rong boss. Vi vay Cam
+     * tu co the tien den ria, nhung toan than khong bao gio vuot ra ngoai.
+     */
+    public static final int MEP_TRAI_AN_TOAN_MAP_50 =
+            MEP_NEN_TRAI_MAP_50 + ChickenKichThuocNhanVat.BOSS_NUA_RONG;
+    public static final int MEP_PHAI_AN_TOAN_MAP_50 =
+            MEP_NEN_PHAI_MAP_50 - ChickenKichThuocNhanVat.BOSS_NUA_RONG;
+    public static final int QUANG_DUONG_MOI_LUOT =
+            com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                    .QUANG_DUONG_MOI_LUOT;
+    public static final int BUOC_DI_CHUYEN =
+            com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                    .BUOC_DI_CHUYEN;
+    public static final int TRE_MOI_BUOC_MS =
+            com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                    .TRE_MOI_BUOC_MS;
+    public static final int NAP_DAN_SAU_DI_CHUYEN =
+            com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                    .NAP_DAN_SAU_DI_CHUYEN;
 
     private BossCamTu() {
     }
@@ -22,48 +44,43 @@ public final class BossCamTu {
             ChickenChienBinh camTu,
             ChickenChienBinh[] chienBinhs
     ) {
-        ChickenChienBinh ganNhat = null;
-        long khoangCachNhoNhat = Long.MAX_VALUE;
-        for (int i = 0; i < 8 && i < chienBinhs.length; i++) {
-            ChickenChienBinh nguoiChoi = chienBinhs[i];
-            if (nguoiChoi == null || nguoiChoi.chet || nguoiChoi.hp <= 0 || !nguoiChoi.coPhien()) {
-                continue;
-            }
-            long dx = (long) nguoiChoi.x - camTu.x;
-            long dy = (long) nguoiChoi.y - camTu.y;
-            long khoangCach = dx * dx + dy * dy;
-            if (khoangCach < khoangCachNhoNhat
-                    || (khoangCach == khoangCachNhoNhat
-                    && (ganNhat == null || (nguoiChoi.chiSo & 0xFF) < (ganNhat.chiSo & 0xFF)))) {
-                ganNhat = nguoiChoi;
-                khoangCachNhoNhat = khoangCach;
-            }
-        }
-        return ganNhat;
+        return com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                .timNguoiSongGanNhat(camTu, chienBinhs);
     }
 
-    public static boolean daChamNguoiChoi(ChickenChienBinh camTu, ChickenChienBinh nguoiChoi) {
-        int camTuTrai = camTu.x - ChickenKichThuocNhanVat.BOSS_NUA_RONG;
-        int camTuPhai = camTu.x + ChickenKichThuocNhanVat.BOSS_NUA_RONG;
-        int camTuTren = camTu.y - ChickenKichThuocNhanVat.BOSS_LECH_TREN;
-        int camTuDuoi = camTu.y - ChickenKichThuocNhanVat.BOSS_LECH_DUOI;
-
-        int nguoiTrai = nguoiChoi.x - ChickenKichThuocNhanVat.NGUOI_CHOI_NUA_RONG;
-        int nguoiPhai = nguoiChoi.x + ChickenKichThuocNhanVat.NGUOI_CHOI_NUA_RONG;
-        int nguoiTren = nguoiChoi.y - ChickenKichThuocNhanVat.NGUOI_CHOI_LECH_TREN;
-        int nguoiDuoi = nguoiChoi.y - ChickenKichThuocNhanVat.NGUOI_CHOI_LECH_DUOI;
-
-        return camTuTrai <= nguoiPhai && camTuPhai >= nguoiTrai
-                && camTuTren <= nguoiDuoi && camTuDuoi >= nguoiTren;
+    public static boolean daChamNguoiChoi(
+            ChickenChienBinh camTu,
+            ChickenChienBinh nguoiChoi
+    ) {
+        return com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                .daChamNguoiChoi(camTu, nguoiChoi);
     }
 
-    /**
-     * Tính một bước đi có va chạm và trọng lực.
-     *
-     * Cảm tử chỉ tự điều khiển theo trục X. Trục Y tuyệt đối không đuổi thẳng
-     * theo mục tiêu vì cách cũ làm boss rơi xuống rồi bị kéo bay ngược lên.
-     * Khi mất nền, Y chỉ tăng theo từng bước trọng lực cho tới khi chạm nền.
-     */
+    public static boolean trongPhamViKichNo(
+            ChickenChienBinh camTu,
+            ChickenChienBinh nguoiChoi,
+            int banKinh
+    ) {
+        return com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                .trongPhamViKichNo(camTu, nguoiChoi, banKinh);
+    }
+
+    public static int tinhSatThuongNoTheoKhoangCach(
+            ChickenChienBinh camTu,
+            ChickenChienBinh nguoiChoi,
+            int satThuongToiDa,
+            int banKinh,
+            int phanTramTaiRia
+    ) {
+        return com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                .tinhSatThuongNoTheoKhoangCach(
+                        camTu,
+                        nguoiChoi,
+                        satThuongToiDa,
+                        banKinh,
+                        phanTramTaiRia);
+    }
+
     public static short[] tinhBuocTiepTheo(
             ChickenChienBinh camTu,
             ChickenChienBinh mucTieu,
@@ -71,132 +88,205 @@ public final class BossCamTu {
             int huongXKhoa,
             ChickenQuanLyBanDo map
     ) {
-        if (camTu == null || mucTieu == null || map == null
-                || quangDuongConLai <= 0) {
-            return new short[]{
-                camTu == null ? 0 : camTu.x,
-                camTu == null ? 0 : camTu.y
-            };
+        int huongDuoi = Integer.signum(huongXKhoa);
+        if (huongDuoi == 0 && camTu != null && mucTieu != null) {
+            huongDuoi = Integer.signum(mucTieu.x - camTu.x);
         }
-
-        int huongX = huongXKhoa;
-        if (huongX == 0) {
-            huongX = layHuongX(camTu, mucTieu);
+        if (camTu != null
+                && ((camTu.x <= MEP_TRAI_AN_TOAN_MAP_50 && huongDuoi < 0)
+                || (camTu.x >= MEP_PHAI_AN_TOAN_MAP_50 && huongDuoi > 0))) {
+            return new short[]{camTu.x, camTu.y};
         }
-
-        boolean dangCoNen = ChickenLuyenTapToaDo.coNenDoDuoiHaiChan(
-                map, camTu.x, camTu.y);
-        int khoangX = Math.abs(mucTieu.x - camTu.x);
-        int buocNgang = dangCoNen
-                ? Math.min(
-                        Math.min(BUOC_DI_CHUYEN, quangDuongConLai),
-                        khoangX)
-                : 0;
-        // Khi đang rơi chỉ hạ theo trọng lực, không chạy ngang giữa không trung.
-        int xDuKien = camTu.x + huongX * buocNgang;
-        xDuKien = Math.max(
-                ChickenKichThuocNhanVat.BOSS_NUA_RONG,
-                Math.min(
-                        map.getWidth() - 1 - ChickenKichThuocNhanVat.BOSS_NUA_RONG,
-                        xDuKien
-                )
-        );
-
-        // Quét từng pixel ngang để không xuyên qua tường hoặc khối map mỏng.
-        int xMoi = timXDiChuyenAnToan(map, camTu.x, xDuKien, camTu.y);
-        int yMoi = camTu.y;
-
-        if (ChickenLuyenTapToaDo.coNenDoDuoiHaiChan(
-                map, (short) xMoi, (short) yMoi)
-                && thanBossThongThoang(map, (short) xMoi, (short) yMoi)) {
-            return new short[]{(short) xMoi, (short) yMoi};
-        }
-
-        short nenGan = timNenOnDinhGan(map, (short) xMoi, (short) yMoi);
-        if (nenGan != Short.MIN_VALUE && nenGan >= yMoi) {
-            yMoi = nenGan;
-        } else {
-            // Không tìm thấy nền gần: rơi đúng một bước, không được bật lên.
-            yMoi = Math.min(map.getHeight() + 32, yMoi + BUOC_TRONG_LUC);
-        }
-
-        return new short[]{(short) xMoi, (short) yMoi};
-    }
-
-    private static final int BUOC_TRONG_LUC = 12;
-    private static final int DO_ROI_GAN_TOI_DA = 12;
-
-    private static int timXDiChuyenAnToan(
-            ChickenQuanLyBanDo map,
-            int xHienTai,
-            int xDuKien,
-            int footY
-    ) {
-        if (xDuKien == xHienTai) {
-            return xHienTai;
-        }
-        int huong = xDuKien > xHienTai ? 1 : -1;
-        int xAnToan = xHienTai;
-        for (int x = xHienTai + huong;
-                huong > 0 ? x <= xDuKien : x >= xDuKien;
-                x += huong) {
-            if (!thanBossThongThoang(map, (short) x, (short) footY)) {
-                break;
+        short[] buoc = com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                .tinhBuocTiepTheo(
+                        camTu,
+                        mucTieu,
+                        quangDuongConLai,
+                        huongXKhoa,
+                        map);
+        if (buoc != null && buoc.length >= 2) {
+            buoc = chotDiemDungTrongMepAnToan(camTu, buoc, map);
+            if (buoc[0] == MEP_TRAI_AN_TOAN_MAP_50
+                    || buoc[0] == MEP_PHAI_AN_TOAN_MAP_50) {
+                short matNenGan = timMatNenGanCaoDo(
+                        map, buoc[0], buoc[1]);
+                if (matNenGan != Short.MIN_VALUE) {
+                    buoc[1] = matNenGan;
+                }
             }
-            xAnToan = x;
         }
-        return xAnToan;
+        if (buoc == null || buoc.length < 2
+                || coMatNenThatSuTaiTam(map, buoc[0], buoc[1])) {
+            return buoc;
+        }
+
+        /*
+         * Map Bao vay gom nhieu buc gach phang tach roi. Cong thuc dung chung
+         * cho map 51 cho phep mot ban chan bam mai doc; tren map 50 dieu do co
+         * the nham canh doc cua vien gach la nen va giu Cam tu lo lung o khe.
+         * Neu tam chan da hut mat tren, khong duoc roi ngay tai diem mot ban
+         * chan van con mac vao mep gach. Client se co gang noi suy cheo qua
+         * canh gach, dung o do va lat sprite qua lai. Hay dung het phan quang
+         * duong ngang con lai de toan hitbox thoat buc, sau do moi neo xuong
+         * nen hop le tiep theo.
+         */
+        short[] diemRoi = timDiemRoiDaThoatKhoiBuc(
+                map,
+                camTu,
+                mucTieu,
+                quangDuongConLai,
+                huongXKhoa,
+                buoc[0]);
+        if (diemRoi != null) {
+            return chotDiemDungTrongMepAnToan(camTu, diemRoi, map);
+        }
+
+        /*
+         * Chua thoat het mep buc trong luot nay: chi gui dich ngang ma cong
+         * thuc dung chung da tim duoc. Luot sau Cam tu se tiep tuc tien ra
+         * khoi mep. Tuyet doi khong gui dich roi cheo ngay tai canh gach.
+         */
+        if (buoc[0] != camTu.x) {
+            return chotDiemDungTrongMepAnToan(camTu, buoc, map);
+        }
+
+        short yNen = timMatNenThapHon(map, buoc[0], buoc[1]);
+        if (yNen != Short.MIN_VALUE) {
+            return chotDiemDungTrongMepAnToan(
+                    camTu, new short[]{buoc[0], yNen}, map);
+        }
+        return chotDiemDungTrongMepAnToan(camTu, new short[]{
+            buoc[0],
+            (short) Math.min(map.getHeight() + 32, buoc[1] + 12)
+        }, map);
     }
 
-    private static short timNenOnDinhGan(
+    private static short[] timDiemRoiDaThoatKhoiBuc(
             ChickenQuanLyBanDo map,
-            short x,
-            short footY
+            ChickenChienBinh camTu,
+            ChickenChienBinh mucTieu,
+            int quangDuongConLai,
+            int huongXKhoa,
+            short xBuocAnToan
     ) {
-        int[] lechX = new int[]{0, -4, 4, -8, 8, -12, 12};
-        short nenTotNhat = Short.MIN_VALUE;
-        int doRoiNhoNhat = Integer.MAX_VALUE;
-        for (int dx : lechX) {
-            short xKiemTra = (short) Math.max(
-                    0, Math.min(map.getWidth() - 1, x + dx));
-            short nen = ChickenLuyenTapToaDo.timMatDatTaiHoacThapHon(
-                    map,
-                    xKiemTra,
-                    footY,
-                    (kiemTraX, kiemTraY) ->
-                            thanBossThongThoang(map, kiemTraX, kiemTraY)
-            );
-            if (nen == Short.MIN_VALUE || nen < footY) {
+        if (map == null || camTu == null || mucTieu == null
+                || quangDuongConLai <= 0) {
+            return null;
+        }
+        int huong = Integer.signum(huongXKhoa);
+        if (huong == 0) {
+            huong = Integer.signum(mucTieu.x - camTu.x);
+        }
+        if (huong == 0) {
+            return null;
+        }
+
+        int quangDuongX = Math.min(
+                quangDuongConLai,
+                Math.abs(mucTieu.x - camTu.x));
+        int gioiHanTrai = MEP_TRAI_AN_TOAN_MAP_50;
+        int gioiHanPhai = Math.min(
+                MEP_PHAI_AN_TOAN_MAP_50,
+                map.getWidth() - 1
+                        - ChickenKichThuocNhanVat.BOSS_NUA_RONG);
+        int xDayDu = Math.max(
+                gioiHanTrai,
+                Math.min(gioiHanPhai, camTu.x + huong * quangDuongX));
+
+        for (int x = xDayDu;
+                huong > 0 ? x >= xBuocAnToan : x <= xBuocAnToan;
+                x -= huong) {
+            short xKiemTra = (short) x;
+            if (!daThoatKhoiMatBucCu(map, xKiemTra, camTu.y)) {
                 continue;
             }
-            int doRoi = nen - footY;
-            if (doRoi <= DO_ROI_GAN_TOI_DA && doRoi < doRoiNhoNhat) {
-                nenTotNhat = nen;
-                doRoiNhoNhat = doRoi;
+            short yNen = timMatNenThapHon(map, xKiemTra, camTu.y);
+            if (yNen != Short.MIN_VALUE) {
+                return new short[]{xKiemTra, yNen};
             }
+            return new short[]{
+                xKiemTra,
+                (short) Math.min(map.getHeight() + 32, camTu.y + 12)
+            };
         }
-        return nenTotNhat;
+        return null;
     }
 
-    public static boolean thanBossThongThoang(
+    private static short kepXTrongMepAnToan(short x) {
+        return (short) Math.max(
+                MEP_TRAI_AN_TOAN_MAP_50,
+                Math.min(MEP_PHAI_AN_TOAN_MAP_50, x));
+    }
+
+    private static short[] chotDiemDungTrongMepAnToan(
+            ChickenChienBinh camTu,
+            short[] diem,
+            ChickenQuanLyBanDo map
+    ) {
+        if (camTu == null || diem == null || diem.length < 2) {
+            return diem;
+        }
+        short xAnToan = kepXTrongMepAnToan(diem[0]);
+        if (((xAnToan - camTu.x) & 1) != 0) {
+            xAnToan = (short) (xAnToan
+                    - Integer.signum(xAnToan - camTu.x));
+        }
+        short[] daChot =
+                com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                        .chotDiemDungChoClient(
+                                camTu,
+                                new short[]{xAnToan, diem[1]},
+                                map);
+        if (daChot == null || daChot.length < 2) {
+            return daChot;
+        }
+        short xDaChot = kepXTrongMepAnToan(daChot[0]);
+        if (((xDaChot - camTu.x) & 1) != 0) {
+            xDaChot = (short) (xDaChot
+                    - Integer.signum(xDaChot - camTu.x));
+        }
+        daChot[0] = xDaChot;
+        return daChot;
+    }
+
+    private static short timMatNenGanCaoDo(
             ChickenQuanLyBanDo map,
             short x,
             short footY
     ) {
         if (map == null) {
-            return false;
+            return Short.MIN_VALUE;
         }
-        int trai = x - ChickenKichThuocNhanVat.BOSS_NUA_RONG + 2;
-        int phai = x + ChickenKichThuocNhanVat.BOSS_NUA_RONG - 2;
-        int tren = footY - ChickenKichThuocNhanVat.BOSS_LECH_TREN;
-        int duoi = footY - ChickenKichThuocNhanVat.BOSS_LECH_DUOI - 1;
-        for (int py = Math.max(0, tren);
-                py <= Math.min(map.getHeight() - 1, duoi);
-                py += 2) {
-            for (int px = Math.max(0, trai);
-                    px <= Math.min(map.getWidth() - 1, phai);
-                    px += 2) {
-                if (map.coVaCham((short) px, (short) py)) {
+        for (int doLech = 0; doLech <= SAI_SO_NEO_CHAN_Y; doLech++) {
+            int yTren = footY - doLech;
+            if (laMatTren(map, x, yTren)) {
+                return (short) yTren;
+            }
+            int yDuoi = footY + doLech;
+            if (doLech > 0 && laMatTren(map, x, yDuoi)) {
+                return (short) yDuoi;
+            }
+        }
+        return Short.MIN_VALUE;
+    }
+
+    private static boolean daThoatKhoiMatBucCu(
+            ChickenQuanLyBanDo map,
+            short x,
+            short footY
+    ) {
+        int trai = Math.max(
+                0, x - ChickenKichThuocNhanVat.BOSS_NUA_RONG);
+        int phai = Math.min(
+                map.getWidth() - 1,
+                x + ChickenKichThuocNhanVat.BOSS_NUA_RONG);
+        int tuY = Math.max(1, footY - SAI_SO_NEO_CHAN_Y);
+        int denY = Math.min(
+                map.getHeight() - 1,
+                footY + SAI_SO_NEO_CHAN_Y);
+        for (int px = trai; px <= phai; px++) {
+            for (int y = tuY; y <= denY; y++) {
+                if (laMatTren(map, (short) px, y)) {
                     return false;
                 }
             }
@@ -204,22 +294,91 @@ public final class BossCamTu {
         return true;
     }
 
+    private static boolean coMatNenThatSuTaiTam(
+            ChickenQuanLyBanDo map,
+            short x,
+            short footY
+    ) {
+        if (map == null) {
+            return false;
+        }
+        int tuY = Math.max(1, footY - SAI_SO_NEO_CHAN_Y);
+        int denY = Math.min(
+                map.getHeight() - 1,
+                footY + SAI_SO_NEO_CHAN_Y);
+        for (int y = tuY; y <= denY; y++) {
+            if (laMatTren(map, x, y)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static short timMatNenThapHon(
+            ChickenQuanLyBanDo map,
+            short x,
+            short footY
+    ) {
+        int batDauY = Math.max(1, footY + 1);
+        for (int y = batDauY; y < map.getHeight(); y++) {
+            if (laMatTren(map, x, y)
+                    && thanBossThongThoang(map, x, (short) y)) {
+                return (short) y;
+            }
+        }
+        return Short.MIN_VALUE;
+    }
+
+    private static boolean laMatTren(
+            ChickenQuanLyBanDo map,
+            short x,
+            int y
+    ) {
+        return y > 0 && y < map.getHeight()
+                && map.coVaCham(x, (short) y)
+                && !map.coVaCham(x, (short) (y - 1));
+    }
+
+    public static boolean thanBossThongThoang(
+            ChickenQuanLyBanDo map,
+            short x,
+            short footY
+    ) {
+        return com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                .thanBossThongThoang(map, x, footY);
+    }
+
     public static boolean daRoiKhoiMap(
             ChickenChienBinh camTu,
             ChickenQuanLyBanDo map
     ) {
-        return camTu != null && map != null
-                && camTu.y > map.getHeight() + 24;
+        return com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                .daRoiKhoiMap(camTu, map);
     }
 
-    public static int layHuongX(ChickenChienBinh camTu, ChickenChienBinh mucTieu) {
-        if (camTu == null || mucTieu == null) {
-            return 0;
-        }
-        int dx = mucTieu.x - camTu.x;
-        if (Math.abs(dx) <= NGUONG_DOI_HUONG_X) {
-            return 0;
-        }
-        return dx < 0 ? -1 : 1;
+    public static int layHuongX(
+            ChickenChienBinh camTu,
+            ChickenChienBinh mucTieu
+    ) {
+        return com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                .layHuongX(camTu, mucTieu);
+    }
+
+    public static boolean daCanTrucX(
+            ChickenChienBinh camTu,
+            ChickenChienBinh mucTieu
+    ) {
+        return com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                .daCanTrucX(camTu, mucTieu);
+    }
+
+    public static boolean laDiemDenClientCoTheKetThuc(
+            ChickenChienBinh camTu,
+            ChickenQuanLyBanDo map,
+            short x,
+            short y
+    ) {
+        return com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                .laDiemDenClientCoTheKetThuc(camTu, map, x, y);
     }
 }

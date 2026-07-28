@@ -5,18 +5,34 @@ package com.chicken.chien;
  * Tọa độ nhân vật: x là tâm ngang, y là điểm chân.
  */
 public final class ChickenToaDoDauNong {
-    public static final int NGUOI_CHOI_TRUC_SUNG_CACH_CHAN = 32;
+    /** Khop pivot CPlayer va cong thuc dang dung trong luyen tap. */
+    public static final int NGUOI_CHOI_TRUC_SUNG_CACH_CHAN = 12;
     public static final int BOSS_TRUC_SUNG_CACH_CHAN = 30;
-    public static final int DO_DAI_NONG_NGUOI_CHOI = 18;
+    public static final int DO_DAI_NONG_NGUOI_CHOI = 40;
+    public static final int DO_DAI_NONG_PROTON = 20;
     public static final int DO_DAI_NONG_BOSS = 18;
 
     private ChickenToaDoDauNong() {
     }
 
     public static short[] layChoNguoiChoi(short x, short y, short goc,
+            short maVuKhi,
             ChickenQuanLyCongThucSung.KiemTraBanDo banDo) {
         return lay(x, (short)(y - NGUOI_CHOI_TRUC_SUNG_CACH_CHAN), goc,
-                DO_DAI_NONG_NGUOI_CHOI, banDo);
+                layDoDaiNongNguoiChoi(maVuKhi), banDo);
+    }
+
+    /**
+     * Client dung nong 20 px cho nhom Proton (ID 150-159), cac sung con lai
+     * dung 40 px. maVuKhi lay tu trang thai chien binh tren server.
+     */
+    public static int layDoDaiNongNguoiChoi(short maVuKhi) {
+        ChickenQuanLyDanSung.DuLieuSung sung =
+                ChickenQuanLyDanSung.theoPartSung(maVuKhi);
+        if (sung != null && sung.getIdSung() >= 150 && sung.getIdSung() <= 159) {
+            return DO_DAI_NONG_PROTON;
+        }
+        return DO_DAI_NONG_NGUOI_CHOI;
     }
 
     public static short[] layChoBoss(short x, short y, short goc,

@@ -17,58 +17,48 @@ import jdk.internal.org.objectweb.asm.Label;
 import jdk.internal.org.objectweb.asm.MethodVisitor;
 import jdk.internal.org.objectweb.asm.Opcodes;
 
-/** Patcher lap lai an toan cho CMD 124/125 va cac hook Iron Man Java ME. */
-public final class PatchIronManLaser {
+/** Them lenh chat local "show" de bat/tat bang thong tin cua CCanvas. */
+public final class PatchOverlayInfoToggle {
 
-    private static final String MESSAGE_HANDLER = "chibikun/MessageHandler";
-    private static final String GAME_SCR = "chibikun/GameScr";
-    private static final String SKILL_STATE = "chibikun/IronManSkillClientState";
-    private static final String VFX = "chibikun/IronManLaserVfx";
+    private static final String CANVAS = "coreLG/CCanvas";
+    private static final String GAME_SERVICE = "chibikun/GameService";
+    private static final String TOGGLE = "chibikun/OverlayInfoToggle";
 
-    private PatchIronManLaser() {
+    private PatchOverlayInfoToggle() {
     }
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 3) {
+        if (args.length != 2) {
             throw new IllegalArgumentException(
-                    "Usage: PatchIronManLaser <jar> "
-                    + "<IronManSkillClientState.class> <IronManLaserVfx.class>");
+                    "Usage: PatchOverlayInfoToggle <jar> <OverlayInfoToggle.class>");
         }
         File jar = new File(args[0]).getCanonicalFile();
-        byte[] skillState = rewriteHelperVersion(
+        byte[] helper = rewriteHelperVersion(
                 Files.readAllBytes(new File(args[1]).toPath()));
-        byte[] vfx = rewriteHelperVersion(
-                Files.readAllBytes(new File(args[2]).toPath()));
-        patchJar(jar, skillState, vfx);
-        System.out.println("Patched Iron Man laser: " + jar);
+        patchJar(jar, helper);
+        System.out.println("Patched local chat show toggle: " + jar);
     }
 
-    private static void patchJar(
-            File jar,
-            byte[] skillState,
-            byte[] vfx
-    ) throws Exception {
+    private static void patchJar(File jar, byte[] helper) throws Exception {
         Map<String, byte[]> replacements = new HashMap<String, byte[]>();
         JarFile input = new JarFile(jar);
         try {
             replacements.put(
-                    MESSAGE_HANDLER + ".class",
-                    patchMessageHandler(read(input, MESSAGE_HANDLER + ".class")));
+                    CANVAS + ".class",
+                    patchCanvas(read(input, CANVAS + ".class")));
             replacements.put(
-                    GAME_SCR + ".class",
-                    patchGameScr(read(input, GAME_SCR + ".class")));
-            replacements.put(SKILL_STATE + ".class", skillState);
-            replacements.put(VFX + ".class", vfx);
+                    GAME_SERVICE + ".class",
+                    patchGameService(read(input, GAME_SERVICE + ".class")));
+            replacements.put(TOGGLE + ".class", helper);
 
-            File temp = new File(jar.getParentFile(), jar.getName() + ".iron.tmp");
+            File temp = new File(jar.getParentFile(), jar.getName() + ".show.tmp");
             JarOutputStream output = new JarOutputStream(new FileOutputStream(temp));
             try {
                 Enumeration<JarEntry> entries = input.entries();
                 while (entries.hasMoreElements()) {
                     JarEntry oldEntry = entries.nextElement();
                     String name = oldEntry.getName();
-                    if (name.equals(SKILL_STATE + ".class")
-                            || name.equals(VFX + ".class")) {
+                    if (name.equals(TOGGLE + ".class")) {
                         continue;
                     }
                     JarEntry next = new JarEntry(name);
@@ -91,7 +81,6 @@ public final class PatchIronManLaser {
             } finally {
                 output.close();
             }
-            // Windows khong cho thay JAR khi JarFile van giu handle.
             input.close();
             Files.move(
                     temp.toPath(),
@@ -102,9 +91,8 @@ public final class PatchIronManLaser {
         }
     }
 
-    private static byte[] patchMessageHandler(byte[] source) {
-        final boolean[] hasSkillStateHandler = new boolean[1];
-        final boolean[] hasVfxHandler = new boolean[1];
+    private static byte[] patchCanvas(byte[] source) {
+        final boolean[] alreadyPatched = new boolean[1];
         ClassReader scan = new ClassReader(source);
         scan.accept(new ClassVisitor(Opcodes.ASM8) {
             @Override
@@ -126,12 +114,8 @@ public final class PatchIronManLaser {
                             String methodDescriptor,
                             boolean isInterface
                     ) {
-                        if (methodName.equals("handle")) {
-                            if (owner.equals(SKILL_STATE)) {
-                                hasSkillStateHandler[0] = true;
-                            } else if (owner.equals(VFX)) {
-                                hasVfxHandler[0] = true;
-                            }
+                        if (owner.equals(TOGGLE) && methodName.equals("isVisible")) {
+                            alreadyPatched[0] = true;
                         }
                         super.visitMethodInsn(
                                 opcode, owner, methodName,
@@ -140,10 +124,11 @@ public final class PatchIronManLaser {
                 };
             }
         }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-        if (hasSkillStateHandler[0] && hasVfxHandler[0]) {
+        if (alreadyPatched[0]) {
             return source;
         }
 
+        final boolean[] inserted = new boolean[1];
         ClassReader reader = new ClassReader(source);
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         reader.accept(new ClassVisitor(Opcodes.ASM8, writer) {
@@ -157,60 +142,62 @@ public final class PatchIronManLaser {
             ) {
                 MethodVisitor base = super.visitMethod(
                         access, name, descriptor, signature, exceptions);
-                if (name.equals("onMessage")
-                        && descriptor.equals("(Lchibikun/Message;)V")) {
-                    return new MethodVisitor(Opcodes.ASM8, base) {
-                        @Override
-                        public void visitCode() {
-                            super.visitCode();
-                            if (!hasSkillStateHandler[0]) {
-                                emitCommandHandler(this, 124, SKILL_STATE);
-                            }
-                            if (!hasVfxHandler[0]) {
-                                emitCommandHandler(this, 125, VFX);
-                            }
-                        }
-                    };
+                if (!name.equals("paint")
+                        || !descriptor.equals("(Ljavax/microedition/lcdui/Graphics;)V")) {
+                    return base;
                 }
-                return base;
+                return new MethodVisitor(Opcodes.ASM8, base) {
+                    private boolean sawMyInfo;
+
+                    @Override
+                    public void visitFieldInsn(
+                            int opcode,
+                            String owner,
+                            String fieldName,
+                            String fieldDescriptor
+                    ) {
+                        super.visitFieldInsn(
+                                opcode, owner, fieldName, fieldDescriptor);
+                        this.sawMyInfo = opcode == Opcodes.GETSTATIC
+                                && owner.equals("coreLG/MyMidlet")
+                                && fieldName.equals("myInfo")
+                                && fieldDescriptor.equals("Lchibikun/CPlayer;");
+                    }
+
+                    @Override
+                    public void visitJumpInsn(int opcode, Label label) {
+                        super.visitJumpInsn(opcode, label);
+                        if (this.sawMyInfo && opcode == Opcodes.IFNULL) {
+                            super.visitMethodInsn(
+                                    Opcodes.INVOKESTATIC,
+                                    TOGGLE,
+                                    "isVisible",
+                                    "()Z",
+                                    false);
+                            super.visitJumpInsn(Opcodes.IFEQ, label);
+                            inserted[0] = true;
+                        }
+                        this.sawMyInfo = false;
+                    }
+                };
             }
         }, ClassReader.SKIP_FRAMES);
+        if (!inserted[0]) {
+            throw new IllegalArgumentException(
+                    "Khong tim thay block myInfo trong CCanvas.paint");
+        }
         return writer.toByteArray();
     }
 
-    private static void emitCommandHandler(
-            MethodVisitor visitor,
-            int command,
-            String owner
-    ) {
-        Label next = new Label();
-        visitor.visitVarInsn(Opcodes.ALOAD, 1);
-        visitor.visitFieldInsn(
-                Opcodes.GETFIELD,
-                "chibikun/Message",
-                "cmd",
-                "B");
-        visitor.visitIntInsn(Opcodes.BIPUSH, command);
-        visitor.visitJumpInsn(Opcodes.IF_ICMPNE, next);
-        visitor.visitVarInsn(Opcodes.ALOAD, 1);
-        visitor.visitMethodInsn(
-                Opcodes.INVOKESTATIC,
-                owner,
-                "handle",
-                "(Lchibikun/Message;)V",
-                false);
-        visitor.visitInsn(Opcodes.RETURN);
-        visitor.visitLabel(next);
-    }
-
-    private static byte[] patchGameScr(byte[] source) {
-        final boolean[] hasVfxPaint = new boolean[1];
+    private static byte[] patchGameService(byte[] source) {
+        final boolean[] hasBoard = new boolean[1];
+        final boolean[] hasRpg = new boolean[1];
         ClassReader scan = new ClassReader(source);
         scan.accept(new ClassVisitor(Opcodes.ASM8) {
             @Override
             public MethodVisitor visitMethod(
                     int access,
-                    String name,
+                    final String name,
                     String descriptor,
                     String signature,
                     String[] exceptions
@@ -226,8 +213,12 @@ public final class PatchIronManLaser {
                             String methodDescriptor,
                             boolean isInterface
                     ) {
-                        if (owner.equals(VFX) && methodName.equals("paint")) {
-                            hasVfxPaint[0] = true;
+                        if (owner.equals(TOGGLE) && methodName.equals("handleChat")) {
+                            if (name.equals("chatToBoard")) {
+                                hasBoard[0] = true;
+                            } else if (name.equals("chatRPG")) {
+                                hasRpg[0] = true;
+                            }
                         }
                         super.visitMethodInsn(
                                 opcode, owner, methodName,
@@ -236,7 +227,7 @@ public final class PatchIronManLaser {
                 };
             }
         }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
-        if (hasVfxPaint[0]) {
+        if (hasBoard[0] && hasRpg[0]) {
             return source;
         }
 
@@ -246,32 +237,36 @@ public final class PatchIronManLaser {
             @Override
             public MethodVisitor visitMethod(
                     int access,
-                    String name,
+                    final String name,
                     String descriptor,
                     String signature,
                     String[] exceptions
             ) {
                 MethodVisitor base = super.visitMethod(
                         access, name, descriptor, signature, exceptions);
-                if (name.equals("paint")
-                        && descriptor.equals("(Lchibikun/mGraphics;)V")) {
-                    return new MethodVisitor(Opcodes.ASM8, base) {
-                        @Override
-                        public void visitInsn(int opcode) {
-                            if (opcode == Opcodes.RETURN) {
-                                super.visitVarInsn(Opcodes.ALOAD, 1);
-                                super.visitMethodInsn(
-                                        Opcodes.INVOKESTATIC,
-                                        VFX,
-                                        "paint",
-                                        "(Lchibikun/mGraphics;)V",
-                                        false);
-                            }
-                            super.visitInsn(opcode);
-                        }
-                    };
+                boolean target = descriptor.equals("(Ljava/lang/String;)V")
+                        && ((name.equals("chatToBoard") && !hasBoard[0])
+                        || (name.equals("chatRPG") && !hasRpg[0]));
+                if (!target) {
+                    return base;
                 }
-                return base;
+                return new MethodVisitor(Opcodes.ASM8, base) {
+                    @Override
+                    public void visitCode() {
+                        super.visitCode();
+                        Label original = new Label();
+                        super.visitVarInsn(Opcodes.ALOAD, 1);
+                        super.visitMethodInsn(
+                                Opcodes.INVOKESTATIC,
+                                TOGGLE,
+                                "handleChat",
+                                "(Ljava/lang/String;)Z",
+                                false);
+                        super.visitJumpInsn(Opcodes.IFEQ, original);
+                        super.visitInsn(Opcodes.RETURN);
+                        super.visitLabel(original);
+                    }
+                };
             }
         }, ClassReader.SKIP_FRAMES);
         return writer.toByteArray();

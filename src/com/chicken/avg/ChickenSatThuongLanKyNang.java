@@ -10,10 +10,17 @@ import com.chicken.chien.ChickenTinhSatThuongNo;
 public final class ChickenSatThuongLanKyNang {
     public static final int ID_HO_SO_THOR = 393;
     public static final int ID_HO_SO_HAWK = 397;
+    /** Du phu bon Cam tu trong mot cum map 51 (khoang cach toi hitbox xa nhat 71 px). */
+    public static final int BAN_KINH_DAY_DU_HAWK = 6;
+    public static final int BAN_KINH_NO_HAWK = 108;
     private static final HoSoSatThuong HO_SO_THOR =
             ChickenCauHinhSatThuongSung.theoIdSung(ID_HO_SO_THOR);
     private static final HoSoSatThuong HO_SO_HAWK =
-            ChickenCauHinhSatThuongSung.theoIdSung(ID_HO_SO_HAWK);
+            ChickenCauHinhSatThuongSung.saoChepVoiBanKinhNo(
+                    ChickenCauHinhSatThuongSung.theoIdSung(ID_HO_SO_HAWK),
+                    BAN_KINH_DAY_DU_HAWK,
+                    BAN_KINH_NO_HAWK
+            );
 
     private ChickenSatThuongLanKyNang() {
     }

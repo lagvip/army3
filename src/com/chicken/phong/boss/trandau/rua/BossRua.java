@@ -17,6 +17,7 @@ import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.chien.ChickenChienBinh;
 import com.chicken.chien.ChickenDiChuyenServer;
 import com.chicken.chien.ChickenKetQuaDan;
+import com.chicken.chien.ChickenNguCanhLaySung;
 import com.chicken.chien.ChickenPhatBanServer;
 import com.chicken.chien.ChickenQuanLyChien;
 import com.chicken.chien.ChickenQuanLyCongThucSung;
@@ -269,6 +270,8 @@ public final class BossRua extends ChickenQuanLyChien {
         long thoiGianHoatAnhMs =
                 ChickenThoiGianHoatAnhDan.HIEU_UNG_KHONG_CO_QUY_DAO_MS;
 
+        try (ChickenNguCanhLaySung.Phien ignored =
+                ChickenNguCanhLaySung.batDauPhatBanNguoiChoi()) {
         if (shooter.avenger == ChickenKyNangDacBietIronMan.AVG_IRON_MAN
                 && shooter.ironManLaserSanSang) {
             this.banLaserIronManBoss(shooter, goc);
@@ -296,6 +299,7 @@ public final class BossRua extends ChickenQuanLyChien {
 
         // Dù chọn Bắn x3 hay bắn thường, lượt này đã kết thúc nên phải xóa
         // cờ menu để lượt sau Ultron có thể mở lại đúng trạng thái.
+        }
         this.kyNangUltronBoss.sauKhiDaBan(shooter);
         ChickenKyNangDacBietIronMan.xoaTrangThaiChoBan(shooter);
         this.kyNangHawkBoss.sauKhiBanThuong(shooter);
@@ -811,6 +815,8 @@ public final class BossRua extends ChickenQuanLyChien {
              * Không hẹn giờ 70 ms cho từng bước 9 px vì các bước trung gian
              * không hề được gửi cho client và chỉ tạo khoảng đứng im giả.
              */
+            short xTruocDiChuyen = boss.x;
+            short yTruocDiChuyen = boss.y;
             boolean coDiChuyen = daDiChuyen;
             int conLai = Math.max(0, quangDuongConLai);
             int baoHiem = 0;
@@ -853,9 +859,85 @@ public final class BossRua extends ChickenQuanLyChien {
                 coDiChuyen = true;
             }
 
+            boss.y = DiChuyenBossRua.chuanHoaYChanClient(
+                    boss.x, boss.y, this.banDo);
             this.phatDiChuyenBossNeuCan(boss, coDiChuyen);
+            this.tungChieuRuaSauDiChuyen(
+                    boss, mucTieu, slot, phien, chieu,
+                    coDiChuyen, xTruocDiChuyen, yTruocDiChuyen);
+        }
+    }
+
+    private void tungChieuRuaSauDiChuyen(
+            ChickenChienBinh boss,
+            ChickenChienBinh mucTieu,
+            int slot,
+            long phien,
+            ChieuBossRua.LoaiChieu chieu,
+            boolean coDiChuyen,
+            short xCu,
+            short yCu
+    ) {
+        long treMs = coDiChuyen
+                ? DiChuyenBossRua.tinhThoiGianHoatAnhMs(
+                        xCu, yCu, boss.x, boss.y)
+                : 0L;
+        if (treMs <= 0L) {
+            this.tungChieuRua(boss, mucTieu, slot, phien, chieu);
+            return;
+        }
+        System.out.println("[BOSS RUA][CHO_DI_CHUYEN_XONG] slot=" + slot
+                + " from=" + xCu + "," + yCu
+                + " to=" + boss.x + "," + boss.y
+                + " delayMs=" + treMs);
+        short xDich = boss.x;
+        short yDich = boss.y;
+        this.boHenGio.schedule(
+                () -> this.hoanTatDiChuyenVaTungChieuRua(
+                        boss, mucTieu, slot, phien, chieu, xDich, yDich),
+                treMs,
+                TimeUnit.MILLISECONDS
+        );
+    }
+
+    private void hoanTatDiChuyenVaTungChieuRua(
+            ChickenChienBinh boss,
+            ChickenChienBinh mucTieu,
+            int slot,
+            long phien,
+            ChieuBossRua.LoaiChieu chieu,
+            short xDich,
+            short yDich
+    ) {
+        synchronized (this) {
+            if (!this.conHieuLucLuotBossRua(slot, phien, boss)
+                    || boss.x != xDich || boss.y != yDich) {
+                return;
+            }
+            try {
+                this.phatChotDiChuyenBoss(boss);
+            } catch (IOException loi) {
+                System.err.println("[BOSS RUA][LOI_CHOT_DI_CHUYEN] slot="
+                        + slot + " phien=" + phien + " loi=" + loi.getMessage());
+            }
             this.tungChieuRua(boss, mucTieu, slot, phien, chieu);
         }
+    }
+
+    private boolean conHieuLucLuotBossRua(
+            int slot,
+            long phien,
+            ChickenChienBinh boss
+    ) {
+        return !this.daKetThuc
+                && this.maPhienLuot == phien
+                && (this.luotHienTai & 0xFF) == slot
+                && slot >= 0
+                && slot < this.chienBinhs.length
+                && this.chienBinhs[slot] == boss
+                && boss != null
+                && !boss.chet
+                && boss.hp > 0;
     }
 
     private void ketThucRuaRoiKhoiMap(
@@ -1160,7 +1242,7 @@ public final class BossRua extends ChickenQuanLyChien {
         }
         ChickenQuanLyCongThucSung.KiemTraBanDo kiemTra = this.kiemTraBanDo();
         short[] dauNong = ChickenToaDoDauNong.layChoNguoiChoi(
-                shooter.x, shooter.y, goc, kiemTra);
+                shooter.x, shooter.y, goc, shooter.maVuKhi, kiemTra);
         ChickenQuanLyDanSung.DuLieuSung sung =
                 ChickenQuanLyDanSung.theoPartSung(shooter.maVuKhi);
         return ChickenPhatBanServer.tao(
@@ -1834,10 +1916,14 @@ public final class BossRua extends ChickenQuanLyChien {
 
     private void phatDiChuyenBoss(ChickenChienBinh boss) throws IOException {
         for (ChickenChienBinh nguoiNhan : this.nguoiChoiConPhien()) {
-            // Chỉ phát một đích cuối cho cả lượt. Client dùng nội suy native
-            // của CMD 21 nên Rùa chạy mượt; CMD 22 nằm chờ tới khi animation
-            // gọi mNotify, không còn ba lần đổi đích gây giật/lùi.
-            nguoiNhan.nguoiChoi.dichVu.guiDiChuyenDau(
+            nguoiNhan.nguoiChoi.dichVu.guiDiChuyenBossRua(
+                    boss.chiSo, boss.x, boss.y);
+        }
+    }
+
+    private void phatChotDiChuyenBoss(ChickenChienBinh boss) throws IOException {
+        for (ChickenChienBinh nguoiNhan : this.nguoiChoiConPhien()) {
+            nguoiNhan.nguoiChoi.dichVu.guiHoanTatDiChuyenBossRua(
                     boss.chiSo, boss.x, boss.y);
         }
     }

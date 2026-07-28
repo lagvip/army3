@@ -12,6 +12,8 @@ import com.chicken.chiso.ChickenKichThuocNhanVat;
 public final class DiChuyenBossRua {
     public static final int QUANG_DUONG_MOI_LUOT = 170;
     public static final int TRE_MOI_BUOC_MS = 85;
+    public static final long TRE_HOAT_ANH_TOI_THIEU_MS = 350L;
+    public static final long TRE_HOAT_ANH_TOI_DA_MS = 3_200L;
 
     private static final int TOC_DO_CHAY = 9;
     private static final int TOC_DO_ROI = 12;
@@ -30,6 +32,31 @@ public final class DiChuyenBossRua {
     private static final int CHIEU_CAO_THAN_DI_CHUYEN = 72;
 
     private DiChuyenBossRua() {
+    }
+
+    /**
+     * Uoc tinh thoi gian BigBoss native chay tu toa do cu toi dich CMD21.
+     * Server chot toa do ngay nhung phai doi client ve xong moi tung chieu.
+     */
+    public static long tinhThoiGianHoatAnhMs(
+            short xCu,
+            short yCu,
+            short xMoi,
+            short yMoi
+    ) {
+        int dx = Math.abs(xMoi - xCu);
+        int dy = Math.abs(yMoi - yCu);
+        if (dx == 0 && dy == 0) {
+            return 0L;
+        }
+        int soBuocNgang = (dx + TOC_DO_CHAY - 1) / TOC_DO_CHAY;
+        int soBuocDoc = (dy + TOC_DO_ROI - 1) / TOC_DO_ROI;
+        int soBuoc = Math.max(1, Math.max(soBuocNgang, soBuocDoc));
+        long uocTinh = soBuoc * (long) TRE_MOI_BUOC_MS + 150L;
+        return Math.max(
+                TRE_HOAT_ANH_TOI_THIEU_MS,
+                Math.min(TRE_HOAT_ANH_TOI_DA_MS, uocTinh)
+        );
     }
 
     public static ChickenChienBinh timNguoiSongGanNhat(
@@ -241,6 +268,35 @@ public final class DiChuyenBossRua {
 
     private static boolean coNenBenDuoi(int x, int chanY, ChickenQuanLyBanDo banDo) {
         int yKiemTra = chanY + 1;
+        return demDiemNenTaiY(x, yKiemTra, banDo) >= SO_DIEM_NEN_TOI_THIEU;
+    }
+
+    /**
+     * Đổi tọa độ vật lý server sang tọa độ chân native mà BigBoss client có
+     * thể đạt chính xác. Vật lý vẫn giữ quy ước cũ để không đổi hành vi mép
+     * bệ; chỉ khi y hiện tại chưa nằm trong nền nhưng y+1 có đủ nền mới cộng
+     * đúng một pixel trước khi phát CMD21.
+     */
+    public static short chuanHoaYChanClient(
+            int x,
+            short chanY,
+            ChickenQuanLyBanDo banDo
+    ) {
+        if (banDo == null || demDiemNenTaiY(x, chanY, banDo)
+                >= SO_DIEM_NEN_TOI_THIEU) {
+            return chanY;
+        }
+        return demDiemNenTaiY(x, chanY + 1, banDo)
+                >= SO_DIEM_NEN_TOI_THIEU
+                ? (short) (chanY + 1)
+                : chanY;
+    }
+
+    private static int demDiemNenTaiY(
+            int x,
+            int yKiemTra,
+            ChickenQuanLyBanDo banDo
+    ) {
         int soDiemCoNen = 0;
         for (int lech = -NUA_RONG_CHAN; lech <= NUA_RONG_CHAN; lech += 9) {
             int px = x + lech;
@@ -255,7 +311,7 @@ public final class DiChuyenBossRua {
          * gạch map 54, đuôi Rùa còn chạm 2-3 điểm khiến cả thân treo lơ lửng
          * và AI chuyển thẳng sang bắn. Thiếu quá nửa mặt chân thì phải rơi.
          */
-        return soDiemCoNen >= SO_DIEM_NEN_TOI_THIEU;
+        return soDiemCoNen;
     }
 
     private static boolean thanBiChan(

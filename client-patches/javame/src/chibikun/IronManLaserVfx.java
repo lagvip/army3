@@ -12,6 +12,11 @@ public final class IronManLaserVfx {
 
     public static final byte COMMAND = 125;
     private static final int PROTOCOL_VERSION = 1;
+    private static final int CHARGE_MS = 110;
+    private static final int BEAM_GROW_MS = 120;
+    private static final int COLOR_GLOW = 0x008CFF;
+    private static final int COLOR_ENERGY = 0x00E8FF;
+    private static final int COLOR_WHITE = 0xFFFFFF;
     private static boolean active;
     private static long startAt;
     private static int durationMs;
@@ -24,6 +29,7 @@ public final class IronManLaserVfx {
     }
 
     public static synchronized void handle(Message message) {
+        IronManSkillClientState.reset();
         try {
             DataInputStream reader = message.reader();
             int version = reader.readUnsignedByte();
@@ -71,22 +77,34 @@ public final class IronManLaserVfx {
             graphics.translate(deltaX, deltaY);
         }
         try {
-            int pulse = 3 + elapsed / 45 % 3;
-            drawCore(graphics, startX, startY, pulse);
-            if (elapsed < 90) {
+            int pulse = 5 + elapsed / 45 % 3;
+            drawEnergyOrb(graphics, startX, startY, pulse);
+            if (elapsed < CHARGE_MS) {
                 return;
             }
 
-            int grow = elapsed - 90;
-            if (grow > 100) {
-                grow = 100;
+            int growMs = elapsed - CHARGE_MS;
+            if (growMs > BEAM_GROW_MS) {
+                growMs = BEAM_GROW_MS;
             }
-            int beamEndX = startX + (endX - startX) * grow / 100;
-            int beamEndY = startY + (endY - startY) * grow / 100;
-            drawBeam(graphics, startX, startY, beamEndX, beamEndY);
-            if (grow == 100) {
-                drawCore(graphics, endX, endY, 2);
-            }
+            int beamEndX = startX + scaleRound(
+                    endX - startX, growMs, BEAM_GROW_MS);
+            int beamEndY = startY + scaleRound(
+                    endY - startY, growMs, BEAM_GROW_MS);
+            drawBeam(
+                    graphics,
+                    startX,
+                    startY,
+                    beamEndX,
+                    beamEndY,
+                    elapsed
+            );
+            drawEnergyOrb(
+                    graphics,
+                    beamEndX,
+                    beamEndY,
+                    11 + elapsed / 55 % 2
+            );
         } finally {
             if (deltaX != 0 || deltaY != 0) {
                 graphics.translate(-deltaX, -deltaY);
@@ -94,34 +112,47 @@ public final class IronManLaserVfx {
         }
     }
 
-    private static void drawCore(
+    private static int scaleRound(int value, int numerator, int denominator) {
+        long scaled = (long) value * numerator;
+        long half = denominator / 2;
+        if (scaled < 0) {
+            return (int) ((scaled - half) / denominator);
+        }
+        return (int) ((scaled + half) / denominator);
+    }
+
+    private static void drawEnergyOrb(
             mGraphics graphics,
             int x,
             int y,
             int radius
     ) {
-        graphics.setColor(0xFF2A00);
-        graphics.fillRect(
-                x - radius - 1,
-                y - radius - 1,
-                radius * 2 + 3,
-                radius * 2 + 3
-        );
-        graphics.setColor(0x13DCE8);
-        graphics.fillRect(
-                x - radius,
-                y - radius,
-                radius * 2 + 1,
-                radius * 2 + 1
-        );
-        int inner = radius > 1 ? radius - 1 : 1;
-        graphics.setColor(0xFFFFFF);
-        graphics.fillRect(
-                x - inner,
-                y - inner,
-                inner * 2 + 1,
-                inner * 2 + 1
-        );
+        drawDisc(graphics, x, y, radius + 4, COLOR_GLOW);
+        drawDisc(graphics, x, y, radius, COLOR_ENERGY);
+        int inner = radius - 3;
+        if (inner < 2) {
+            inner = 2;
+        }
+        drawDisc(graphics, x, y, inner, COLOR_WHITE);
+    }
+
+    private static void drawDisc(
+            mGraphics graphics,
+            int x,
+            int y,
+            int radius,
+            int color
+    ) {
+        graphics.setColor(color);
+        int radiusSquared = radius * radius;
+        for (int row = -radius; row <= radius; row += 2) {
+            int remaining = radiusSquared - row * row;
+            if (remaining < 0) {
+                remaining = 0;
+            }
+            int half = (int) Math.sqrt(remaining);
+            graphics.fillRect(x - half, y + row, half * 2 + 1, 2);
+        }
     }
 
     private static void drawBeam(
@@ -129,7 +160,8 @@ public final class IronManLaserVfx {
             int x1,
             int y1,
             int x2,
-            int y2
+            int y2,
+            int elapsed
     ) {
         int dx = x2 - x1;
         int dy = y2 - y1;
@@ -137,29 +169,111 @@ public final class IronManLaserVfx {
             return;
         }
 
-        int offsetX = Math.abs(dy) > Math.abs(dx) ? 1 : 0;
-        int offsetY = offsetX == 0 ? 1 : 0;
-        graphics.setColor(0xFF2A00);
-        for (int offset = -3; offset <= 3; offset++) {
-            graphics.a(
-                    (float) (x1 + offsetX * offset),
-                    (float) (y1 + offsetY * offset),
-                    (float) (x2 + offsetX * offset),
-                    (float) (y2 + offsetY * offset),
-                    false
+        double length = Math.sqrt((double) dx * dx + (double) dy * dy);
+        if (length < 1.0D) {
+            return;
+        }
+        double ux = dx / length;
+        double uy = dy / length;
+        int offsetX = round(-dy / length);
+        int offsetY = round(dx / length);
+        if (offsetX == 0 && offsetY == 0) {
+            offsetY = 1;
+        }
+
+        drawMuzzleFlare(
+                graphics,
+                x1,
+                y1,
+                ux,
+                uy,
+                offsetX,
+                offsetY,
+                elapsed
+        );
+
+        graphics.setColor(COLOR_GLOW);
+        for (int offset = -10; offset <= 10; offset++) {
+            drawRawLine(
+                    graphics,
+                    x1 + offsetX * offset,
+                    y1 + offsetY * offset,
+                    x2 + offsetX * offset,
+                    y2 + offsetY * offset
             );
         }
-        graphics.setColor(0x13DCE8);
-        for (int offset = -1; offset <= 1; offset++) {
-            graphics.a(
-                    (float) (x1 + offsetX * offset),
-                    (float) (y1 + offsetY * offset),
-                    (float) (x2 + offsetX * offset),
-                    (float) (y2 + offsetY * offset),
-                    false
+        graphics.setColor(COLOR_ENERGY);
+        for (int offset = -7; offset <= 7; offset++) {
+            drawRawLine(
+                    graphics,
+                    x1 + offsetX * offset,
+                    y1 + offsetY * offset,
+                    x2 + offsetX * offset,
+                    y2 + offsetY * offset
             );
         }
-        graphics.setColor(0xFFFFFF);
+        graphics.setColor(COLOR_WHITE);
+        for (int offset = -4; offset <= 4; offset++) {
+            drawRawLine(
+                    graphics,
+                    x1 + offsetX * offset,
+                    y1 + offsetY * offset,
+                    x2 + offsetX * offset,
+                    y2 + offsetY * offset
+            );
+        }
+    }
+
+    private static void drawMuzzleFlare(
+            mGraphics graphics,
+            int x,
+            int y,
+            double ux,
+            double uy,
+            int offsetX,
+            int offsetY,
+            int elapsed
+    ) {
+        int phase = elapsed / 35 % 4;
+        graphics.setColor(0x00BFFF);
+        for (int ray = -4; ray <= 4; ray++) {
+            int spread = ray * 4;
+            int tail = 13 + Math.abs(ray) * 3 + ((phase + ray + 4) & 3);
+            int tailX = x - round(ux * tail) + offsetX * spread;
+            int tailY = y - round(uy * tail) + offsetY * spread;
+            int noseX = x + round(ux * 12) + offsetX * (spread / 4);
+            int noseY = y + round(uy * 12) + offsetY * (spread / 4);
+            drawRawLine(graphics, tailX, tailY, noseX, noseY);
+        }
+
+        graphics.setColor(COLOR_WHITE);
+        for (int ray = -2; ray <= 2; ray++) {
+            int spread = ray * 2;
+            int tail = 9 + Math.abs(ray) * 2;
+            drawRawLine(
+                    graphics,
+                    x - round(ux * tail) + offsetX * spread,
+                    y - round(uy * tail) + offsetY * spread,
+                    x + round(ux * 14),
+                    y + round(uy * 14)
+            );
+        }
+    }
+
+    private static int round(double value) {
+        if (value < 0.0D) {
+            return (int) (value - 0.5D);
+        }
+        return (int) (value + 0.5D);
+    }
+
+    private static void drawRawLine(
+            mGraphics graphics,
+            int x1,
+            int y1,
+            int x2,
+            int y2
+    ) {
         graphics.a((float) x1, (float) y1, (float) x2, (float) y2, false);
     }
 }

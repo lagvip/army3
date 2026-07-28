@@ -1,15 +1,11 @@
 package com.chicken.phong.boss.trandau.datbom;
 
 import com.chicken.chien.ChickenQuanLyDanSung;
-import com.chicken.loi.ChickenQuanLyMayChu;
+import com.chicken.phong.boss.trandau.ChickenSungShopBoss;
 import com.chicken.vatpham.ChickenMauVatPham;
-import com.chicken.vatpham.ChickenThuocTinhVatPham;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 
 /** Dữ liệu cố định của các Phiến quân đứng yên trên map 53. */
 public final class CauHinhBossDatBom {
@@ -27,9 +23,6 @@ public final class CauHinhBossDatBom {
     public static final int SO_BOSS_SAU_NGUOI = 8;
     /** Damage shown for a timed bomb. Timed bombs are fatal and ignore armor. */
     public static final int SAT_THUONG_BOM_HEN_GIO = 6_000;
-    private static final int ID_AVG_DAU = 391;
-    private static final int ID_AVG_CUOI = 398;
-    private static final int[] SUNG_DU_PHONG = {110, 120, 160};
 
     public enum LoaiBoss {
         DAT_BOM
@@ -157,23 +150,7 @@ public final class CauHinhBossDatBom {
      * Súng được giữ nguyên suốt trận; AVG và item không bán bị loại.
      */
     public static ChickenQuanLyDanSung.DuLieuSung chonSungShopKhongAvg() {
-        List<ChickenQuanLyDanSung.DuLieuSung> ungViens =
-                layDanhSachSungShopKhongAvg(
-                        ChickenQuanLyMayChu.itemTemplates);
-        if (ungViens.isEmpty()) {
-            for (int idSung : SUNG_DU_PHONG) {
-                ChickenQuanLyDanSung.DuLieuSung duLieu =
-                        ChickenQuanLyDanSung.theoIdSung(idSung);
-                if (duLieu != null) {
-                    ungViens.add(duLieu);
-                }
-            }
-        }
-        if (ungViens.isEmpty()) {
-            return null;
-        }
-        return ungViens.get(
-                ThreadLocalRandom.current().nextInt(ungViens.size()));
+        return ChickenSungShopBoss.chonNgauNhienKhongAvg();
     }
 
     /**
@@ -183,85 +160,32 @@ public final class CauHinhBossDatBom {
     public static List<ChickenQuanLyDanSung.DuLieuSung>
             layDanhSachSungShopKhongAvg(
                     Map<Integer, ChickenMauVatPham> itemTemplates) {
-        if (itemTemplates == null || itemTemplates.isEmpty()) {
-            return new ArrayList<>();
-        }
-        ArrayList<ChickenQuanLyDanSung.DuLieuSung> ketQua =
-                new ArrayList<>();
-        ArrayList<Integer> ids = new ArrayList<>(itemTemplates.keySet());
-        Collections.sort(ids);
-        for (int idSung : ids) {
-            ChickenMauVatPham mau = itemTemplates.get(idSung);
-            if (!laSungShopKhongAvg(mau)) {
-                continue;
-            }
-            ChickenQuanLyDanSung.DuLieuSung duLieu =
-                    ChickenQuanLyDanSung.theoIdSung(idSung);
-            if (duLieu != null) {
-                ketQua.add(duLieu);
-            }
-        }
-        return ketQua;
+        return ChickenSungShopBoss.layDanhSachKhongAvg(itemTemplates);
     }
 
     public static boolean laSungShopKhongAvg(ChickenMauVatPham mau) {
-        if (mau == null || mau.loai != 5
-                || (mau.buyGold <= 0 && mau.buyGem <= 0)) {
-            return false;
-        }
-        int idSung = mau.ma & 0xFFFF;
-        return idSung < ID_AVG_DAU || idSung > ID_AVG_CUOI;
+        return ChickenSungShopBoss.laSungShopKhongAvg(mau);
     }
 
     public static int layTanCongTheoIdSung(int idSung) {
-        int tanCong = layOption(layMauSung(idSung), 1);
-        if (tanCong > 0) {
-            return tanCong;
-        }
-        return switch (idSung) {
+        int duPhong = switch (idSung) {
             case 110 -> 280;
             case 120 -> 250;
             case 160 -> 330;
             default -> SAT_THUONG_CAM_TU;
         };
+        return ChickenSungShopBoss.layTanCongTheoId(idSung, duPhong);
     }
 
     /** Option 14 là tốc độ nạp dùng để xếp lượt tiếp theo của chính khẩu súng. */
     public static int layNapDanTheoIdSung(int idSung) {
-        int napDan = layOption(layMauSung(idSung), 14);
-        if (napDan > 0) {
-            return napDan;
-        }
-        return switch (idSung) {
+        int duPhong = switch (idSung) {
             case 110 -> 280;
             case 120 -> 250;
             case 160 -> 330;
             default -> 100;
         };
+        return ChickenSungShopBoss.layNapDanTheoId(idSung, duPhong);
     }
 
-    private static ChickenMauVatPham layMauSung(int idSung) {
-        return ChickenQuanLyMayChu.itemTemplates == null
-                ? null
-                : ChickenQuanLyMayChu.itemTemplates.get(idSung);
-    }
-
-    private static int layOption(ChickenMauVatPham mau, int maOption) {
-        if (mau == null || mau.thuocTinhs == null) {
-            return 0;
-        }
-        int tong = 0;
-        for (Object doiTuong : mau.thuocTinhs) {
-            if (!(doiTuong instanceof ChickenThuocTinhVatPham)) {
-                continue;
-            }
-            ChickenThuocTinhVatPham option =
-                    (ChickenThuocTinhVatPham) doiTuong;
-            if (option.optionTemplate != null
-                    && option.optionTemplate.ma == maOption) {
-                tong += Math.max(0, option.thamSo);
-            }
-        }
-        return tong;
-    }
 }

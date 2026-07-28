@@ -43,16 +43,16 @@ public final class ChickenCauHinhSatThuongSung {
 
         // Vu khi thuong cua AVG. Skill rieng (Hawk/Iron Man/Ultron...) co bo
         // xu ly rieng va khong duoc tu dong bien thanh vu no.
-        dangKyNo(391, 2, 10, 10, true);   // Iron Man thuong
+        dangKyNoAvg(391, 2, 10, 10, true);   // Iron Man thuong
         dangKyTrucTiep(392);              // Hulk la vien dan
-        dangKyNo(393, 7, 40, 20, true);   // Thor thuong
-        dangKyNo(394, 2, 10, 10, true);   // Loki thuong
-        dangKyNo(395, 6, 24, 20, true);   // Captain: no diem cuoi + xuyen nguoi rieng
+        dangKyNoAvg(393, 7, 40, 20, true);   // Thor thuong
+        dangKyNoAvg(394, 2, 10, 10, true);   // Loki thuong
+        dangKyNoAvg(395, 6, 24, 20, true);   // Captain: no diem cuoi + xuyen nguoi rieng
         dangKyTrucTiep(396);              // Winter Soldier xuyen map
-        dangKyNo(397, 4, 24, 15, true);   // Hawk thuong
+        dangKyNoAvg(397, 4, 24, 15, true);   // Hawk thuong
         dangKyTrucTiep(398);              // Ultron laze thang
-        dangKyNo(400, 4, 24, 15, true);
-        dangKyNo(401, 4, 24, 15, true);
+        dangKyNoAvg(400, 4, 24, 15, true);
+        dangKyNoAvg(401, 4, 24, 15, true);
     }
 
     private ChickenCauHinhSatThuongSung() {
@@ -99,6 +99,31 @@ public final class ChickenCauHinhSatThuongSung {
         ));
     }
 
+    /**
+     * Vu khi AVG co co che no giu nguyen damage/falloff, chi tang ca vung
+     * full damage va ban kinh ngoai len 1,5 lan. Lam tron len de ban kinh le
+     * khong bi mat nua pixel khi server tinh theo toa do nguyen.
+     */
+    private static void dangKyNoAvg(
+            int idSung,
+            int banKinhDayDuGoc,
+            int banKinhNoGoc,
+            int phanTramToiThieu,
+            boolean biDiaHinhChe
+    ) {
+        dangKyNo(
+                idSung,
+                nhanMotPhayNam(banKinhDayDuGoc),
+                nhanMotPhayNam(banKinhNoGoc),
+                phanTramToiThieu,
+                biDiaHinhChe
+        );
+    }
+
+    private static int nhanMotPhayNam(int giaTri) {
+        return Math.max(0, ((giaTri * 3) + 1) / 2);
+    }
+
     private static void dangKyTrucTiep(int idSung) {
         dangKy(new HoSoSatThuong(
                 idSung,
@@ -127,6 +152,33 @@ public final class ChickenCauHinhSatThuongSung {
 
     public static Map<Integer, HoSoSatThuong> layTatCa() {
         return Collections.unmodifiableMap(THEO_ID_SUNG);
+    }
+
+    /**
+     * Tao mot ban sao ho so voi vung no rieng cho skill. Ho so goc cua sung
+     * van duoc giu nguyen, tranh viec can bang skill lam thay doi dan thuong.
+     */
+    public static HoSoSatThuong saoChepVoiBanKinhNo(
+            HoSoSatThuong hoSoGoc,
+            int banKinhDayDu,
+            int banKinhNo
+    ) {
+        if (hoSoGoc == null) {
+            throw new IllegalArgumentException("Ho so sat thuong goc khong duoc null");
+        }
+        return new HoSoSatThuong(
+                hoSoGoc.idSung,
+                true,
+                banKinhDayDu,
+                banKinhNo,
+                hoSoGoc.phanTramToiThieu,
+                hoSoGoc.kieuDuongCong,
+                hoSoGoc.biDiaHinhChe,
+                hoSoGoc.doDayMongToiDa,
+                hoSoGoc.doDayVuaToiDa,
+                hoSoGoc.phanTramQuaTuongMong,
+                hoSoGoc.phanTramQuaTuongVua
+        );
     }
 
     /** Goi luc khoi dong de sung moi khong bi roi ve cong thuc ngam dinh. */

@@ -13,10 +13,14 @@ public final class CauHinhBossKhiCau {
     public static final int SLOT_BOSS_CUOI = 10;
     public static final int MAU_KHI_CAU = 8_527;
     public static final int MAU_PHIEN_QUAN = 1_000;
+    /** Truc Y tang xuong duoi; giu Khi Cau trong tang cao cua map. */
+    public static final int Y_BAY_CAO_NHAT = 70;
+    public static final int Y_BAY_THAP_NHAT = 110;
+    public static final int Y_MAC_DINH_KHI_CAU = 90;
+    public static final int TY_LE_AIM_CHUAN_PHIEN_QUAN = 60;
     /** Chỉ giữ để tương thích phần điều phối dùng chung; map 52 không tạo Cảm tử. */
     public static final int SAT_THUONG_CAM_TU = MAU_PHIEN_QUAN / 2;
     public static final int NAP_DAN_KHI_CAU_SAU_DI_CHUYEN = 300;
-    public static final int TRE_MOI_BUOC_BAY_MS = 70;
 
     /** Tọa độ hai Phiến quân so với tâm neo của khí cầu. */
     // Đúng tọa độ native mà CPlayer fh=3 tự khóa hai slot fh=4 vào dây treo.
@@ -85,13 +89,16 @@ public final class CauHinhBossKhiCau {
     }
 
     private static final CauHinh[] DANH_SACH = new CauHinh[]{
-        new CauHinh((byte) 8, -52, "Boss Khí cầu 8", (short) 900, (short) 260,
+        new CauHinh((byte) 8, -52, "Boss Khí cầu 8", (short) 900,
+                (short) Y_MAC_DINH_KHI_CAU,
                 (short) -1, (short) -1, (short) -1, (short) -1, (short) -1,
                 (short) -1, (byte) 0, MAU_KHI_CAU, LoaiBoss.KHI_CAU),
-        new CauHinh((byte) 9, -152, "Phiến quân dây trái", (short) 880, (short) 310,
+        new CauHinh((byte) 9, -152, "Phiến quân dây trái", (short) 880,
+                (short) (Y_MAC_DINH_KHI_CAU + LECH_Y_DAY_TREO),
                 (short) -1, (short) 159, (short) 158, (short) 157, (short) 160,
                 (short) 54, (byte) 2, MAU_PHIEN_QUAN, LoaiBoss.BAN_SUNG),
-        new CauHinh((byte) 10, -252, "Phiến quân dây phải", (short) 920, (short) 310,
+        new CauHinh((byte) 10, -252, "Phiến quân dây phải", (short) 920,
+                (short) (Y_MAC_DINH_KHI_CAU + LECH_Y_DAY_TREO),
                 (short) -1, (short) 159, (short) 158, (short) 157, (short) 160,
                 (short) 56, (byte) 2, MAU_PHIEN_QUAN, LoaiBoss.BAN_SUNG)
     };

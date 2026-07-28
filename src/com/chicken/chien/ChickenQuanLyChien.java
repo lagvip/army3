@@ -376,24 +376,27 @@ public class ChickenQuanLyChien {
             shooter.ultronDaCoGocNgam = true;
         }
 
-        if (this.kyNangIronMan.dangChoBan(shooter)) {
-            this.banLaserIronMan(shooter, goc);
-            this.kyNangIronMan.sauKhiBanHoacBoLuot(shooter);
-        } else if (this.kyNangUltron.dangBanX3(shooter)) {
-            this.banX3Ultron(shooter, goc, luc);
-            /*
-             * Chua sang luot: CMD 79 cua client se lan luot mo khoa lan ban
-             * thu hai va thu ba. Ket thuc loat moi tinh damage va sang luot.
-             */
-            return;
-        } else {
-            ChickenKetQuaDan ketQua = this.xuLyPhatBan(
-                    shooter, loaiDanMayChu, goc, luc, lucPhu);
-            this.phatBan(shooter, ketQua, (byte) 1);
-            if (this.dongBoHulkSauPhat(shooter, ketQua)) {
+        try (ChickenNguCanhLaySung.Phien ignored =
+                ChickenNguCanhLaySung.batDauPhatBanNguoiChoi()) {
+            if (this.kyNangIronMan.dangChoBan(shooter)) {
+                this.banLaserIronMan(shooter, goc);
+                this.kyNangIronMan.sauKhiBanHoacBoLuot(shooter);
+            } else if (this.kyNangUltron.dangBanX3(shooter)) {
+                this.banX3Ultron(shooter, goc, luc);
+                /*
+                 * Chua sang luot: CMD 79 cua client se lan luot mo khoa lan ban
+                 * thu hai va thu ba. Ket thuc loat moi tinh damage va sang luot.
+                 */
                 return;
+            } else {
+                ChickenKetQuaDan ketQua = this.xuLyPhatBan(
+                        shooter, loaiDanMayChu, goc, luc, lucPhu);
+                this.phatBan(shooter, ketQua, (byte) 1);
+                if (this.dongBoHulkSauPhat(shooter, ketQua)) {
+                    return;
+                }
+                this.apDungSatThuongKetQua(ketQua);
             }
-            this.apDungSatThuongKetQua(ketQua);
         }
         this.kyNangHawk.sauKhiBanThuong(shooter);
         if (!this.daKetThuc) {
@@ -729,7 +732,8 @@ public class ChickenQuanLyChien {
                     ? ChickenToaDoDauNong.layChoBoss(
                             shooter.x, shooter.y, goc, kiemTraBanDo)
                     : ChickenToaDoDauNong.layChoNguoiChoi(
-                            shooter.x, shooter.y, goc, kiemTraBanDo);
+                            shooter.x, shooter.y, goc, shooter.maVuKhi,
+                            kiemTraBanDo);
         }
 
         ChickenQuanLyDanSung.DuLieuSung duLieuSungMayChu =

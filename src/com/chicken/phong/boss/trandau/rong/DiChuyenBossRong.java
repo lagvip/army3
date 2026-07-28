@@ -3,6 +3,7 @@ package com.chicken.phong.boss.trandau.rong;
 import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.chien.ChickenChienBinh;
 import com.chicken.chiso.ChickenKichThuocNhanVat;
+import java.util.concurrent.ThreadLocalRandom;
 
 /** Di chuyển bay và tọa độ kẹp/thả riêng của BigBoss Rồng. */
 public final class DiChuyenBossRong {
@@ -113,6 +114,86 @@ public final class DiChuyenBossRong {
                         soFrame * CauHinhBossRong.THOI_GIAN_FRAME_CLIENT_MS
                 )
         );
+    }
+
+    /**
+     * Chon mot diem trong khong gian quanh nguoi choi de Rong bay toi truoc
+     * khi ban. Diem cuoi do server chon, duoc kep trong map va khong nam trong
+     * dia hinh; client chi nhan dich bay de ve animation.
+     */
+    public static short[] chonDiemBayQuanhNguoi(
+            ChickenChienBinh boss,
+            ChickenChienBinh mucTieu,
+            ChickenQuanLyBanDo banDo
+    ) {
+        if (boss == null || mucTieu == null || banDo == null) {
+            return new short[]{
+                (short) (boss == null ? 0 : boss.x),
+                (short) (boss == null ? 0 : boss.y)
+            };
+        }
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        for (int lan = 0; lan < CauHinhBossRong.SO_LAN_THU_DIEM_BAY_QUANH;
+                lan++) {
+            int khoangX = random.nextInt(
+                    CauHinhBossRong.KHOANG_X_BAY_QUANH_TOI_THIEU,
+                    CauHinhBossRong.KHOANG_X_BAY_QUANH_TOI_DA + 1);
+            int huong = random.nextBoolean() ? 1 : -1;
+            int doCao = random.nextInt(
+                    CauHinhBossRong.DO_CAO_BAY_QUANH_TOI_THIEU,
+                    CauHinhBossRong.DO_CAO_BAY_QUANH_TOI_DA + 1);
+            short[] diem = kepTrongMap(
+                    mucTieu.x + huong * khoangX,
+                    mucTieu.y - doCao,
+                    banDo);
+            if (Math.hypot(diem[0] - boss.x, diem[1] - boss.y)
+                            >= CauHinhBossRong.BUOC_BAY_TOI_DA
+                    && laVungBayTrong(diem[0], diem[1], banDo)) {
+                return diem;
+            }
+        }
+
+        // O ria map, uu tien phia con nhieu khoang trong hon va nang Rong cao
+        // them. Day la diem du phong xac dinh, tranh dung im roi ban tai cho.
+        int huongVaoMap = mucTieu.x < banDo.getWidth() / 2 ? 1 : -1;
+        for (int doCao = CauHinhBossRong.DO_CAO_BAY_QUANH_TOI_THIEU;
+                doCao <= CauHinhBossRong.DO_CAO_BAY_QUANH_TOI_DA + 120;
+                doCao += 12) {
+            short[] diem = kepTrongMap(
+                    mucTieu.x + huongVaoMap
+                            * CauHinhBossRong.KHOANG_X_BAY_QUANH_TOI_THIEU,
+                    mucTieu.y - doCao,
+                    banDo);
+            if (laVungBayTrong(diem[0], diem[1], banDo)) {
+                return diem;
+            }
+        }
+        return kepTrongMap(
+                mucTieu.x + huongVaoMap
+                        * CauHinhBossRong.KHOANG_X_BAY_QUANH_TOI_THIEU,
+                mucTieu.y - CauHinhBossRong.DO_CAO_BAY_QUANH_TOI_DA,
+                banDo);
+    }
+
+    /** Toan bo hitbox native cua Rong tai diem dung phai nam ngoai dia hinh. */
+    public static boolean laVungBayTrong(
+            int x,
+            int y,
+            ChickenQuanLyBanDo banDo
+    ) {
+        if (banDo == null) {
+            return false;
+        }
+        for (int px = x - CauHinhBossRong.HITBOX_LECH_TRAI;
+                px <= x + CauHinhBossRong.HITBOX_LECH_PHAI; px++) {
+            for (int py = y - CauHinhBossRong.HITBOX_LECH_TREN;
+                    py <= y + CauHinhBossRong.HITBOX_LECH_DUOI; py++) {
+                if (banDo.coVaCham((short) px, (short) py)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /** Điểm trung chuyển: bay sang nửa map đối diện và nâng mục tiêu lên cao. */

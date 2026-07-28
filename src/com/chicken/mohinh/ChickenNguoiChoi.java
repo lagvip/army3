@@ -25,6 +25,7 @@ import com.chicken.chien.ChickenCauHinhSatThuongSung;
 import com.chicken.chien.ChickenTinhSatThuongNo;
 import com.chicken.chien.ChickenSieuCao;
 import com.chicken.chien.ChickenLoatDanServer;
+import com.chicken.chien.ChickenNguCanhLaySung;
 import com.chicken.chiso.ChickenChiSoNguoiChoi;
 import com.chicken.gio.ChickenHeThongGio;
 import com.chicken.bando.ChickenQuanLyBanDo;
@@ -1948,6 +1949,8 @@ public class ChickenNguoiChoi {
         // không phụ thuộc vào việc viên trước đã bay xong hay đã va chạm.
         this.huyLoatMgDangCho();
         this.trainingSession.trainingMgBurstEndAt = 0L;
+        try (ChickenNguCanhLaySung.Phien ignored =
+                ChickenNguCanhLaySung.batDauPhatBanNguoiChoi()) {
         if (idSungMayChu == 130) {
             final int tongSoVienMg = Math.min(
                     ChickenLuyenTapBan.SO_VIEN_MG,
@@ -2008,6 +2011,7 @@ public class ChickenNguoiChoi {
                     cacDuongY,
                     sieuCaoHieuUng
             );
+        }
         }
         this.dongBoToaDoBaySauKhiBanLuyenTap();
         hulkRoiKhoiMap = this.apDungViTriHulkSauPhatLuyenTap(

@@ -8,6 +8,7 @@ import com.chicken.chien.ChickenChienBinh;
 import com.chicken.chien.ChickenQuanLyDanSung;
 import com.chicken.chien.ChickenQuanLyDanSung.DuLieuSung;
 import com.chicken.chien.ChickenKetQuaDan;
+import com.chicken.chien.ChickenNguCanhLaySung;
 import com.chicken.chien.ChickenSieuCao;
 import com.chicken.avg.ChickenThanhDiChuyenAVG;
 import com.chicken.avg.ChickenQuanLyNangLuongAVG;
@@ -31,7 +32,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Vector;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,6 +47,16 @@ implements IChickenDichVuGame {
 
     private ChickenPhien khach;
     private ChickenNguoiChoi nguoiChoi;
+    private static final ScheduledExecutorService BO_HEN_GIO_LAY_SUNG =
+            Executors.newScheduledThreadPool(2, runnable -> {
+                Thread thread = new Thread(runnable, "chicken-get-gun-pacing");
+                thread.setDaemon(true);
+                return thread;
+            });
+    private final Object khoaHangRaoGuiTin = new Object();
+    private final Deque<ChickenTinNhan> tinChoLaySung = new ArrayDeque<>();
+    private boolean dangChoLaySung;
+    private long phienHangRaoLaySung;
 
     public ChickenDichVuGame(ChickenPhien khach) {
         this.khach = khach;
@@ -914,6 +930,38 @@ implements IChickenDichVuGame {
         this.guiTin(ms);
     }
 
+    /**
+     * Mở hoạt ảnh bay native bằng CMD 93.
+     *
+     * <p>Client dùng luồng này cho BigBoss Rồng và Khí Cầu
+     * (flyPlayer, bossType 3). Rùa type 1 vẫn phải dùng CMD 21.</p>
+     */
+    public void guiDiChuyenBossBay(byte slot, short x, short y) throws IOException {
+        ChickenTinNhan ms = new ChickenTinNhan(93);
+        DataOutputStream ds = ms.boGhi();
+        ds.writeByte(slot);
+        ds.writeShort(x);
+        ds.writeShort(y);
+        ds.flush();
+        this.guiTin(ms);
+    }
+
+    /** Ten cu giu lai de cac tran Rong khong bi anh huong. */
+    public void guiDiChuyenBigBoss(byte slot, short x, short y) throws IOException {
+        this.guiDiChuyenBossBay(slot, x, y);
+    }
+
+    /** Đồng bộ tức thời tọa độ authoritative, không mở animation mới. */
+    public void guiCapNhatXYDau(byte chiSo, short x, short y) throws IOException {
+        ChickenTinNhan ms = new ChickenTinNhan(53);
+        DataOutputStream ds = ms.boGhi();
+        ds.writeByte(chiSo);
+        ds.writeShort(x);
+        ds.writeShort(y);
+        ds.flush();
+        this.guiTin(ms);
+    }
+
     public void guiDiChuyenDau(byte chiSo, short x, short y) throws IOException {
         ChickenTinNhan ms = new ChickenTinNhan(21);
         DataOutputStream ds = ms.boGhi();
@@ -922,6 +970,26 @@ implements IChickenDichVuGame {
         ds.writeShort(y);
         ds.flush();
         this.guiTin(ms);
+    }
+
+    /** Bắt đầu hoạt ảnh di chuyển BigBoss Rùa bằng CMD 21 native. */
+    public void guiDiChuyenBossRua(byte chiSo, short x, short y) throws IOException {
+        this.guiDiChuyenDau(chiSo, x, y);
+    }
+
+    /**
+     * Chốt hoạt ảnh di chuyển BigBoss Rùa của giao thức client cũ.
+     *
+     * <p>Server chỉ gọi gói CMD 21 thứ hai sau thời gian hoạt ảnh, với đúng
+     * tọa độ đích đã tính từ trạng thái authoritative. Đây là tín hiệu hiển
+     * thị; client không được quyết định tọa độ, lượt hay kết quả chiến đấu.</p>
+     */
+    public void guiHoanTatDiChuyenBossRua(
+            byte chiSo,
+            short x,
+            short y
+    ) throws IOException {
+        this.guiDiChuyenDau(chiSo, x, y);
     }
 
     /**
@@ -1093,7 +1161,7 @@ implements IChickenDichVuGame {
                 ketQua.sieuCao
         );
         ds.flush();
-        this.guiTin(ms);
+        this.guiTinKetQuaBan(ms);
     }
 
     private void ghiMotDuongDan(
@@ -1208,7 +1276,7 @@ implements IChickenDichVuGame {
         }
         ds.writeByte(0);
         ds.flush();
-        this.guiTin(ms);
+        this.guiTinKetQuaBan(ms);
     }
 
     /**
@@ -1365,7 +1433,7 @@ implements IChickenDichVuGame {
 
         ds.writeByte(0); // không dùng đạn siêu cao.
         ds.flush();
-        this.guiTin(ms);
+        this.guiTinKetQuaBan(ms);
     }
 
     public void guiCapNhatMauDau(byte chiSo, int hp, byte phanTram, byte trangThaiChet) throws IOException {
@@ -1543,7 +1611,62 @@ implements IChickenDichVuGame {
     }
 
     public void guiTin(ChickenTinNhan ms) {
-        this.khach.guiTin(ms);
+        if (ms == null) {
+            return;
+        }
+        synchronized (this.khoaHangRaoGuiTin) {
+            if (this.dangChoLaySung) {
+                this.tinChoLaySung.addLast(ms);
+                return;
+            }
+            this.khach.guiTin(ms);
+        }
+    }
+
+    /**
+     * Giu CMD 22/84 va moi packet phat sinh sau no theo dung thu tu cho den
+     * khi animation lay sung native ket thuc. Chi kich hoat trong ngu canh
+     * server vua chap nhan mot phat ban cua nguoi choi; dan boss/bot khong bi
+     * chen them do tre.
+     */
+    private void guiTinKetQuaBan(ChickenTinNhan ms) {
+        if (ms == null) {
+            return;
+        }
+        // Mock test khong co ChickenPhien; giu cach gui dong bo de test packet.
+        if (!ChickenNguCanhLaySung.dangChoLaySung() || this.khach == null) {
+            this.guiTin(ms);
+            return;
+        }
+
+        final long phien;
+        synchronized (this.khoaHangRaoGuiTin) {
+            if (this.dangChoLaySung) {
+                this.tinChoLaySung.addLast(ms);
+                return;
+            }
+            this.dangChoLaySung = true;
+            phien = ++this.phienHangRaoLaySung;
+            this.tinChoLaySung.addLast(ms);
+        }
+        BO_HEN_GIO_LAY_SUNG.schedule(
+                () -> this.moHangRaoLaySung(phien),
+                ChickenNguCanhLaySung.THOI_GIAN_TOI_THIEU_MS,
+                TimeUnit.MILLISECONDS
+        );
+    }
+
+    private void moHangRaoLaySung(long phien) {
+        synchronized (this.khoaHangRaoGuiTin) {
+            if (!this.dangChoLaySung || phien != this.phienHangRaoLaySung) {
+                return;
+            }
+            while (!this.tinChoLaySung.isEmpty()) {
+                ChickenTinNhan tin = this.tinChoLaySung.removeFirst();
+                this.khach.guiTin(tin);
+            }
+            this.dangChoLaySung = false;
+        }
     }
 
     public void guiDuLieuBanDo(int maBanDo) throws IOException {
@@ -1804,7 +1927,7 @@ implements IChickenDichVuGame {
         this.ghiDuLieuSieuCao(
                 ds, loaiDan, cacDuongX[0], cacDuongY[0], sieuCao);
         ds.flush();
-        this.guiTin(ms);
+        this.guiTinKetQuaBan(ms);
     }
 
     public void guiCapNhatMauLuyenTap(byte chiSo, int hp, int maxHp, byte trangThaiChet) throws IOException {
