@@ -312,7 +312,13 @@ public final class ChickenPhatBanServer {
             return ketQua;
         }
         for (ChickenChienBinh mucTieu : cacMucTieu) {
-            if (!laMucTieuHopLe(nguoiBan, mucTieu, boLoc)) {
+            /*
+             * Sieu cao la ket qua hinh hoc: duong dan that cua server co cat
+             * hitbox hay khong. Khong tai su dung bo loc phe/damage o day,
+             * neu khong self-hit hoac dong doi co the bi loai truoc khi bat
+             * hieu ung. Bo loc van duoc ap dung rieng o buoc va cham/damage.
+             */
+            if (!laMucTieuHinhHocSieuCaoHopLe(nguoiBan, mucTieu)) {
                 continue;
             }
             if (ChickenSieuCao.laPhatSieuCaoTrungMucTieu(
@@ -328,6 +334,20 @@ public final class ChickenPhatBanServer {
             }
         }
         return ketQua;
+    }
+
+    private static boolean laMucTieuHinhHocSieuCaoHopLe(
+            ChickenChienBinh nguoiBan,
+            ChickenChienBinh mucTieu
+    ) {
+        return mucTieu != null
+                && !mucTieu.chet
+                && mucTieu.hp > 0
+                /*
+                 * Hulk la chinh vat the dang bay. Luc quay ve diem xuat phat
+                 * chi la ha canh, khong phai mot phat dan trung ban than.
+                 */
+                && !laHulkTuVaCham(nguoiBan, mucTieu);
     }
 
     private static VaCham timVaChamDauTien(

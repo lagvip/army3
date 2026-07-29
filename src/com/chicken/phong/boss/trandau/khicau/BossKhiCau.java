@@ -16,6 +16,7 @@ import com.chicken.chien.ChickenChienBinh;
 import com.chicken.chien.ChickenDiChuyenServer;
 import com.chicken.chien.ChickenKetQuaDan;
 import com.chicken.chien.ChickenNguCanhLaySung;
+import com.chicken.chien.ChickenNapDanServer;
 import com.chicken.chien.ChickenPhatBanServer;
 import com.chicken.chien.ChickenQuanLyChien;
 import com.chicken.chien.ChickenQuanLyCongThucSung;
@@ -1548,40 +1549,7 @@ public final class BossKhiCau extends ChickenQuanLyChien {
     }
 
     private int layNapDanSauBanNguoiChoi(ChickenChienBinh chienBinh) {
-        if (chienBinh == null || chienBinh.nguoiChoi == null) {
-            return 100;
-        }
-        ChickenNguoiChoi nguoiChoi = chienBinh.nguoiChoi;
-        ChickenVatPham sung = nguoiChoi.itemBody != null
-                && nguoiChoi.itemBody.length > 5
-                ? nguoiChoi.itemBody[5] : null;
-        int napDanGoc = -1;
-        if (sung != null) {
-            // Giống luyện tập: nếu item có option riêng thì dùng đúng danh sách
-            // đó; chỉ dùng option template khi item không có option riêng.
-            if (sung.itemOptions != null && !sung.itemOptions.isEmpty()) {
-                napDanGoc = sung.getParamById(14);
-            } else if (sung.mau != null && sung.mau.thuocTinhs != null) {
-                for (Object doiTuong : sung.mau.thuocTinhs) {
-                    if (!(doiTuong instanceof ChickenThuocTinhVatPham)) {
-                        continue;
-                    }
-                    ChickenThuocTinhVatPham option =
-                            (ChickenThuocTinhVatPham) doiTuong;
-                    if (option.optionTemplate != null
-                            && option.optionTemplate.ma == 14
-                            && option.thamSo > 0) {
-                        napDanGoc = option.thamSo;
-                        break;
-                    }
-                }
-            }
-        }
-        if (napDanGoc <= 0) {
-            napDanGoc = 100;
-        }
-        int giamNapDan = ChickenChiSoNguoiChoi.tinhGiamNapDanTuTiemNang(nguoiChoi);
-        return Math.max(1, napDanGoc - giamNapDan);
+        return ChickenNapDanServer.layChoChienBinh(chienBinh);
     }
 
     private int layIdSung(ChickenChienBinh chienBinh) {

@@ -11,8 +11,8 @@ public final class CauHinhBossKhiCau {
     public static final int SLOT_KHI_CAU = 8;
     public static final int SLOT_BOSS_DAU = 8;
     public static final int SLOT_BOSS_CUOI = 10;
-    public static final int MAU_KHI_CAU = 8_527;
-    public static final int MAU_PHIEN_QUAN = 1_000;
+    public static final int MAU_KHI_CAU = 1;
+    public static final int MAU_PHIEN_QUAN = 1;
     /** Truc Y tang xuong duoi; giu Khi Cau trong tang cao cua map. */
     public static final int Y_BAY_CAO_NHAT = 70;
     public static final int Y_BAY_THAP_NHAT = 110;

@@ -1,6 +1,7 @@
 package com.chicken.phong.boss.sanhcho;
 
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.chicken.loi.ChickenCoSoDuLieu;
 import com.chicken.loi.ChickenQuanLyMayChu;
@@ -166,6 +167,7 @@ public final class ChickenKinhTeBoss {
         final int mocCapDaNhanMoi;
         final short diemTiemNangMoi;
         final int ngocMoi;
+        final long phienBanThongKeMoi;
 
         private KetQuaExp(
                 boolean thanhCong,
@@ -175,7 +177,8 @@ public final class ChickenKinhTeBoss {
                 int capMoi,
                 int mocCapDaNhanMoi,
                 short diemTiemNangMoi,
-                int ngocMoi
+                int ngocMoi,
+                long phienBanThongKeMoi
         ) {
             this.thanhCong = thanhCong;
             this.daXuLy = daXuLy;
@@ -185,6 +188,7 @@ public final class ChickenKinhTeBoss {
             this.mocCapDaNhanMoi = mocCapDaNhanMoi;
             this.diemTiemNangMoi = diemTiemNangMoi;
             this.ngocMoi = ngocMoi;
+            this.phienBanThongKeMoi = phienBanThongKeMoi;
         }
 
         static KetQuaExp thanhCong(
@@ -198,7 +202,23 @@ public final class ChickenKinhTeBoss {
         ) {
             return new KetQuaExp(
                     true, daXuLy, expThucTe, expMoi, capMoi,
-                    mocCapDaNhanMoi, diemTiemNangMoi, ngocMoi);
+                    mocCapDaNhanMoi, diemTiemNangMoi, ngocMoi, -1L);
+        }
+
+        static KetQuaExp thanhCongCoPhienBan(
+                boolean daXuLy,
+                int expThucTe,
+                int expMoi,
+                int capMoi,
+                int mocCapDaNhanMoi,
+                short diemTiemNangMoi,
+                int ngocMoi,
+                long phienBanThongKeMoi
+        ) {
+            return new KetQuaExp(
+                    true, daXuLy, expThucTe, expMoi, capMoi,
+                    mocCapDaNhanMoi, diemTiemNangMoi, ngocMoi,
+                    phienBanThongKeMoi);
         }
     }
 
@@ -577,11 +597,12 @@ public final class ChickenKinhTeBoss {
                     if (ketQua == null || !ketQua.thanhCong) {
                         return 0;
                     }
-                    nguoiChoi.kinhNghiem = ketQua.expMoi;
-                    nguoiChoi.cap = ketQua.capMoi;
-                    nguoiChoi.capCaoNhatDaNhanThuong =
-                            ketQua.mocCapDaNhanMoi;
-                    nguoiChoi.point = ketQua.diemTiemNangMoi;
+                    nguoiChoi.apDungTrangThaiExpDaCommit(
+                            ketQua.expMoi,
+                            ketQua.capMoi,
+                            ketQua.mocCapDaNhanMoi,
+                            ketQua.diemTiemNangMoi,
+                            ketQua.phienBanThongKeMoi);
                     nguoiChoi.ngoc = ketQua.ngocMoi;
                     thanhVien.danhDauDaNhanExpHaBoss();
                     DebugSanhBoss.log("TRA_EXP_HA_BOSS", nguoiChoi,
@@ -809,9 +830,6 @@ public final class ChickenKinhTeBoss {
                     int capCu = ChickenTienIch.layCap(expCu);
                     int mocDaNhan = Math.max(0, docSoNguyen(
                             trangThai.stats, "rewardedLevel", capCu));
-                    int diemCu = Math.max(0, docSoNguyen(
-                            trangThai.stats, "point", 0));
-
                     int expMoi = (int) Math.min(
                             Integer.MAX_VALUE,
                             (long) expCu + Math.max(0, expCong));
@@ -819,14 +837,21 @@ public final class ChickenKinhTeBoss {
                     int capMoi = ChickenTienIch.layCap(expMoi);
                     int soCapThuong = Math.max(
                             0, capMoi - Math.max(capCu, mocDaNhan));
-                    int diemCong = nhanAnToan(
-                            soCapThuong,
-                            ChickenQuanLyTiemNang.DIEM_TIEM_NANG_MOI_CAP);
                     int ngocCong = nhanAnToan(
                             soCapThuong,
                             ChickenQuanLyTiemNang.NGOC_TIM_MOI_CAP);
+                    int diemDaPhanBo =
+                            docSoDiemTiemNangDaPhanBo(trangThai.stats);
+                    int tongDiemTheoCap = nhanAnToan(
+                            capMoi,
+                            ChickenQuanLyTiemNang.DIEM_TIEM_NANG_MOI_CAP);
+                    if (diemDaPhanBo > tongDiemTheoCap) {
+                        throw new SQLException(
+                                "Diem tiem nang da phan bo vuot level");
+                    }
                     short diemMoi = (short) Math.min(
-                            Short.MAX_VALUE, (long) diemCu + diemCong);
+                            Short.MAX_VALUE,
+                            tongDiemTheoCap - diemDaPhanBo);
                     int ngocMoi = (int) Math.min(
                             Integer.MAX_VALUE,
                             (long) Math.max(0, trangThai.ngoc) + ngocCong);
@@ -835,12 +860,15 @@ public final class ChickenKinhTeBoss {
                     trangThai.stats.put("exp", expMoi);
                     trangThai.stats.put("rewardedLevel", mocMoi);
                     trangThai.stats.put("point", diemMoi);
+                    long phienBanMoi = trangThai.phienBanThongKe + 1L;
                     try (PreparedStatement capNhat = ketNoi.prepareStatement(
-                            "UPDATE `players` SET `stats_json` = ?, `gem` = ? "
+                            "UPDATE `players` SET `stats_json` = ?, "
+                                    + "`gem` = ?, `stats_revision` = ? "
                                     + "WHERE `id` = ?")) {
                         capNhat.setString(1, trangThai.stats.toJSONString());
                         capNhat.setInt(2, ngocMoi);
-                        capNhat.setInt(3, maNguoiChoi);
+                        capNhat.setLong(3, phienBanMoi);
+                        capNhat.setInt(4, maNguoiChoi);
                         if (capNhat.executeUpdate() != 1) {
                             throw new SQLException(
                                     "Cap nhat EXP boss khong dung mot dong");
@@ -856,9 +884,9 @@ public final class ChickenKinhTeBoss {
                         ghiSo.executeUpdate();
                     }
                     ketNoi.commit();
-                    return KetQuaExp.thanhCong(
+                    return KetQuaExp.thanhCongCoPhienBan(
                             false, expThucTe, expMoi, capMoi,
-                            mocMoi, diemMoi, ngocMoi);
+                            mocMoi, diemMoi, ngocMoi, phienBanMoi);
                 } catch (SQLException | RuntimeException loi) {
                     ketNoi.rollback();
                     throw loi;
@@ -873,7 +901,8 @@ public final class ChickenKinhTeBoss {
                 int maNguoiChoi
         ) throws SQLException {
             try (PreparedStatement doc = ketNoi.prepareStatement(
-                    "SELECT `stats_json`, `gem` FROM `players` "
+                    "SELECT `stats_json`, `gem`, `stats_revision` "
+                            + "FROM `players` "
                             + "WHERE `id` = ? FOR UPDATE")) {
                 doc.setInt(1, maNguoiChoi);
                 try (ResultSet ketQua = doc.executeQuery()) {
@@ -895,7 +924,10 @@ public final class ChickenKinhTeBoss {
                                 "stats_json cua player bi null");
                     }
                     return new TrangThaiExp(
-                            stats, Math.max(0, ketQua.getInt("gem")));
+                            stats,
+                            Math.max(0, ketQua.getInt("gem")),
+                            Math.max(0L,
+                                    ketQua.getLong("stats_revision")));
                 }
             }
         }
@@ -947,13 +979,50 @@ public final class ChickenKinhTeBoss {
                 Math.max(0L, (long) Math.max(0, a) * Math.max(0, b)));
     }
 
+    private static int docSoDiemTiemNangDaPhanBo(
+            JSONObject stats
+    ) throws SQLException {
+        JSONArray phanBo = stats.getJSONArray("pointAdd");
+        if (phanBo == null || phanBo.size()
+                < ChickenQuanLyTiemNang.SO_CHI_SO) {
+            throw new SQLException(
+                    "pointAdd trong stats_json khong hop le");
+        }
+        long tong = 0;
+        for (int i = 0;
+                i < ChickenQuanLyTiemNang.SO_CHI_SO;
+                i++) {
+            int giaTri;
+            try {
+                giaTri = Integer.parseInt(
+                        phanBo.get(i).toString());
+            } catch (RuntimeException loi) {
+                throw new SQLException(
+                        "pointAdd khong phai so tai vi tri " + i,
+                        loi);
+            }
+            if (i == ChickenQuanLyTiemNang.MAU) {
+                tong += Math.max(0, giaTri - 1000) / 10;
+            } else {
+                tong += Math.max(0, giaTri);
+            }
+        }
+        return (int) Math.min(Integer.MAX_VALUE, tong);
+    }
+
     private static final class TrangThaiExp {
         final JSONObject stats;
         final int ngoc;
+        final long phienBanThongKe;
 
-        TrangThaiExp(JSONObject stats, int ngoc) {
+        TrangThaiExp(
+                JSONObject stats,
+                int ngoc,
+                long phienBanThongKe
+        ) {
             this.stats = stats;
             this.ngoc = ngoc;
+            this.phienBanThongKe = phienBanThongKe;
         }
 
         KetQuaExp toKetQua(boolean daXuLy, int expThucTe)
@@ -965,8 +1034,9 @@ public final class ChickenKinhTeBoss {
             short diem = (short) Math.min(
                     Short.MAX_VALUE,
                     Math.max(0, docSoNguyen(this.stats, "point", 0)));
-            return KetQuaExp.thanhCong(
-                    daXuLy, expThucTe, exp, cap, moc, diem, this.ngoc);
+            return KetQuaExp.thanhCongCoPhienBan(
+                    daXuLy, expThucTe, exp, cap, moc, diem, this.ngoc,
+                    this.phienBanThongKe);
         }
     }
 }

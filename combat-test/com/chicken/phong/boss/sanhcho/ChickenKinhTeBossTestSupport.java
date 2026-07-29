@@ -177,8 +177,9 @@ public final class ChickenKinhTeBossTestSupport {
 
     private static void kiemTraExpIdempotentVaRollback() {
         ChickenNguoiChoi nguoiChoi = nguoiChoi(93_010, 0);
-        nguoiChoi.kinhNghiem = 10_000;
-        nguoiChoi.cap = ChickenTienIch.layCap(nguoiChoi.kinhNghiem);
+        nguoiChoi.datKinhNghiemVaCanBangTrongBoNho(10_000);
+        nguoiChoi.cap = ChickenTienIch.layCap(
+                nguoiChoi.layKinhNghiem());
         nguoiChoi.capCaoNhatDaNhanThuong = nguoiChoi.cap;
         nguoiChoi.point = 12;
         nguoiChoi.ngoc = 20;
@@ -188,11 +189,11 @@ public final class ChickenKinhTeBossTestSupport {
 
         KhoExpRam khoExp = new KhoExpRam();
         khoExp.datTrangThai(nguoiChoi);
-        int expBanDau = nguoiChoi.kinhNghiem;
+        int expBanDau = nguoiChoi.layKinhNghiem();
         bang(1_234, ChickenKinhTeBoss.traoExpHaBoss(
                         thanhVien, 1_234, khoExp),
                 "EXP boss lan dau khong duoc cong");
-        bang(expBanDau + 1_234, nguoiChoi.kinhNghiem,
+        bang(expBanDau + 1_234, nguoiChoi.layKinhNghiem(),
                 "EXP DB thanh cong nhung RAM khong dong bo");
         bang(0, ChickenKinhTeBoss.traoExpHaBoss(
                         thanhVien, 1_234, khoExp),
@@ -200,8 +201,10 @@ public final class ChickenKinhTeBossTestSupport {
         bang(1, khoExp.soGiaoDich(),
                 "EXP lap lai tao them giao dich");
 
+        kiemTraExpBossLenLaiCapCu();
+
         ChickenNguoiChoi loiDb = nguoiChoi(93_011, 0);
-        loiDb.kinhNghiem = 5_000;
+        loiDb.datKinhNghiemVaCanBangTrongBoNho(5_000);
         ThanhVienBoss veLoi = new ThanhVienBoss(
                 loiDb, (byte) 1, 11L, false);
         veLoi.danhDauDaThuPhiVaoPhong();
@@ -212,7 +215,7 @@ public final class ChickenKinhTeBossTestSupport {
         bang(0, ChickenKinhTeBoss.traoExpHaBoss(
                         veLoi, 500, khoLoi),
                 "DB loi nhung server van bao co EXP");
-        bang(5_000, loiDb.kinhNghiem,
+        bang(5_000, loiDb.layKinhNghiem(),
                 "DB rollback nhung RAM van bi cong EXP");
 
         ChickenNguoiChoi chuaTraPhi = nguoiChoi(93_012, 0);
@@ -227,7 +230,7 @@ public final class ChickenKinhTeBossTestSupport {
                 "ve chua tra phi van ghi giao dich EXP");
 
         ChickenNguoiChoi rotMang = nguoiChoi(93_013, 0);
-        rotMang.kinhNghiem = 2_000;
+        rotMang.datKinhNghiemVaCanBangTrongBoNho(2_000);
         ThanhVienBoss veRotMang = new ThanhVienBoss(
                 rotMang, (byte) 3, 13L, false);
         veRotMang.danhDauDaThuPhiVaoPhong();
@@ -282,6 +285,54 @@ public final class ChickenKinhTeBossTestSupport {
     public static void danhDauDaTraPhi(ThanhVienBoss thanhVien) {
         if (thanhVien != null) {
             thanhVien.danhDauDaThuPhiVaoPhong(1_000);
+        }
+    }
+
+    private static void kiemTraExpBossLenLaiCapCu() {
+        Map<Integer, com.chicken.dulieu.ChickenTieuDeCap> bangCapCu =
+                new HashMap<>(
+                        com.chicken.dulieu.ChickenTieuDeCap.levels);
+        try {
+            com.chicken.dulieu.ChickenTieuDeCap.levels.clear();
+            for (int i = 0; i <= 80; i++) {
+                com.chicken.dulieu.ChickenTieuDeCap cap =
+                        new com.chicken.dulieu.ChickenTieuDeCap();
+                cap.ma = i;
+                cap.kinhNghiem = i * 1000;
+                cap.ten = "Level " + i;
+                com.chicken.dulieu.ChickenTieuDeCap.levels.put(i, cap);
+            }
+
+            ChickenNguoiChoi lenLaiCapCu =
+                    nguoiChoi(93_014, 0);
+            lenLaiCapCu.datKinhNghiemVaCanBangTrongBoNho(70_000);
+            lenLaiCapCu.cap = 70;
+            lenLaiCapCu.capCaoNhatDaNhanThuong = 80;
+            lenLaiCapCu.point = 700;
+            lenLaiCapCu.ngoc = 321;
+            ThanhVienBoss veLenLaiCapCu = new ThanhVienBoss(
+                    lenLaiCapCu, (byte) 4, 14L, false);
+            veLenLaiCapCu.danhDauDaThuPhiVaoPhong();
+            KhoExpRam khoLenLaiCapCu = new KhoExpRam();
+            khoLenLaiCapCu.datTrangThai(lenLaiCapCu);
+
+            bang(10_000,
+                    ChickenKinhTeBoss.traoExpHaBoss(
+                            veLenLaiCapCu, 10_000,
+                            khoLenLaiCapCu),
+                    "EXP boss khong dua nguoi choi len lai Lv80");
+            bang(80, lenLaiCapCu.cap,
+                    "EXP boss len lai sai level");
+            bang(800, (int) lenLaiCapCu.point,
+                    "EXP boss len lai Lv80 van giu 700 diem");
+            bang(321, lenLaiCapCu.ngoc,
+                    "EXP boss len lai cap cu phat lai ngoc");
+            bang(80, lenLaiCapCu.capCaoNhatDaNhanThuong,
+                    "EXP boss lam sai moc thuong cao nhat");
+        } finally {
+            com.chicken.dulieu.ChickenTieuDeCap.levels.clear();
+            com.chicken.dulieu.ChickenTieuDeCap.levels.putAll(
+                    bangCapCu);
         }
     }
 
@@ -409,7 +460,7 @@ public final class ChickenKinhTeBossTestSupport {
             this.trangThais.put(
                     nguoiChoi.ma,
                     new TrangThaiExpRam(
-                            nguoiChoi.kinhNghiem,
+                            nguoiChoi.layKinhNghiem(),
                             nguoiChoi.capCaoNhatDaNhanThuong,
                             nguoiChoi.point,
                             nguoiChoi.ngoc));
@@ -440,8 +491,6 @@ public final class ChickenKinhTeBossTestSupport {
             int capMoi = ChickenTienIch.layCap(expMoi);
             int soCapThuong = Math.max(
                     0, capMoi - Math.max(capCu, trangThai.mocDaNhan));
-            int diemCong = soCapThuong
-                    * ChickenQuanLyTiemNang.DIEM_TIEM_NANG_MOI_CAP;
             int ngocCong = soCapThuong
                     * ChickenQuanLyTiemNang.NGOC_TIM_MOI_CAP;
             trangThai.exp = expMoi;
@@ -449,7 +498,8 @@ public final class ChickenKinhTeBossTestSupport {
                     trangThai.mocDaNhan, capMoi);
             trangThai.diem = (short) Math.min(
                     Short.MAX_VALUE,
-                    (long) Math.max(0, trangThai.diem) + diemCong);
+                    (long) capMoi
+                    * ChickenQuanLyTiemNang.DIEM_TIEM_NANG_MOI_CAP);
             trangThai.ngoc = (int) Math.min(
                     Integer.MAX_VALUE,
                     (long) Math.max(0, trangThai.ngoc) + ngocCong);

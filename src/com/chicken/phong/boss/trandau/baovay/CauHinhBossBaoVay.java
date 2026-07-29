@@ -5,6 +5,7 @@ import com.chicken.loi.ChickenQuanLyMayChu;
 import com.chicken.phong.boss.trandau.ChickenHoatAnhNoCamTu;
 import com.chicken.vatpham.ChickenMauVatPham;
 import com.chicken.vatpham.ChickenThuocTinhVatPham;
+import java.util.Arrays;
 
 /** Du lieu co dinh cua muoi boss tren map 50 - Boss Bao vay. */
 public final class CauHinhBossBaoVay {
@@ -20,6 +21,10 @@ public final class CauHinhBossBaoVay {
     public static final int PHAN_TRAM_DAMAGE_RIA_CAM_TU = 20;
     public static final int SLOT_BOSS_DAU = 8;
     public static final int SLOT_BOSS_CUOI = 17;
+    public static final int SO_NGUOI_MO_DU_TAM_CAM_TU = 4;
+    private static final int SO_PHIEN_QUAN = 2;
+    private static final int SO_CAM_TU_IT_NGUOI = 4;
+    private static final int SO_CAM_TU_DAY_DU = 8;
 
     public enum LoaiBoss {
         BAN_SUNG,
@@ -114,6 +119,18 @@ public final class CauHinhBossBaoVay {
 
     public static CauHinh[] layTatCa() {
         return DANH_SACH.clone();
+    }
+
+    /**
+     * Chon doi hinh ngay luc tao tran tu so nguoi server da xac nhan.
+     * Bon Cam tu tren (slot 10-13) luon co; bon Cam tu duoi (slot 14-17)
+     * chi mo khi phong co tu bon nguoi.
+     */
+    public static CauHinh[] layTheoSoNguoi(int soNguoi) {
+        int soCamTu = soNguoi >= SO_NGUOI_MO_DU_TAM_CAM_TU
+                ? SO_CAM_TU_DAY_DU
+                : SO_CAM_TU_IT_NGUOI;
+        return Arrays.copyOf(DANH_SACH, SO_PHIEN_QUAN + soCamTu);
     }
 
     public static CauHinh layTheoSlot(int slot) {

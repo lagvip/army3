@@ -177,7 +177,7 @@ implements IChickenDichVuGame {
         ds.writeUTF(this.nguoiChoi.ten);
         ds.writeInt(this.nguoiChoi.vang);
         ds.writeInt(this.nguoiChoi.ngoc);
-        ds.writeInt(this.nguoiChoi.kinhNghiem);
+        ds.writeInt(this.nguoiChoi.layKinhNghiem());
         ds.writeInt(this.nguoiChoi.cup);
         ds.writeShort(this.nguoiChoi.clan);
         ds.writeInt(0);
@@ -214,7 +214,7 @@ implements IChickenDichVuGame {
         ds.writeInt(nguoiChoi.ma);
         ds.writeUTF(nguoiChoi.ten);
         ds.writeShort(nguoiChoi.clan);
-        ds.writeInt(nguoiChoi.kinhNghiem);
+        ds.writeInt(nguoiChoi.layKinhNghiem());
         ds.writeShort(nguoiChoi.head);
         ds.writeShort(nguoiChoi.leg);
         ds.writeShort(nguoiChoi.body);
@@ -656,7 +656,7 @@ implements IChickenDichVuGame {
         ds.writeInt(joined.ma);
         ds.writeUTF(joined.ten);
         ds.writeShort(joined.clan);
-        ds.writeInt(joined.kinhNghiem);
+        ds.writeInt(joined.layKinhNghiem());
         ds.writeShort(joined.head);
         ds.writeShort(joined.leg);
         ds.writeShort(joined.body);

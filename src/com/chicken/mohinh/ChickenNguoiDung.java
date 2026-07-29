@@ -13,6 +13,7 @@ import com.chicken.mang.ChickenTinNhan;
 import com.chicken.mang.ChickenPhien;
 import com.chicken.tienich.ChickenDuLieuJson;
 import com.chicken.tienich.ChickenTienIch;
+import com.chicken.tiemnang.ChickenQuanLyTiemNang;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -40,7 +41,7 @@ public class ChickenNguoiDung {
     private static final int[] ID_TEMPLATE_WEAPON = new int[]{110, 120, 130, 140, 150, 160, 190, 200};
     private static final int[] ID_TEMPLATE_HEAD = new int[]{0, 1, 2, 3, 4};
     private static final int[] ID_TEMPLATE_HAT = new int[]{60, 65, 70, 75, 80};
-    private static final String DEFAULT_STATS_JSON = "{\"power\":100,\"avenger\":100,\"kill\":0,\"dead\":1,\"assist\":0,\"trainingSuccess\":1,\"trainingWins\":0,\"busyHammer\":0,\"nHammer\":2,\"exp\":1000,\"point\":0,\"pointAdd\":[1000,0,0,0,0,0]}";
+    private static final String DEFAULT_STATS_JSON = "{\"power\":100,\"avenger\":100,\"kill\":0,\"dead\":1,\"assist\":0,\"trainingSuccess\":1,\"trainingWins\":0,\"busyHammer\":0,\"nHammer\":2,\"exp\":1000,\"rewardedLevel\":2,\"point\":20,\"pointAdd\":[1000,0,0,0,0,0]}";
 
     public ChickenNguoiDung(ChickenPhien khach, ChickenDichVuGame dichVu) {
         this.khach = khach;
@@ -164,9 +165,9 @@ public class ChickenNguoiDung {
                             this.nguoiChoi = new ChickenNguoiChoi(this.dichVu);
                             this.nguoiChoi.ma = res2.getInt("id");
                             this.nguoiChoi.ten = ten;
-                            this.nguoiChoi.vang = 999999999;
-                            this.nguoiChoi.ngoc = 999999999;
-                            this.nguoiChoi.cup = 0;
+                            this.nguoiChoi.vang = res2.getInt("gold");
+                            this.nguoiChoi.ngoc = res2.getInt("gem");
+                            this.nguoiChoi.cup = res2.getInt("cup");
                             this.nguoiChoi.x = (short)70;
                             this.nguoiChoi.y = (short)360;
                             this.nguoiChoi.head = head;
@@ -177,12 +178,20 @@ public class ChickenNguoiDung {
                             this.nguoiChoi.wp = weapon;
                             JSONObject stats = (JSONObject)JSON.parse(res2.getString("stats_json"));
                             ChickenDuLieuJson p = new ChickenDuLieuJson(stats);
-                            this.nguoiChoi.kinhNghiem = 10000000;
-                            this.nguoiChoi.cap = ChickenTienIch.layCap(this.nguoiChoi.kinhNghiem);
-                            this.nguoiChoi.capCaoNhatDaNhanThuong = p.containsKey("rewardedLevel")
+                            int expTai = p.getInt("exp");
+                            int capTai = ChickenTienIch.layCap(expTai);
+                            int mocTai = p.containsKey("rewardedLevel")
                                     ? Math.max(0, p.getInt("rewardedLevel"))
-                                    : this.nguoiChoi.cap;
-                            this.nguoiChoi.point = p.getShort("point");
+                                    : capTai;
+                            JSONArray jArr = p.getJSONArray("pointAdd");
+                            short[] diemTai = new short[6];
+                            for (int i = 0; i < 6; ++i) {
+                                diemTai[i] = Short.parseShort(
+                                        jArr.get(i).toString());
+                            }
+                            this.nguoiChoi.napTrangThaiTiemNangTuKho(
+                                    expTai, mocTai, p.getShort("point"),
+                                    diemTai, res2.getLong("stats_revision"));
                             this.nguoiChoi.trainingSuccess = p.getByte("trainingSuccess");
                             this.nguoiChoi.datSoTranThangLuyenTap(p.containsKey("trainingWins") ? p.getInt("trainingWins") : 0);
                             this.nguoiChoi.busyHammer = p.getByte("busyHammer");
@@ -197,11 +206,6 @@ public class ChickenNguoiDung {
                                             : ChickenQuanLyNangLuongAVG.NANG_LUONG_TOI_DA
                             );
                             this.nguoiChoi.power = p.getByte("power");
-                            JSONArray jArr = p.getJSONArray("pointAdd");
-                            this.nguoiChoi.pointAdd = new short[6];
-                            for (int i = 0; i < 6; ++i) {
-                                this.nguoiChoi.pointAdd[i] = Short.parseShort(jArr.get(i).toString());
-                            }
                             int headId = -1;
                             int legId = -1;
                             int bodyId = -1;
@@ -314,12 +318,20 @@ public class ChickenNguoiDung {
                 this.nguoiChoi.wing = (short)-1;
                 this.nguoiChoi.wp = (short)-1;
                 ChickenDuLieuJson p = new ChickenDuLieuJson((JSONObject)JSON.parse(res.getString("stats_json")));
-                this.nguoiChoi.kinhNghiem = p.getInt("exp");
-                this.nguoiChoi.cap = ChickenTienIch.layCap(this.nguoiChoi.kinhNghiem);
-                this.nguoiChoi.capCaoNhatDaNhanThuong = p.containsKey("rewardedLevel")
+                int expTai = p.getInt("exp");
+                int capTai = ChickenTienIch.layCap(expTai);
+                int mocTai = p.containsKey("rewardedLevel")
                         ? Math.max(0, p.getInt("rewardedLevel"))
-                        : this.nguoiChoi.cap;
-                this.nguoiChoi.point = p.getShort("point");
+                        : capTai;
+                JSONArray jArr = p.getJSONArray("pointAdd");
+                short[] diemTai = new short[6];
+                for (int i = 0; i < 6; ++i) {
+                    diemTai[i] = Short.parseShort(
+                            jArr.get(i).toString());
+                }
+                this.nguoiChoi.napTrangThaiTiemNangTuKho(
+                        expTai, mocTai, p.getShort("point"),
+                        diemTai, res.getLong("stats_revision"));
                 this.nguoiChoi.trainingSuccess = p.getByte("trainingSuccess");
                 this.nguoiChoi.datSoTranThangLuyenTap(p.containsKey("trainingWins") ? p.getInt("trainingWins") : 0);
                 this.nguoiChoi.busyHammer = p.getByte("busyHammer");
@@ -334,11 +346,6 @@ public class ChickenNguoiDung {
                                             : ChickenQuanLyNangLuongAVG.NANG_LUONG_TOI_DA
                             );
                 this.nguoiChoi.power = p.getByte("power");
-                JSONArray jArr = p.getJSONArray("pointAdd");
-                this.nguoiChoi.pointAdd = new short[6];
-                for (int i = 0; i < 6; ++i) {
-                    this.nguoiChoi.pointAdd[i] = Short.parseShort(jArr.get(i).toString());
-                }
                 JSONArray bags = (JSONArray)JSON.parse(res.getString("inventory_json"));
                 for (int i = 0; i < bags.size(); ++i) {
                     ChickenVatPham vatPham = new ChickenVatPham((JSONObject)bags.get(i));
@@ -400,6 +407,17 @@ public class ChickenNguoiDung {
                                 new Object[]{this.nguoiChoi.ma, vatPham.chiSo}
                         );
                     }
+                }
+                int thayDoiDiem =
+                        ChickenQuanLyTiemNang.dongBoQuyenLoiTheoCapHienTai(
+                                this.nguoiChoi);
+                if (thayDoiDiem
+                        == ChickenQuanLyTiemNang.DONG_BO_THAT_BAI) {
+                    int maNguoiChoiLoi = this.nguoiChoi.ma;
+                    this.nguoiChoi = null;
+                    throw new SQLException(
+                            "Khong the dong bo diem tiem nang player="
+                            + maNguoiChoiLoi);
                 }
                 res.close();
                 ChickenQuanLyBietDoi.taiClan(this.nguoiChoi);

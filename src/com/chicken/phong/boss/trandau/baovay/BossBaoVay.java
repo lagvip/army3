@@ -16,6 +16,7 @@ import com.chicken.chien.ChickenChienBinh;
 import com.chicken.chien.ChickenDiChuyenServer;
 import com.chicken.chien.ChickenKetQuaDan;
 import com.chicken.chien.ChickenNguCanhLaySung;
+import com.chicken.chien.ChickenNapDanServer;
 import com.chicken.chien.ChickenPhatBanServer;
 import com.chicken.chien.ChickenQuanLyChien;
 import com.chicken.chien.ChickenQuanLyCongThucSung;
@@ -69,6 +70,7 @@ public final class BossBaoVay extends ChickenQuanLyChien {
     private final ChickenChienBinh[] chienBinhs = new ChickenChienBinh[SO_SLOT];
     private final CauHinhBossBaoVay.CauHinh[] cauHinhBoss =
             new CauHinhBossBaoVay.CauHinh[SO_SLOT];
+    private final CauHinhBossBaoVay.CauHinh[] danhSachBoss;
     /** ID sung server random mot lan cho tung Phien quan ban sung. */
     private final int[] idSungBoss = new int[SO_SLOT];
     /** Thời gian nạp hiện tại của từng ghế/slot; lúc vào trận đều bằng 0. */
@@ -104,6 +106,8 @@ public final class BossBaoVay extends ChickenQuanLyChien {
         });
         Arrays.fill(this.idSungBoss, -1);
         this.taoNguoiChoi(sanh);
+        this.danhSachBoss = CauHinhBossBaoVay.layTheoSoNguoi(
+                this.demNguoiChoiKhoiTao());
         this.taoBoss();
         this.khoiTaoKyNangAVG();
         this.dangKyNguoiChoiTrongTran();
@@ -122,7 +126,7 @@ public final class BossBaoVay extends ChickenQuanLyChien {
             return;
         }
         this.daBatDau = true;
-        for (CauHinhBossBaoVay.CauHinh cauHinh : CauHinhBossBaoVay.layTatCa()) {
+        for (CauHinhBossBaoVay.CauHinh cauHinh : this.danhSachBoss) {
             int slot = cauHinh.getSlot() & 0xFF;
             ChickenChienBinh boss = this.chienBinhs[slot];
             ChickenQuanLyDanSung.DuLieuSung duLieu =
@@ -143,7 +147,7 @@ public final class BossBaoVay extends ChickenQuanLyChien {
         for (ChickenChienBinh nguoiNhan : this.nguoiChoiConPhien()) {
             nguoiNhan.nguoiChoi.dichVu.guiBatDauDau(
                     this.banDo.layMaBanDo(), this.chienBinhs, this.banDo.layMaNen());
-            for (CauHinhBossBaoVay.CauHinh cauHinh : CauHinhBossBaoVay.layTatCa()) {
+            for (CauHinhBossBaoVay.CauHinh cauHinh : this.danhSachBoss) {
                 int slot = cauHinh.getSlot() & 0xFF;
                 ChickenChienBinh boss = this.chienBinhs[slot];
                 nguoiNhan.nguoiChoi.dichVu.guiTaoBossBaoVay(
@@ -165,7 +169,7 @@ public final class BossBaoVay extends ChickenQuanLyChien {
         System.out.println("[BOSS BAO VAY][BAT_DAU] P4-"
                 + (this.sanh.getMaBan() & 0xFF)
                 + " map=50 players=" + this.demNguoiChoiSong()
-                + " bosses=" + CauHinhBossBaoVay.layTatCa().length);
+                + " bosses=" + this.danhSachBoss.length);
         this.chuyenSangLuotTiepTheo(-1);
     }
 
@@ -432,7 +436,7 @@ public final class BossBaoVay extends ChickenQuanLyChien {
     }
 
     private void taoBoss() {
-        for (CauHinhBossBaoVay.CauHinh cauHinh : CauHinhBossBaoVay.layTatCa()) {
+        for (CauHinhBossBaoVay.CauHinh cauHinh : this.danhSachBoss) {
             int slot = cauHinh.getSlot() & 0xFF;
             ChickenQuanLyDanSung.DuLieuSung duLieu = cauHinh.laBossBanSung()
                     ? ChickenSungShopBoss.chonNgauNhienKhongAvg()
@@ -459,6 +463,16 @@ public final class BossBaoVay extends ChickenQuanLyChien {
             this.cauHinhBoss[slot] = cauHinh;
             this.napDan[slot] = 0;
         }
+    }
+
+    private int demNguoiChoiKhoiTao() {
+        int dem = 0;
+        for (int i = 0; i < SO_SLOT_NGUOI_CHOI; i++) {
+            if (this.chienBinhs[i] != null) {
+                dem++;
+            }
+        }
+        return dem;
     }
 
     private ChickenQuanLyDanSung.DuLieuSung layDuLieuSungBoss(
@@ -1542,40 +1556,7 @@ public final class BossBaoVay extends ChickenQuanLyChien {
     }
 
     private int layNapDanSauBanNguoiChoi(ChickenChienBinh chienBinh) {
-        if (chienBinh == null || chienBinh.nguoiChoi == null) {
-            return 100;
-        }
-        ChickenNguoiChoi nguoiChoi = chienBinh.nguoiChoi;
-        ChickenVatPham sung = nguoiChoi.itemBody != null
-                && nguoiChoi.itemBody.length > 5
-                ? nguoiChoi.itemBody[5] : null;
-        int napDanGoc = -1;
-        if (sung != null) {
-            // Giống luyện tập: nếu item có option riêng thì dùng đúng danh sách
-            // đó; chỉ dùng option template khi item không có option riêng.
-            if (sung.itemOptions != null && !sung.itemOptions.isEmpty()) {
-                napDanGoc = sung.getParamById(14);
-            } else if (sung.mau != null && sung.mau.thuocTinhs != null) {
-                for (Object doiTuong : sung.mau.thuocTinhs) {
-                    if (!(doiTuong instanceof ChickenThuocTinhVatPham)) {
-                        continue;
-                    }
-                    ChickenThuocTinhVatPham option =
-                            (ChickenThuocTinhVatPham) doiTuong;
-                    if (option.optionTemplate != null
-                            && option.optionTemplate.ma == 14
-                            && option.thamSo > 0) {
-                        napDanGoc = option.thamSo;
-                        break;
-                    }
-                }
-            }
-        }
-        if (napDanGoc <= 0) {
-            napDanGoc = 100;
-        }
-        int giamNapDan = ChickenChiSoNguoiChoi.tinhGiamNapDanTuTiemNang(nguoiChoi);
-        return Math.max(1, napDanGoc - giamNapDan);
+        return ChickenNapDanServer.layChoChienBinh(chienBinh);
     }
 
     private int layIdSung(ChickenChienBinh chienBinh) {

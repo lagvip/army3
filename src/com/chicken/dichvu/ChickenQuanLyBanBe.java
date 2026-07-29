@@ -152,7 +152,7 @@ public class ChickenQuanLyBanBe {
             ds.writeShort(ban.leg);
             ds.writeShort(ban.wing);
             ds.writeShort(ban.wp);
-            ds.writeInt(ban.kinhNghiem);
+            ds.writeInt(ban.layKinhNghiem());
             ds.writeByte(1);
             ds.writeShort(ban.clan > 0 ? (short)ban.clan : (short)0);
             return;

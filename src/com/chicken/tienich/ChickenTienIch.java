@@ -60,7 +60,16 @@ public class ChickenTienIch {
         int cap = 0;
         for (int i = 0; i < ChickenTieuDeCap.levels.size(); ++i) {
             ChickenTieuDeCap tieuDeCap = ChickenTieuDeCap.levels.get(i);
-            if (kinhNghiem <= tieuDeCap.kinhNghiem) continue;
+            if (tieuDeCap == null) {
+                break;
+            }
+            /*
+             * Client dùng exp >= mốc để nhận level (CPlayer.getStringLevel).
+             * Dùng cùng phép so sánh để hai phía không lệch đúng tại mốc EXP.
+             */
+            if (kinhNghiem < tieuDeCap.kinhNghiem) {
+                continue;
+            }
             cap = i;
         }
         return cap;
@@ -137,4 +146,3 @@ public class ChickenTienIch {
         return nhoNhat + ngauNhien.nextInt(lonNhat - nhoNhat);
     }
 }
-

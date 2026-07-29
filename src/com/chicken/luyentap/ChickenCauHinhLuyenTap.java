@@ -22,16 +22,20 @@ public final class ChickenCauHinhLuyenTap {
     public static final int TRAINING_PLAYER_MAX_HP = 1000;
     public static final int TRAINING_BOSS_BASE_HP = 1000;
     public static final int TRAINING_BOSS_HP_STEP = 50;
-    public static final int TRAINING_BOSS_DAMAGE = 100;
-    public static final int TRAINING_WIN_EXP_REWARD = 1_000_000;
-    public static final int TRAINING_WIN_GOLD_REWARD = 5_000_000;
+    public static final int TRAINING_BOSS_FALLBACK_DAMAGE = 100;
+    /*
+     * CMD 50 của client chỉ chứa signed short cho EXP. Mức mặc định phải nằm
+     * trong 0..32767 để bảng kết quả luôn hiện đúng số server đã cộng.
+     */
+    public static final int TRAINING_WIN_EXP_REWARD = 1_000;
+    public static final int TRAINING_WIN_GOLD_REWARD = 5_000;
     public static final int TRAINING_MAX_PACKET_HP = 65535;
 
     // Thời gian và chuyển trạng thái
     public static final long TRAINING_RETURN_LOBBY_DELAY_MS = 1800L;
     public static final long TRAINING_BOSS_RETREAT_DELAY_MS = 120L;
     public static final long TRAINING_BOSS_AIM_DELAY_MS = 280L;
-    public static final long TRAINING_BOSS_SHOT_DELAY_MS = 1300L;
+    public static final long TRAINING_BOSS_FALLBACK_SHOT_DELAY_MS = 1300L;
 
     // Di chuyển boss và rơi bản đồ
     public static final int TRAINING_FALL_DISTANCE = 140;
@@ -44,9 +48,7 @@ public final class ChickenCauHinhLuyenTap {
     // Điểm xoay và chiều dài nòng súng
     // Khớp công thức CPlayer của client: sourceY - 12, đầu nòng cách 40 px.
     public static final int TRAINING_PLAYER_GUN_PIVOT_Y = 12;
-    public static final int TRAINING_BOSS_GUN_PIVOT_Y = 30;
     public static final int TRAINING_PLAYER_BARREL_LENGTH = 40;
-    public static final int TRAINING_BOSS_BARREL_LENGTH = 18;
 
     // Vùng va chạm nhân vật
     public static final int TRAINING_CHARACTER_COLLISION_MIN_DISTANCE = 12;
@@ -59,12 +61,12 @@ public final class ChickenCauHinhLuyenTap {
     public static final int TRAINING_MULTI_BULLET_DELAY_POINTS = 2;
 
     // Súng và ngoại hình boss. Súng dùng ID template; các món còn lại dùng part.
-    public static final short TRAINING_BOSS_WEAPON_TEMPLATE_ID = 120;
-    public static final byte[] TRAINING_BOT_AVENGERS = new byte[]{6};
+    // Bộ IS I màu đen: tóc 6, chân 157, thân 158, nón 159, balo 160.
+    public static final byte[] TRAINING_BOT_AVENGERS = new byte[]{0};
     public static final short[] TRAINING_BOT_DISPLAY_WEAPONS = new short[]{-1};
-    public static final short[] TRAINING_BOT_HEADS = new short[]{203};
-    public static final short[] TRAINING_BOT_LEGS = new short[]{214};
-    public static final short[] TRAINING_BOT_BODIES = new short[]{213};
-    public static final short[] TRAINING_BOT_HATS = new short[]{-1};
-    public static final short[] TRAINING_BOT_WINGS = new short[]{-1};
+    public static final short[] TRAINING_BOT_HEADS = new short[]{6};
+    public static final short[] TRAINING_BOT_LEGS = new short[]{157};
+    public static final short[] TRAINING_BOT_BODIES = new short[]{158};
+    public static final short[] TRAINING_BOT_HATS = new short[]{159};
+    public static final short[] TRAINING_BOT_WINGS = new short[]{160};
 }

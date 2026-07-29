@@ -228,7 +228,7 @@ public class ChickenChoDau {
             ChickenNguoiChoi bot = new ChickenNguoiChoi(null);
             bot.ma = -9000 - o;
             bot.ten = SOLO_BOT_NAMES[i];
-            bot.kinhNghiem = 1000;
+            bot.datKinhNghiemVaCanBangTrongBoNho(1000);
             bot.clan = -1;
             bot.head = this.chuPhong != null ? this.chuPhong.head : 0;
             bot.leg = this.chuPhong != null ? this.chuPhong.leg : 10;

@@ -47,6 +47,12 @@ final class ChickenPhienLuyenTap {
     /** Quãng đường chủ động còn lại của người chơi trong lượt. */
     int trainingMoveRemaining;
     int trainingBossReloadTime;
+    /** ID súng shop được server chốt một lần khi bắt đầu phiên. */
+    int trainingBossWeaponId = -1;
+    /** Part hiển thị tương ứng đúng với ID súng đã chốt. */
+    short trainingBossWeaponPart = -1;
+    /** Damage gốc lấy từ option tấn công của chính template súng shop. */
+    int trainingBossAttack;
     int trainingPendingDamagePerBullet;
     int trainingActiveBotIndex = -1;
 
@@ -54,12 +60,18 @@ final class ChickenPhienLuyenTap {
     ScheduledFuture<?> trainingBotReturnTask;
     ScheduledFuture<?> trainingPlayerResolveTask;
     ScheduledFuture<?> trainingGravityTask;
+    /** CMD79 X3 den som duoc hen xu ly, khong bi bo mat. */
+    ScheduledFuture<?> trainingUltronX3XacNhanTask;
 
     long trainingSessionId;
+    /** Khóa idempotency server phát riêng cho phần thưởng của phiên hiện tại. */
+    String trainingRewardOperationKey;
     long trainingTurnId;
     long trainingLastShotTurnId = -1L;
     long trainingActiveShotId;
     boolean trainingActiveShotResolved = true;
+    /** Moc server som nhat chap nhan CMD 79 cho packet dan hien tai. */
+    long trainingXacNhanDanSomNhatMs;
     ChickenHeThongGio.TrangThaiGio trainingWind = ChickenHeThongGio.khongGio();
     long trainingMgBurstEndAt;
     long trainingMgBurstShotId = -1L;

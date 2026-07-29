@@ -136,7 +136,7 @@ public class ChickenQuanLyXepHang {
                     row.leg = online.leg;
                     row.wing = online.wing;
                     row.wp = online.wp;
-                    row.exp = online.kinhNghiem;
+                    row.exp = online.layKinhNghiem();
                     row.cup = online.cup;
                     row.kill = online.kill;
                     row.dead = Math.max(1, online.chet);

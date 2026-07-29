@@ -1,5 +1,7 @@
 package com.chicken.mohinh;
 
+import java.util.UUID;
+
 /**
  * Quản lý vòng đời và trạng thái dùng chung của một phiên luyện tập.
  *
@@ -14,11 +16,19 @@ final class ChickenQuanLyPhienLuyenTap {
     static long batDauPhien(ChickenPhienLuyenTap phien,
             int thoiGianNapNguoiChoi,
             int thoiGianNapBoss,
+            int idSungBoss,
+            short partSungBoss,
+            int tanCongBoss,
             int mauToiDaBoss,
             byte chiSoNguoiChoi) {
         long maPhien = ++phien.trainingSessionId;
+        phien.trainingRewardOperationKey =
+                "training-win:" + UUID.randomUUID();
         phien.trainingPlayerReloadTime = thoiGianNapNguoiChoi;
         phien.trainingBossReloadTime = thoiGianNapBoss;
+        phien.trainingBossWeaponId = idSungBoss;
+        phien.trainingBossWeaponPart = partSungBoss;
+        phien.trainingBossAttack = tanCongBoss;
         phien.trainingBossMaxHp = mauToiDaBoss;
         phien.trainingFirstTurnSent = false;
         datTrangThaiChoVongMoi(phien, chiSoNguoiChoi);
@@ -27,6 +37,7 @@ final class ChickenQuanLyPhienLuyenTap {
 
     static void ketThucPhien(ChickenPhienLuyenTap phien, byte chiSoNguoiChoi) {
         phien.trainingSessionId++;
+        phien.trainingRewardOperationKey = null;
         phien.trainingFirstTurnSent = false;
         phien.trainingBotAnimating = false;
         phien.trainingBossShield = false;
@@ -38,6 +49,9 @@ final class ChickenQuanLyPhienLuyenTap {
         phien.trainingCurrentTurn = chiSoNguoiChoi;
         phien.trainingPlayerReload = 0;
         phien.trainingBossReload = 0;
+        phien.trainingBossWeaponId = -1;
+        phien.trainingBossWeaponPart = -1;
+        phien.trainingBossAttack = 0;
         phien.trainingTurnId = 0L;
         phien.trainingLastShotTurnId = -1L;
         phien.trainingActiveShotId = 0L;

@@ -13,10 +13,13 @@ import com.chicken.mang.ChickenPhien;
 import com.chicken.mang.kenh.ChickenMayChuNetty;
 import com.chicken.phong.ChickenQuanLyPhong;
 import com.chicken.phong.boss.sanhcho.ChickenKinhTeBoss;
+import com.chicken.mohinh.ChickenKinhTeLuyenTap;
+import com.chicken.luyentap.ChickenCauHinhLuyenTap;
 import com.chicken.nhapvai.ChickenBanDoRPG;
 import com.chicken.cuahang.ChickenCuaHang;
 import com.chicken.tienich.ChickenDuLieuJson;
 import com.chicken.tienich.ChickenTienIch;
+import com.chicken.tiemnang.ChickenQuanLyTiemNang;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -61,6 +64,10 @@ public class ChickenQuanLyMayChu {
     public static int bossEntryGoldCost;
     /** Vàng server trao cho mỗi người chơi khi trận boss kết thúc với chiến thắng. */
     public static int bossWinGoldReward;
+    /** EXP thắng luyện tập; bị giới hạn theo signed short của CMD 50. */
+    public static int trainingExpReward;
+    /** Vàng thắng luyện tập do server trao nguyên tử cùng EXP. */
+    public static int trainingGoldReward;
     public static byte vBig;
     public static byte vData;
     public static byte vItem;
@@ -222,18 +229,37 @@ public class ChickenQuanLyMayChu {
                 capNhat.executeUpdate();
             }
 
-            try (PreparedStatement stmt = conn.prepareStatement("SELECT * FROM `caption_levels`");
+            ChickenTieuDeCap.levels.clear();
+            try (PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT * FROM `caption_levels` ORDER BY `id` ASC");
                  ResultSet res = stmt.executeQuery()) {
+            int maMongDoi = 0;
+            int expTruoc = -1;
             while (res.next()) {
                 int kinhNghiem = res.getInt("exp");
                 String ten = res.getString("name");
                 short icon = res.getShort("icon");
                 int ma = res.getInt("id");
+                if (ma != maMongDoi || kinhNghiem < expTruoc) {
+                    throw new SQLException(
+                            "Bang caption_levels phai lien tuc tu 0 va EXP tang dan"
+                            + ": id=" + ma + " expected=" + maMongDoi
+                            + " exp=" + kinhNghiem + " previous=" + expTruoc);
+                }
                 ChickenTieuDeCap cap = new ChickenTieuDeCap();
+                cap.ma = ma;
                 cap.kinhNghiem = kinhNghiem;
                 cap.ten = ten;
                 cap.icon = icon;
                 ChickenTieuDeCap.levels.put(ma, cap);
+                maMongDoi++;
+                expTruoc = kinhNghiem;
+            }
+            if (ChickenTieuDeCap.levels.isEmpty()
+                    || ChickenTieuDeCap.levels.size() > Byte.MAX_VALUE) {
+                throw new SQLException(
+                        "So level khong hop le: "
+                        + ChickenTieuDeCap.levels.size());
             }
             }
         }
@@ -349,6 +375,13 @@ public class ChickenQuanLyMayChu {
                 configMap, bossEntryGoldCost, "boss-entry-gold-cost"));
         bossWinGoldReward = Math.max(0, ChickenQuanLyMayChu.cfgInt(
                 configMap, bossWinGoldReward, "boss-win-gold-reward"));
+        trainingExpReward = ChickenKinhTeLuyenTap.gioiHanExpPacket(
+                ChickenQuanLyMayChu.cfgInt(
+                        configMap, trainingExpReward,
+                        "reward-training-exp"));
+        trainingGoldReward = Math.max(0, ChickenQuanLyMayChu.cfgInt(
+                configMap, trainingGoldReward,
+                "reward-training-gold"));
     }
 
     private static String cfgStr(HashMap<String, String> map, String def, String... keys) {
@@ -426,7 +459,9 @@ public class ChickenQuanLyMayChu {
         batDau = false;
         ChickenQuanLyMayChu.loadConfigFile();
         ChickenCoSoDuLieu.khoiTao(mysql_host, mysql_database, mysql_user, mysql_pass);
+        ChickenQuanLyTiemNang.khoiTaoKhoaDaMayChu();
         ChickenKinhTeBoss.khoiTao();
+        ChickenKinhTeLuyenTap.khoiTao();
         ChickenQuanLyMayChu.damBaoTaiKhoanTest();
         ChickenQuanLyMayChu.loadDataItem();
         ChickenQuanLyMayChu.setDataItem();
@@ -672,6 +707,10 @@ public class ChickenQuanLyMayChu {
         bossExpReward = 1000;
         bossEntryGoldCost = 1000;
         bossWinGoldReward = 2000;
+        trainingExpReward =
+                ChickenCauHinhLuyenTap.TRAINING_WIN_EXP_REWARD;
+        trainingGoldReward =
+                ChickenCauHinhLuyenTap.TRAINING_WIN_GOLD_REWARD;
         maxElementFight = 8;
         maxPlayers = 8;
         nPlayersInitRoom = 2;
