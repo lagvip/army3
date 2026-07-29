@@ -30,11 +30,11 @@ public final class ChickenQuanLyTiemNang {
     private static final short MAU_MAC_DINH = 1000;
     private static final byte[] MUC_TANG = {10, 1, 1, 1, 1, 1};
     /*
-     * May mắn và Đồng đội chưa có công thức chiến đấu authoritative. Khóa
-     * phân bổ hai ô này để người chơi không mất điểm vào chỉ số vô hiệu.
+     * May mắn chưa có công thức authoritative nên vẫn khóa. Đồng đội đã
+     * được server chốt lúc tạo trận và chỉ buff Máu/Tấn công/Giáp.
      */
     private static final boolean[] CHI_SO_DANG_HOAT_DONG = {
-        true, true, true, false, false, true
+        true, true, true, false, true, true
     };
     private static final int MA_VAT_PHAM_TAY_DIEM = 256;
 

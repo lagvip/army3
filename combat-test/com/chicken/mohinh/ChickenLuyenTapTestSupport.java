@@ -29,6 +29,13 @@ public final class ChickenLuyenTapTestSupport {
     }
 
     public static void tuKiemTra() throws Exception {
+        bang(-1, (int) com.chicken.luyentap.ChickenCauHinhLuyenTap
+                        .TRAINING_BOT_HEADS[0],
+                "bot luyen tap gui toc lam client bo qua non");
+        bang(159, (int) com.chicken.luyentap.ChickenCauHinhLuyenTap
+                        .TRAINING_BOT_HATS[0],
+                "bot luyen tap khong dung non IS I mau den");
+
         ChickenMauVatPham mauSungCu =
                 ChickenQuanLyMayChu.itemTemplates.get(110);
         ChickenMauThuocTinhVatPham tanCongCu =

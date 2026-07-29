@@ -61,10 +61,11 @@ public final class ChickenCauHinhLuyenTap {
     public static final int TRAINING_MULTI_BULLET_DELAY_POINTS = 2;
 
     // Súng và ngoại hình boss. Súng dùng ID template; các món còn lại dùng part.
-    // Bộ IS I màu đen: tóc 6, chân 157, thân 158, nón 159, balo 160.
+    // Bo IS I mau den: de head=-1 de client ve du part non 159
+    // (Small1323/1324). Neu gui ca toc, client cu se bo qua lop non.
     public static final byte[] TRAINING_BOT_AVENGERS = new byte[]{0};
     public static final short[] TRAINING_BOT_DISPLAY_WEAPONS = new short[]{-1};
-    public static final short[] TRAINING_BOT_HEADS = new short[]{6};
+    public static final short[] TRAINING_BOT_HEADS = new short[]{-1};
     public static final short[] TRAINING_BOT_LEGS = new short[]{157};
     public static final short[] TRAINING_BOT_BODIES = new short[]{158};
     public static final short[] TRAINING_BOT_HATS = new short[]{159};

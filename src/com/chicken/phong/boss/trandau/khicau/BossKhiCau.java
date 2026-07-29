@@ -435,6 +435,8 @@ public final class BossKhiCau extends ChickenQuanLyChien {
                     this.banDo.laySinhX(ghe), this.banDo.laySinhY(ghe));
             this.chienBinhs[ghe] = chienBinh;
         }
+        com.chicken.chiso.ChickenHieuUngDongDoi.apDungChoNhomDongMinh(
+                this.chienBinhs);
     }
 
     private void taoBoss() {

@@ -1,6 +1,7 @@
 package com.chicken.chien;
 
 import com.chicken.chiso.ChickenKichThuocNhanVat;
+import com.chicken.chiso.ChickenHieuUngDongDoi;
 import com.chicken.avg.ChickenKyNangDacBietHawk;
 import com.chicken.avg.ChickenKyNangDacBietThor;
 import com.chicken.avg.ChickenKyNangDacBietLoki;
@@ -109,6 +110,7 @@ public class ChickenQuanLyChien {
             short y = this.map.laySinhY(i);
             this.chienBinhs[i] = new ChickenChienBinh(nguoiChoi, (byte)i, x, y);
         }
+        ChickenHieuUngDongDoi.apDungChoPvpTheoPhe(this.chienBinhs);
         this.kyNangHawk = new ChickenKyNangDacBietHawk(this.chienBinhs, this.map,
                 new ChickenKyNangDacBietHawk.DieuKhienTranDau() {
                     @Override
@@ -1652,17 +1654,21 @@ public class ChickenQuanLyChien {
     }
 
     private void kiemTraThang() throws IOException {
-        int alive = 0;
-        byte pheThang = 0;
+        boolean pheChanConSong = false;
+        boolean pheLeConSong = false;
         for (ChickenChienBinh chienBinh : this.chienBinhs) {
             if (chienBinh != null && !chienBinh.chet) {
-                alive++;
-                pheThang = (byte)(chienBinh.chiSo % 2);
+                if ((chienBinh.chiSo & 1) == 0) {
+                    pheChanConSong = true;
+                } else {
+                    pheLeConSong = true;
+                }
             }
         }
-        if (alive > 1) {
+        if (pheChanConSong && pheLeConSong) {
             return;
         }
+        byte pheThang = (byte) (pheLeConSong ? 1 : 0);
         this.daKetThuc = true;
         this.dungBot();
         for (ChickenChienBinh chienBinh : this.chienBinhs) {

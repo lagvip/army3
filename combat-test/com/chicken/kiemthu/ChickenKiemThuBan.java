@@ -48,6 +48,7 @@ import com.chicken.nhapvai.ChickenKhu;
 import com.chicken.phong.boss.sanhcho.SanhChoBoss;
 import com.chicken.phong.boss.sanhcho.ThanhVienBoss;
 import com.chicken.phong.boss.sanhcho.ChickenKinhTeBossTestSupport;
+import com.chicken.phong.ChickenChoDau;
 import com.chicken.phong.boss.trandau.ChickenKetQuaTranBoss;
 import com.chicken.phong.boss.trandau.ChickenLuatVaChamPhongBoss;
 import com.chicken.phong.boss.trandau.ChickenSungShopBoss;
@@ -83,6 +84,7 @@ import com.chicken.vatpham.ChickenVatPham;
 import com.chicken.tienich.ChickenTienIch;
 import com.chicken.tiemnang.ChickenQuanLyTiemNang;
 import com.chicken.chiso.ChickenChiSoNguoiChoi;
+import com.chicken.chiso.ChickenHieuUngDongDoi;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
@@ -119,6 +121,10 @@ public final class ChickenKiemThuBan {
                 ChickenKiemThuBan::kiemTraBaoMatNapDan);
         chay("tiem nang khoa packet, rollback DB va tay diem nguyen tu",
                 ChickenKiemThuBan::kiemTraBaoMatTiemNang);
+        chay("Dong doi chi buff Mau Tan cong Giap khi co nguoi choi khac",
+                ChickenKiemThuBan::kiemTraChiSoDongDoi);
+        chay("PvP ket thuc khi phe doi phuong khong con nguoi song",
+                ChickenKiemThuBan::kiemTraPvPThangTheoPhe);
         chay("CMD79 khong tua nhanh Ultron x3 PvP",
                 ChickenKiemThuBan::kiemTraCmd79UltronKhongNapNhanh);
         chay("luyen tap khong tin toa do, dan va luot tu client",
@@ -2016,12 +2022,22 @@ public final class ChickenKiemThuBan {
 
             ChickenQuanLyTiemNang.xuLyNangCap(
                     nguoiChoi,
-                    new ChickenTinNhan((byte) -46, new byte[]{1, 2}));
+                    new ChickenTinNhan((byte) -46, new byte[]{1, 4}));
             bang(4, nguoiChoi.point,
+                    "cong Dong doi khong tru dung mot diem");
+            bang(1, nguoiChoi.pointAdd[4],
+                    "cong Dong doi sai gia tri");
+            bang(1, soLanLuuPhanBo[0],
+                    "cong Dong doi khong luu dung mot lan");
+
+            ChickenQuanLyTiemNang.xuLyNangCap(
+                    nguoiChoi,
+                    new ChickenTinNhan((byte) -46, new byte[]{1, 2}));
+            bang(3, nguoiChoi.point,
                     "cong Tan cong khong tru dung mot diem");
             bang(1, nguoiChoi.pointAdd[2],
                     "cong Tan cong sai gia tri");
-            bang(1, soLanLuuPhanBo[0],
+            bang(2, soLanLuuPhanBo[0],
                     "cong diem khong luu dung mot lan");
 
             ChickenQuanLyTiemNang.xuLyNangCap(
@@ -2187,6 +2203,261 @@ public final class ChickenKiemThuBan {
             tong += Math.max(0, nguoiChoi.pointAdd[i]);
         }
         return tong;
+    }
+
+    private static void kiemTraChiSoDongDoi() {
+        ChickenNguoiChoi chuSoHuu =
+                new ChickenNguoiChoi(new DichVuBatPacket());
+        chuSoHuu.ma = 94_001;
+        chuSoHuu.ten = "DongDoi950";
+        chuSoHuu.pointAdd =
+                new short[]{1000, 100, 200, 11, 950, 12};
+
+        ChickenNguoiChoi nguoiChoiKhac =
+                new ChickenNguoiChoi(new DichVuBatPacket());
+        nguoiChoiKhac.ma = 94_002;
+        nguoiChoiKhac.ten = "DongDoi0";
+        nguoiChoiKhac.pointAdd =
+                new short[]{1000, 30, 50, 7, 0, 9};
+
+        ChickenChienBinh coDiem = new ChickenChienBinh(
+                chuSoHuu, (byte) 0, (short) 100, (short) 100);
+        ChickenChienBinh bot = new ChickenChienBinh(
+                (byte) 8, (short) 200, (short) 100,
+                "Boss", (short) 1, (byte) 0);
+
+        int mauGoc = coDiem.mauToiDa;
+        int tanCongGoc = coDiem.tanCong;
+        int giapGoc = coDiem.giap;
+        int mayManGoc = coDiem.mayMan;
+        int tocDoGoc = coDiem.tocDo;
+        int theLucGoc = coDiem.theLucDiChuyenToiDa;
+
+        bang(0, ChickenHieuUngDongDoi.apDungChoNhomDongMinh(
+                        new ChickenChienBinh[]{coDiem, bot}),
+                "boss/bot bi tinh nham la dong doi that");
+        bang(mauGoc, coDiem.mauToiDa,
+                "di mot minh van duoc buff Mau");
+        bang(tanCongGoc, coDiem.tanCong,
+                "di mot minh van duoc buff Tan cong");
+        bang(giapGoc, coDiem.giap,
+                "di mot minh van duoc buff Giap");
+
+        ChickenChienBinh trungNguoiChoi = new ChickenChienBinh(
+                chuSoHuu, (byte) 1, (short) 120, (short) 100);
+        bang(0, ChickenHieuUngDongDoi.apDungChoNhomDongMinh(
+                        new ChickenChienBinh[]{coDiem, trungNguoiChoi}),
+                "mot nguoi bi lap slot da kich hoat Dong doi");
+
+        ChickenChienBinh khongDiem = new ChickenChienBinh(
+                nguoiChoiKhac, (byte) 1, (short) 140, (short) 100);
+        bang(2, ChickenHieuUngDongDoi.apDungChoNhomDongMinh(
+                        new ChickenChienBinh[]{coDiem, khongDiem, bot}),
+                "hai nguoi choi that khong kich hoat Dong doi");
+
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        mauGoc, 950),
+                coDiem.mauToiDa,
+                "950 diem Dong doi buff sai Mau");
+        bang(coDiem.mauToiDa, coDiem.hp,
+                "buff Dong doi luc tao tran khong cho day HP");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        tanCongGoc, 950),
+                coDiem.tanCong,
+                "950 diem Dong doi buff sai Tan cong");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        giapGoc, 950),
+                coDiem.giap,
+                "950 diem Dong doi buff sai Giap");
+        bang(mayManGoc, coDiem.mayMan,
+                "Dong doi cong nham May man");
+        bang(tocDoGoc, coDiem.tocDo,
+                "Dong doi cong nham Toc do");
+        bang(theLucGoc, coDiem.theLucDiChuyenToiDa,
+                "Dong doi cong nham the luc di chuyen");
+
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        1000, 950),
+                khongDiem.mauToiDa,
+                "dong doi khong nhan muc diem cao nhat cua nhom");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        50, 950),
+                khongDiem.tanCong,
+                "dong doi khong nhan buff Tan cong cao nhat cua nhom");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        30, 950),
+                khongDiem.giap,
+                "dong doi khong nhan buff Giap cao nhat cua nhom");
+
+        int mauSauLanDau = coDiem.mauToiDa;
+        int tanCongSauLanDau = coDiem.tanCong;
+        int giapSauLanDau = coDiem.giap;
+        int mauDongDoiSauLanDau = khongDiem.mauToiDa;
+        int tanCongDongDoiSauLanDau = khongDiem.tanCong;
+        int giapDongDoiSauLanDau = khongDiem.giap;
+        coDiem.chet = true;
+        coDiem.daRoiTran = true;
+        bang(0, ChickenHieuUngDongDoi.apDungChoNhomDongMinh(
+                        new ChickenChienBinh[]{coDiem, khongDiem}),
+                "ap dung lai Dong doi van bao da xu ly");
+        bang(mauSauLanDau, coDiem.mauToiDa,
+                "packet/khoi tao lap da nhan doi buff Mau");
+        bang(tanCongSauLanDau, coDiem.tanCong,
+                "packet/khoi tao lap da nhan doi buff Tan cong");
+        bang(giapSauLanDau, coDiem.giap,
+                "packet/khoi tao lap da nhan doi buff Giap");
+        bang(mauDongDoiSauLanDau, khongDiem.mauToiDa,
+                "nguoi diem cao nhat roi tran lam thu hoi buff Mau");
+        bang(tanCongDongDoiSauLanDau, khongDiem.tanCong,
+                "nguoi diem cao nhat roi tran lam thu hoi buff Tan cong");
+        bang(giapDongDoiSauLanDau, khongDiem.giap,
+                "nguoi diem cao nhat roi tran lam thu hoi buff Giap");
+
+        ChickenNguoiChoi pvpChuSoHuu =
+                new ChickenNguoiChoi(new DichVuBatPacket());
+        pvpChuSoHuu.ma = 94_011;
+        pvpChuSoHuu.ten = "PvpPheChan0";
+        pvpChuSoHuu.pointAdd =
+                new short[]{1000, 100, 200, 0, 950, 0};
+        ChickenNguoiChoi pvpDoiThu =
+                new ChickenNguoiChoi(new DichVuBatPacket());
+        pvpDoiThu.ma = 94_012;
+        pvpDoiThu.ten = "PvpPheLe1";
+        pvpDoiThu.pointAdd =
+                new short[]{1000, 30, 50, 0, 0, 0};
+        ChickenNguoiChoi pvpDongDoi =
+                new ChickenNguoiChoi(new DichVuBatPacket());
+        pvpDongDoi.ma = 94_013;
+        pvpDongDoi.ten = "PvpPheChan2";
+        pvpDongDoi.pointAdd =
+                new short[]{1000, 40, 60, 0, 0, 0};
+        ChickenNguoiChoi pvpDongDoiDoiThu =
+                new ChickenNguoiChoi(new DichVuBatPacket());
+        pvpDongDoiDoiThu.ma = 94_014;
+        pvpDongDoiDoiThu.ten = "PvpPheLe3";
+        pvpDongDoiDoiThu.pointAdd =
+                new short[]{1000, 45, 70, 0, 400, 0};
+
+        ChickenChienBinh pvpSlot0 = new ChickenChienBinh(
+                pvpChuSoHuu, (byte) 0, (short) 100, (short) 100);
+        ChickenChienBinh pvpSlot1 = new ChickenChienBinh(
+                pvpDoiThu, (byte) 1, (short) 120, (short) 100);
+        int pvpMauGoc = pvpSlot0.mauToiDa;
+        int pvpTanCongGoc = pvpSlot0.tanCong;
+        int pvpGiapGoc = pvpSlot0.giap;
+
+        bang(0, ChickenHieuUngDongDoi.apDungChoPvpTheoPhe(
+                        new ChickenChienBinh[]{pvpSlot0, pvpSlot1}),
+                "doi thu khac phe da kich hoat Dong doi PvP");
+        bang(pvpMauGoc, pvpSlot0.mauToiDa,
+                "PvP chi co doi thu van tang Mau");
+        bang(pvpTanCongGoc, pvpSlot0.tanCong,
+                "PvP chi co doi thu van tang Tan cong");
+        bang(pvpGiapGoc, pvpSlot0.giap,
+                "PvP chi co doi thu van tang Giap");
+
+        ChickenChienBinh pvpSlot2 = new ChickenChienBinh(
+                pvpDongDoi, (byte) 2, (short) 140, (short) 100);
+        ChickenChienBinh pvpSlot3 = new ChickenChienBinh(
+                pvpDongDoiDoiThu, (byte) 3, (short) 160, (short) 100);
+        bang(4, ChickenHieuUngDongDoi.apDungChoPvpTheoPhe(
+                        new ChickenChienBinh[]{
+                            pvpSlot0, pvpSlot1, pvpSlot2, pvpSlot3
+                        }),
+                "hai phe PvP khong duoc chot buff Dong doi rieng");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        pvpMauGoc, 950),
+                pvpSlot0.mauToiDa,
+                "PvP cung phe buff sai Mau");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        pvpTanCongGoc, 950),
+                pvpSlot0.tanCong,
+                "PvP cung phe buff sai Tan cong");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        pvpGiapGoc, 950),
+                pvpSlot0.giap,
+                "PvP cung phe buff sai Giap");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        1000, 950),
+                pvpSlot2.mauToiDa,
+                "dong doi PvP khong nhan muc cao nhat cua phe chan");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        60, 950),
+                pvpSlot2.tanCong,
+                "dong doi PvP buff sai Tan cong cua phe chan");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        40, 950),
+                pvpSlot2.giap,
+                "dong doi PvP buff sai Giap cua phe chan");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        1000, 400),
+                pvpSlot1.mauToiDa,
+                "phe le PvP bi dung nham muc diem phe chan");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        50, 400),
+                pvpSlot1.tanCong,
+                "phe le PvP buff sai Tan cong rieng cua phe");
+        bang(ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        30, 400),
+                pvpSlot1.giap,
+                "phe le PvP buff sai Giap rieng cua phe");
+
+        bang(Integer.MAX_VALUE,
+                ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        Integer.MAX_VALUE, Integer.MAX_VALUE),
+                "cong thuc Dong doi bi tran so");
+    }
+
+    private static void kiemTraPvPThangTheoPhe() throws Exception {
+        DichVuBatPacket[] dichVus = new DichVuBatPacket[4];
+        ChickenNguoiChoi[] nguoiChois = new ChickenNguoiChoi[4];
+        for (int slot = 0; slot < nguoiChois.length; slot++) {
+            dichVus[slot] = new DichVuBatPacket();
+            nguoiChois[slot] = new ChickenNguoiChoi(dichVus[slot]);
+            nguoiChois[slot].ma = 94_100 + slot;
+            nguoiChois[slot].ten = "PvpTeam" + slot;
+        }
+
+        ChickenChoDau choDau = new ChickenChoDau(
+                null, (byte) 0, (byte) 4, (byte) 0);
+        ChickenQuanLyChien tran = new ChickenQuanLyChien(
+                choDau, nguoiChois, (byte) 0);
+        try {
+            Field danhSach = ChickenQuanLyChien.class.getDeclaredField(
+                    "chienBinhs");
+            danhSach.setAccessible(true);
+            ChickenChienBinh[] chienBinhs =
+                    (ChickenChienBinh[]) danhSach.get(tran);
+            Method kiemTraThang = ChickenQuanLyChien.class.getDeclaredMethod(
+                    "kiemTraThang");
+            kiemTraThang.setAccessible(true);
+            Field daKetThuc = ChickenQuanLyChien.class.getDeclaredField(
+                    "daKetThuc");
+            daKetThuc.setAccessible(true);
+
+            chienBinhs[1].chet = true;
+            chienBinhs[1].hp = 0;
+            kiemTraThang.invoke(tran);
+            dung(!daKetThuc.getBoolean(tran),
+                    "PvP ket thuc khi phe le van con slot 3 song");
+
+            chienBinhs[3].chet = true;
+            chienBinhs[3].hp = 0;
+            kiemTraThang.invoke(tran);
+            dung(daKetThuc.getBoolean(tran),
+                    "PvP khong ket thuc khi nguoi cuoi phe le da chet");
+            for (int slot = 0; slot < dichVus.length; slot++) {
+                ChickenTinNhan ketQua = dichVus[slot].layTinCuoi(50);
+                khacNull(ketQua,
+                        "PvP khong gui ket qua cho slot " + slot);
+                DataInputStream doc = new ChickenTinNhan(
+                        (byte) 50, ketQua.layDuLieu()).boDoc();
+                bang(0, doc.readByte(),
+                        "PvP bao sai phe chan thang cho slot " + slot);
+            }
+        } finally {
+            tran.dungBot();
+        }
     }
 
     private static ChickenNguoiChoi taoNguoiChoiNapDan(
@@ -7337,6 +7608,11 @@ public final class ChickenKiemThuBan {
         public synchronized void guiThongTin() {
             this.soLanGuiThongTin++;
             // Mock không có ChickenPhien nên không thể dùng implementation production.
+        }
+
+        @Override
+        public void capNhatKDVaKDA() {
+            // Mock khong gan nguoc nguoiChoi vao dich vu.
         }
 
         private synchronized int demGuiThongTin() {

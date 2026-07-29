@@ -3,6 +3,7 @@ package com.chicken.chien;
 import com.chicken.mohinh.ChickenNguoiChoi;
 import com.chicken.avg.ChickenThanhDiChuyenAVG;
 import com.chicken.avg.ChickenCoCheBayAVG;
+import com.chicken.chiso.ChickenHieuUngDongDoi;
 
 public class ChickenChienBinh {
     public final ChickenNguoiChoi nguoiChoi;
@@ -31,6 +32,8 @@ public class ChickenChienBinh {
     public int giap;
     public int mayMan;
     public int tocDo;
+    /** Chan viec phat packet/khoi tao lap lam nhan buff Dong doi nhieu lan. */
+    private boolean daApDungThuongDongDoi;
     /** Thể lực di chuyển tối đa do server chốt từ option 26 khi vào trận. */
     public int theLucDiChuyenToiDa;
     /** Quãng đường chủ động còn lại trong lượt hiện tại. */
@@ -173,6 +176,37 @@ public class ChickenChienBinh {
     /** Phân biệt người chơi thật với bot luyện tập và boss do server tạo. */
     public boolean laNguoiChoiThat() {
         return !this.bot && this.nguoiChoi != null;
+    }
+
+    /**
+     * Chot buff Dong doi tren snapshot chi so chien dau.
+     *
+     * <p>{@code diemDongDoi} la muc cao nhat cua phe da duoc server chot
+     * luc tao tran, khong nhat thiet la diem rieng cua chien binh nay.
+     *
+     * <p>Chi Mau, Tan cong va Giap thay doi. HP hien tai duoc cong dung phan
+     * Mau toi da tang them, nen goi sau khi da mat mau cung khong hoi day mau.
+     */
+    public boolean apDungThuongDongDoi(int diemDongDoi) {
+        if (this.daApDungThuongDongDoi || !this.laNguoiChoiThat()) {
+            return false;
+        }
+        this.daApDungThuongDongDoi = true;
+
+        int mauCu = Math.max(1, this.mauToiDa);
+        int mauMoi = Math.max(1,
+                ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        mauCu, diemDongDoi));
+        int mauCongThem = Math.max(0, mauMoi - mauCu);
+        this.mauToiDa = mauMoi;
+        this.hp = (int) Math.min(
+                (long) this.mauToiDa,
+                Math.max(0L, (long) this.hp + mauCongThem));
+        this.tanCong = ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                this.tanCong, diemDongDoi);
+        this.giap = ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                this.giap, diemDongDoi);
+        return true;
     }
 
     /**

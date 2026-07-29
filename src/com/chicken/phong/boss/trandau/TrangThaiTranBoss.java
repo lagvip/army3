@@ -2,6 +2,7 @@ package com.chicken.phong.boss.trandau;
 
 import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.chien.ChickenChienBinh;
+import com.chicken.chiso.ChickenHieuUngDongDoi;
 import com.chicken.phong.boss.sanhcho.SanhChoBoss;
 import com.chicken.phong.boss.sanhcho.ThanhVienBoss;
 
@@ -37,6 +38,7 @@ public final class TrangThaiTranBoss {
                     banDo.laySinhY(ghe)
             );
         }
+        ChickenHieuUngDongDoi.apDungChoNhomDongMinh(chienBinhs);
         return new TrangThaiTranBoss(
                 banDo.layMaBanDo(),
                 banDo.layMaNen(),
