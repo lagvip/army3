@@ -1,6 +1,8 @@
 package com.chicken.mohinh;
 
 import com.chicken.bando.ChickenQuanLyBanDo;
+import com.chicken.chien.ChickenChienBinh;
+import com.chicken.chien.ChickenMayMan;
 import com.chicken.gio.ChickenHeThongGio;
 import java.util.ArrayList;
 import java.util.concurrent.ScheduledFuture;
@@ -34,6 +36,9 @@ final class ChickenPhienLuyenTap {
     boolean trainingWaitingShotEnd;
     int trainingPendingSelfHitCount;
     int trainingPendingSelfDamage;
+    /** Lần quay May mắn đã chốt trước packet đạn của phát hiện tại. */
+    transient ChickenChienBinh[] trainingPendingMayManTargets;
+    transient ChickenMayMan.PhienTanCong trainingPendingMayMan;
     boolean trainingFirstTurnSent;
     boolean trainingBotAnimating;
     boolean trainingBossShield;
@@ -43,6 +48,9 @@ final class ChickenPhienLuyenTap {
     byte trainingCurrentTurn;
     int trainingPlayerReload;
     int trainingBossReload;
+    long trainingPlayerReloadOrder;
+    long trainingBossReloadOrder;
+    long trainingReloadOrderCounter;
     int trainingPlayerReloadTime;
     /** Quãng đường chủ động còn lại của người chơi trong lượt. */
     int trainingMoveRemaining;

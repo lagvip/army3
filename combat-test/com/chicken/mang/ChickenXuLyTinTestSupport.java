@@ -1,10 +1,12 @@
 package com.chicken.mang;
 
+import com.chicken.chien.ChickenQuanLyChien;
 import com.chicken.mohinh.ChickenNguoiChoi;
 import com.chicken.mohinh.ChickenNguoiDung;
 import com.chicken.phong.boss.sanhcho.QuanLySanhChoBoss;
 import com.chicken.phong.boss.sanhcho.SanhChoBoss;
 import com.chicken.phong.boss.sanhcho.VaoSanhChoBoss;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +30,31 @@ public final class ChickenXuLyTinTestSupport {
                 "chan nham lenh di chuyen");
         dung(!ChickenXuLyTin.laLenhChuyenScenePhong(22),
                 "chan nham lenh ban");
+        dung(ChickenXuLyTin.laLenhBoLuot(49, 0),
+                "CMD49 rong cua nut native khong duoc nhan la bo luot");
+        dung(!ChickenXuLyTin.laLenhBoLuot(49, 1),
+                "CMD49 menu mot byte bi nhan nham la bo luot");
+        dung(!ChickenXuLyTin.laLenhBoLuot(49, 2),
+                "CMD49 menu hai byte bi nhan nham la bo luot");
+        dung(!ChickenXuLyTin.laLenhBoLuot(49, 3),
+                "CMD49 malformed bi nhan nham la bo luot");
+        dung(!ChickenXuLyTin.laLenhBoLuot(-47, 0),
+                "CMD-47 rong bi nhan nham la bo luot");
+        int soToHopBoLuotDaQuet = 0;
+        for (int cmd = Byte.MIN_VALUE; cmd <= Byte.MAX_VALUE; cmd++) {
+            for (int soBytePayload = 0; soBytePayload <= 255;
+                    soBytePayload++) {
+                boolean mongDoi = cmd == 49 && soBytePayload == 0;
+                dung(ChickenXuLyTin.laLenhBoLuot(cmd, soBytePayload)
+                                == mongDoi,
+                        "phan loai sai lenh bo luot cmd=" + cmd
+                                + " payload=" + soBytePayload);
+                soToHopBoLuotDaQuet++;
+            }
+        }
+        dung(soToHopBoLuotDaQuet == 65_536,
+                "chua quet du bang CMD/payload bo luot");
+        kiemTraCmd49DiQuaRouterPvp();
 
         QuanLySanhChoBoss.khoiTao();
         PhienKhongDuocNgat phien =
@@ -99,6 +126,48 @@ public final class ChickenXuLyTinTestSupport {
                     "lam hong handshake -67 cua luyen tap");
         } finally {
             QuanLySanhChoBoss.khoiTao();
+        }
+    }
+
+    private static void kiemTraCmd49DiQuaRouterPvp() throws Exception {
+        PhienKhongDuocNgat phien = new PhienKhongDuocNgat(97_049);
+        DichVuBatPacket dichVu = new DichVuBatPacket(phien);
+        ChickenNguoiDung user = new ChickenNguoiDung(phien, dichVu);
+        ChickenNguoiChoi nguoiChoi = new ChickenNguoiChoi(dichVu);
+        nguoiChoi.ma = 97_049;
+        nguoiChoi.ten = "SkipRouterP0";
+        nguoiChoi.wp = 57;
+        dichVu.datNguoiChoi(nguoiChoi);
+        user.nguoiChoi = nguoiChoi;
+        phien.user = user;
+
+        ChickenNguoiChoi doiThu = new ChickenNguoiChoi(dichVu);
+        doiThu.ma = 97_050;
+        doiThu.ten = "SkipRouterP1";
+        doiThu.wp = 57;
+        ChickenQuanLyChien tran = new ChickenQuanLyChien(
+                null, new ChickenNguoiChoi[]{nguoiChoi, doiThu}, (byte) 0);
+        try {
+            Field luot = ChickenQuanLyChien.class.getDeclaredField(
+                    "luotHienTai");
+            luot.setAccessible(true);
+            Field napDan = ChickenQuanLyChien.class.getDeclaredField(
+                    "napDan");
+            napDan.setAccessible(true);
+            luot.setByte(tran, (byte) 0);
+
+            new ChickenXuLyTin(phien).khiCoTin(
+                    new ChickenTinNhan((byte) 49, new byte[0]));
+            dung(luot.getByte(tran) == 1,
+                    "CMD49 rong khong di qua router toi tran PvP");
+            dung(((int[]) napDan.get(tran))[0] == 250,
+                    "CMD49 qua router khong gan nap dan 250");
+            dung(!phien.daBiNgat,
+                    "CMD49 hop le lam ngat ket noi");
+        } finally {
+            tran.dungBot();
+            tran.khiNguoiChoiRoi(nguoiChoi);
+            tran.khiNguoiChoiRoi(doiThu);
         }
     }
 

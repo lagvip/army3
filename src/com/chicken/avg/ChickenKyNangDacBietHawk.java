@@ -2,6 +2,7 @@ package com.chicken.avg;
 
 import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.chien.ChickenChienBinh;
+import com.chicken.chien.ChickenMayMan;
 import com.chicken.mang.ChickenTinNhan;
 import java.io.IOException;
 import java.util.concurrent.Executors;
@@ -189,6 +190,8 @@ public final class ChickenKyNangDacBietHawk {
         hawk.hawkDaDungKyNang = true;
         hawk.hawkDaGuiChonMucTieu = false;
         final long skillId = ++this.maKyNang;
+        final ChickenMayMan.PhienTanCong phienMayMan =
+                ChickenMayMan.batDau(hawk, this.chienBinhs);
         short dauNongX = hawk.x;
         short dauNongY = (short)Math.max(Short.MIN_VALUE, hawk.y - 24);
         ChickenHoatAnhHawk.DuongDan bayLen =
@@ -204,7 +207,8 @@ public final class ChickenKyNangDacBietHawk {
                 () -> this.batDauLoatRoiXuong(
                         skillId,
                         hawk,
-                        mucTieu
+                        mucTieu,
+                        phienMayMan
                 ),
                 ChickenHoatAnhHawk.THOI_GIAN_BAY_LEN_MS,
                 TimeUnit.MILLISECONDS
@@ -216,7 +220,8 @@ public final class ChickenKyNangDacBietHawk {
     private synchronized void batDauLoatRoiXuong(
             long skillId,
             ChickenChienBinh hawk,
-            ChickenChienBinh mucTieu
+            ChickenChienBinh mucTieu,
+            ChickenMayMan.PhienTanCong phienMayMan
     ) {
         if (!conHieuLuc(skillId, hawk) || mucTieu == null || mucTieu.chet) {
             ketThucSkill(skillId, hawk);
@@ -242,7 +247,8 @@ public final class ChickenKyNangDacBietHawk {
                     () -> this.xuLySatThuongCongDon(
                             skillId,
                             hawk,
-                            mucTieu
+                            mucTieu,
+                            phienMayMan
                     ),
                     thoiDiemMuiCuoiCham,
                     TimeUnit.MILLISECONDS
@@ -260,7 +266,8 @@ public final class ChickenKyNangDacBietHawk {
     private synchronized void xuLySatThuongCongDon(
             long skillId,
             ChickenChienBinh hawk,
-            ChickenChienBinh mucTieu
+            ChickenChienBinh mucTieu,
+            ChickenMayMan.PhienTanCong phienMayMan
     ) {
         if (!conHieuLuc(skillId, hawk)) {
             return;
@@ -290,6 +297,7 @@ public final class ChickenKyNangDacBietHawk {
                     if (satThuong <= 0) {
                         continue;
                     }
+                    satThuong = phienMayMan.apDung(biAnhHuong, satThuong);
                     log("DAME_NO_LAN", hawk,
                             "soMui=" + SO_MUI_TEN
                             + ", target=" + biAnhHuong.ten

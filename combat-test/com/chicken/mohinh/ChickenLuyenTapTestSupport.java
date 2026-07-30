@@ -102,6 +102,107 @@ public final class ChickenLuyenTapTestSupport {
                     phien.trainingBossReloadTime,
                     "bot luyen tap khong lay dung nap dan sung shop");
             khoiTaoPhien(phien);
+            /*
+             * Map giả của test không nạp terrain. Dùng quyền bay thật của
+             * Iron Man để phép thử bỏ lượt không bị nhánh rơi vực lấn át.
+             */
+            nguoiChoi.avenger =
+                    com.chicken.avg.ChickenKyNangDacBietIronMan.AVG_IRON_MAN;
+            /*
+             * Terrain giả có height=0; bỏ bot khỏi nhánh trọng lực để test chỉ
+             * đo hàng đợi bỏ lượt, không kết thúc vòng vì bot rơi khỏi map giả.
+             */
+            phien.trainingBotDead[0] = true;
+            phien.trainingPlayerReload = 0;
+            phien.trainingBossReload = 0;
+            phien.trainingPlayerReloadOrder = 0L;
+            phien.trainingBossReloadOrder = 0L;
+            phien.trainingLokiDangChoChonMucTieu = true;
+            phien.trainingUltronDangBanX3 = true;
+            phien.trainingIronManLaserSanSang = true;
+            phien.trainingPendingSelfHitCount = 3;
+            phien.trainingPendingSelfDamage = 999;
+            long turnIdTruocBoLuot = phien.trainingTurnId;
+            nguoiChoi.boLuotLuyenTap();
+            bang(1, (int) phien.trainingCurrentTurn,
+                    "bo luot luyen tap khong chuyen sang bot");
+            bang(250, phien.trainingPlayerReload,
+                    "bo luot luyen tap khong gan nap dan nhanh nhat 250");
+            bang(turnIdTruocBoLuot + 1L, phien.trainingTurnId,
+                    "bo luot luyen tap khong tang turnId server");
+            dung(!phien.trainingLokiDangChoChonMucTieu,
+                    "bo luot khong huy chon muc tieu Loki luyen tap");
+            dung(!phien.trainingUltronDangBanX3,
+                    "bo luot khong huy X3 Ultron luyen tap");
+            dung(!phien.trainingIronManLaserSanSang,
+                    "bo luot khong huy ngam laser Iron Man luyen tap");
+            bang(0, phien.trainingPendingSelfHitCount,
+                    "bo luot con giu hit dang cho luyen tap");
+            bang(0, phien.trainingPendingSelfDamage,
+                    "bo luot con giu damage dang cho luyen tap");
+
+            int napNguoiChoiSauBoLuot = phien.trainingPlayerReload;
+            long turnIdSauBoLuot = phien.trainingTurnId;
+            for (int i = 0; i < 20; i++) {
+                nguoiChoi.boLuotLuyenTap();
+            }
+            bang(1, (int) phien.trainingCurrentTurn,
+                    "spam bo luot sai luot lam doi nguoi choi");
+            bang(napNguoiChoiSauBoLuot, phien.trainingPlayerReload,
+                    "spam bo luot sai luot lam doi dong ho nap dan");
+            bang(turnIdSauBoLuot, phien.trainingTurnId,
+                    "spam bo luot sai luot lam tang turnId");
+
+            khoiTaoPhien(phien);
+            phien.trainingWaitingShotEnd = true;
+            nguoiChoi.boLuotLuyenTap();
+            bang(0, (int) phien.trainingCurrentTurn,
+                    "dang cho animation dan van bo duoc luot");
+            phien.trainingWaitingShotEnd = false;
+            phien.trainingHawkSkillActive = true;
+            nguoiChoi.boLuotLuyenTap();
+            bang(0, (int) phien.trainingCurrentTurn,
+                    "dang thi trien skill van bo duoc luot");
+            phien.trainingHawkSkillActive = false;
+
+            khoiTaoPhien(phien);
+            phien.trainingBotAnimating = true;
+            kiemTraBoLuotLuyenTapBiChan(
+                    nguoiChoi, phien, "bot dang animation");
+
+            khoiTaoPhien(phien);
+            phien.trainingBossState =
+                    ChickenNguoiChoi.TrainingBossState.DEAD;
+            kiemTraBoLuotLuyenTapBiChan(
+                    nguoiChoi, phien, "boss da chet");
+
+            khoiTaoPhien(phien);
+            phien.trainingBossState =
+                    ChickenNguoiChoi.TrainingBossState.ROUND_END;
+            kiemTraBoLuotLuyenTapBiChan(
+                    nguoiChoi, phien, "vong da ket thuc");
+
+            khoiTaoPhien(phien);
+            phien.trainingThorSkillActive = true;
+            kiemTraBoLuotLuyenTapBiChan(
+                    nguoiChoi, phien, "Thor dang thi trien");
+            phien.trainingThorSkillActive = false;
+
+            khoiTaoPhien(phien);
+            phien.trainingLokiSkillActive = true;
+            kiemTraBoLuotLuyenTapBiChan(
+                    nguoiChoi, phien, "Loki dang thi trien");
+            phien.trainingLokiSkillActive = false;
+
+            khoiTaoPhien(phien);
+            nguoiChoi.inTraining = false;
+            kiemTraBoLuotLuyenTapBiChan(
+                    nguoiChoi, phien, "khong o luyen tap");
+            nguoiChoi.inTraining = true;
+
+            khoiTaoPhien(phien);
+            nguoiChoi.avenger = 0;
+
             long maPhienTruocLenhLap = phien.trainingSessionId;
             int soTinTruocLenhLap = dichVu.tongSoTin();
             nguoiChoi.vaoLuyenTap();
@@ -500,6 +601,25 @@ public final class ChickenLuyenTapTestSupport {
             phien.trainingBotX[i] = (short) (600 + i * 20);
             phien.trainingBotY[i] = 300;
         }
+    }
+
+    private static void kiemTraBoLuotLuyenTapBiChan(
+            ChickenNguoiChoi nguoiChoi,
+            ChickenPhienLuyenTap phien,
+            String trangThai
+    ) throws Exception {
+        phien.trainingPlayerReload = 17;
+        phien.trainingBossReload = 29;
+        long turnId = phien.trainingTurnId;
+        nguoiChoi.boLuotLuyenTap();
+        bang(0, (int) phien.trainingCurrentTurn,
+                trangThai + " van doi luot luyen tap");
+        bang(17, phien.trainingPlayerReload,
+                trangThai + " van sua nap dan nguoi choi");
+        bang(29, phien.trainingBossReload,
+                trangThai + " van sua nap dan bot");
+        bang(turnId, phien.trainingTurnId,
+                trangThai + " van tang turnId");
     }
 
     private static void kiemTraPacketBanServer(

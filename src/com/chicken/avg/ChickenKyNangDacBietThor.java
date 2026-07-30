@@ -2,6 +2,7 @@ package com.chicken.avg;
 
 import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.chien.ChickenChienBinh;
+import com.chicken.chien.ChickenMayMan;
 import com.chicken.mang.ChickenTinNhan;
 import java.io.IOException;
 import java.util.concurrent.Executors;
@@ -138,11 +139,13 @@ public final class ChickenKyNangDacBietThor {
 
         short[] cacX = taoBonViTriX(thor.x);
         short[] cacY = taoBonDiemVaChamY(this.map, cacX, thor.y);
+        ChickenMayMan.PhienTanCong phienMayMan =
+                ChickenMayMan.batDau(thor, this.chienBinhs);
         this.dieuKhien.guiTiaSet(thor, LOAI_HIEU_UNG_SET, cacX, cacY);
         log("PHAT_SET", thor,
                 "x=" + cacX[0] + "," + cacX[1] + "," + cacX[2] + "," + cacX[3]);
 
-        gaySatThuongTheoTungTia(thor, cacX, cacY);
+        gaySatThuongTheoTungTia(thor, cacX, cacY, phienMayMan);
 
         // Đồng bộ mặt nạ va chạm phía server sau mỗi lần sét đánh.
         // Nếu không cập nhật, lần dùng sau server vẫn tìm đúng điểm va chạm cũ
@@ -163,7 +166,8 @@ public final class ChickenKyNangDacBietThor {
     private void gaySatThuongTheoTungTia(
             ChickenChienBinh thor,
             short[] cacX,
-            short[] cacY
+            short[] cacY,
+            ChickenMayMan.PhienTanCong phienMayMan
     ) throws IOException {
         for (ChickenChienBinh mucTieu : this.chienBinhs) {
             if (mucTieu == null
@@ -186,6 +190,7 @@ public final class ChickenKyNangDacBietThor {
             if (tongSatThuong <= 0) {
                 continue;
             }
+            tongSatThuong = phienMayMan.apDung(mucTieu, tongSatThuong);
 
             log("NO_LAN_SET", thor,
                     "target=" + mucTieu.ten

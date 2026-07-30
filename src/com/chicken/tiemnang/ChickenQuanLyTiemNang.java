@@ -34,7 +34,7 @@ public final class ChickenQuanLyTiemNang {
      * được server chốt lúc tạo trận và chỉ buff Máu/Tấn công/Giáp.
      */
     private static final boolean[] CHI_SO_DANG_HOAT_DONG = {
-        true, true, true, false, true, true
+        true, true, true, true, true, true
     };
     private static final int MA_VAT_PHAM_TAY_DIEM = 256;
 
@@ -300,7 +300,6 @@ public final class ChickenQuanLyTiemNang {
                     + " sau=" + giaTriMoi
                     + " diemConLai=" + nguoiChoi.point);
             guiBangTiemNang(nguoiChoi);
-            nguoiChoi.dichVu.guiThongTin();
         }
     }
 
@@ -369,7 +368,6 @@ public final class ChickenQuanLyTiemNang {
                     + " itemConLai=" + soLuongConLai);
             nguoiChoi.dichVu.capNhatTuiDo(chiSoTui, soLuongConLai);
             guiBangTiemNang(nguoiChoi);
-            nguoiChoi.dichVu.guiThongTin();
             nguoiChoi.moHopThoaiOK("Tẩy điểm thành công.");
             return true;
         }

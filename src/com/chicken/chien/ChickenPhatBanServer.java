@@ -361,6 +361,18 @@ public final class ChickenPhatBanServer {
             return null;
         }
         int soDiem = Math.min(xs.length, ys.length);
+        if (soDiem <= 0) {
+            return null;
+        }
+        /*
+         * Phòng boss cho phép đạn vòng lại trúng chính người/boss bắn. Tuy
+         * nhiên đầu nòng của một số sprite boss (đặc biệt khi chĩa xuống)
+         * vẫn còn nằm trong hitbox thân. Không được coi phần đạn đang rời
+         * nòng đó là một lần tự bắn trúng; chỉ mở va chạm với người bắn sau
+         * khi viên đạn đã thực sự ra khỏi hitbox rồi quay lại.
+         */
+        boolean daRoiHitboxNguoiBan = !trungHitbox(
+                boLoc, nguoiBan, xs[0], ys[0]);
         for (int i = 1; i < soDiem; i++) {
             int x1 = xs[i - 1];
             int y1 = ys[i - 1];
@@ -374,10 +386,19 @@ public final class ChickenPhatBanServer {
                 double tiLe = (double) buoc / (double) soBuoc;
                 int danX = (int) Math.round(x1 + (x2 - x1) * tiLe);
                 int danY = (int) Math.round(y1 + (y2 - y1) * tiLe);
+                boolean dangTrongHitboxNguoiBan = trungHitbox(
+                        boLoc, nguoiBan, danX, danY);
+                if (!daRoiHitboxNguoiBan && !dangTrongHitboxNguoiBan) {
+                    daRoiHitboxNguoiBan = true;
+                }
                 VaCham vaChamNguoiBan = null;
                 for (ChickenChienBinh mucTieu : cacMucTieu) {
                     if (!laMucTieuHopLe(
                             nguoiBan, mucTieu, boLoc)) {
+                        continue;
+                    }
+                    if (mucTieu == nguoiBan
+                            && !daRoiHitboxNguoiBan) {
                         continue;
                     }
                     boolean trung = trungHitbox(
@@ -424,7 +445,7 @@ public final class ChickenPhatBanServer {
         for (ChickenChienBinh mucTieu : cacMucTieu) {
             if (laMucTieuHopLe(nguoiBan, mucTieu, boLoc)
                     && duongDanTrungMucTieu(
-                            xs, ys, mucTieu, boLoc)) {
+                            xs, ys, nguoiBan, mucTieu, boLoc)) {
                 ketQua.add(mucTieu);
             }
         }
@@ -434,10 +455,17 @@ public final class ChickenPhatBanServer {
     private static boolean duongDanTrungMucTieu(
             short[] xs,
             short[] ys,
+            ChickenChienBinh nguoiBan,
             ChickenChienBinh mucTieu,
             BoLocMucTieu boLoc
     ) {
         int soDiem = Math.min(xs.length, ys.length);
+        if (soDiem <= 0) {
+            return false;
+        }
+        boolean laNguoiBan = mucTieu == nguoiBan;
+        boolean daRoiHitboxNguoiBan = !laNguoiBan
+                || !trungHitbox(boLoc, nguoiBan, xs[0], ys[0]);
         for (int i = 1; i < soDiem; i++) {
             int x1 = xs[i - 1];
             int y1 = ys[i - 1];
@@ -448,6 +476,14 @@ public final class ChickenPhatBanServer {
                 double tiLe = (double) buoc / (double) soBuoc;
                 int danX = (int) Math.round(x1 + (x2 - x1) * tiLe);
                 int danY = (int) Math.round(y1 + (y2 - y1) * tiLe);
+                if (laNguoiBan && !daRoiHitboxNguoiBan) {
+                    if (!trungHitbox(
+                            boLoc, nguoiBan, danX, danY)) {
+                        daRoiHitboxNguoiBan = true;
+                    } else {
+                        continue;
+                    }
+                }
                 boolean trung = trungHitbox(
                         boLoc, mucTieu, danX, danY);
                 if (trung) {

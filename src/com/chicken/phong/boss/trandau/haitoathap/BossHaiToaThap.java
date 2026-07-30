@@ -15,6 +15,7 @@ import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.chien.ChickenChienBinh;
 import com.chicken.chien.ChickenDiChuyenServer;
 import com.chicken.chien.ChickenKetQuaDan;
+import com.chicken.chien.ChickenMayMan;
 import com.chicken.chien.ChickenNguCanhLaySung;
 import com.chicken.chien.ChickenNapDanServer;
 import com.chicken.chien.ChickenPhatBanServer;
@@ -33,6 +34,7 @@ import com.chicken.mohinh.ChickenNguoiChoi;
 import com.chicken.phong.boss.sanhcho.SanhChoBoss;
 import com.chicken.phong.boss.sanhcho.ThanhVienBoss;
 import com.chicken.phong.boss.trandau.ChickenKetQuaTranBoss;
+import com.chicken.chien.ChickenHangDoiNapDan;
 import com.chicken.phong.boss.trandau.ChickenHoatAnhNoCamTu;
 import com.chicken.phong.boss.trandau.ChickenLuatVaChamPhongBoss;
 import com.chicken.phong.boss.trandau.ChickenSungShopBoss;
@@ -76,6 +78,7 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
     private final int[] idSungBoss = new int[SO_SLOT];
     /** Thời gian nạp hiện tại của từng ghế/slot; lúc vào trận đều bằng 0. */
     private final int[] napDan = new int[SO_SLOT];
+    private final long[] thuTuHanhDongNapDan = new long[SO_SLOT];
     private final ScheduledExecutorService boHenGio;
     /** Mỗi lượt tạo một trạng thái gió mới giống cơ chế luyện tập. */
     private ChickenHeThongGio.TrangThaiGio gioHienTai =
@@ -92,6 +95,7 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
     private boolean daKetThuc;
     private boolean dangChoXacNhanThang;
     private long maPhienLuot;
+    private long boDemThuTuHanhDongNapDan;
     private ScheduledFuture<?> tacVuHetLuot;
 
     public BossHaiToaThap(SanhChoBoss sanh) {
@@ -263,6 +267,10 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
         } else {
             ChickenKetQuaDan ketQua = this.taoPhatBanNguoiChoi(
                     shooter, loaiDan, goc, luc, lucPhu);
+            ChickenMayMan.PhienTanCong phienMayMan =
+                    ChickenMayMan.batDau(shooter, this.chienBinhs);
+            phienMayMan.chuanBiPhongThuTruocPhat(
+                    ketQua.satThuongTheoMucTieu.keySet());
             this.phatBan(shooter, ketQua, (byte) 1);
             if (this.dongBoHulkSauPhat(shooter, ketQua)) {
                 return;
@@ -272,7 +280,9 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
                     : ketQua.satThuongTheoMucTieu.entrySet()) {
                 if (!this.daKetThuc && entry.getKey() != null
                         && !entry.getKey().chet && entry.getValue() > 0) {
-                    this.gaySatThuong(entry.getKey(), entry.getValue());
+                    this.gaySatThuong(
+                            entry.getKey(),
+                            phienMayMan.apDung(entry.getKey(), entry.getValue()));
                 }
             }
         }
@@ -307,7 +317,7 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
         ChickenKyNangDacBietIronMan.xoaTrangThaiChoBan(chienBinh);
         this.datNapDanSauHanhDong(
                 chienBinh.chiSo & 0xFF,
-                this.layNapDanSauBanNguoiChoi(chienBinh));
+                ChickenNapDanServer.TOI_THIEU);
         this.chuyenSangLuotTiepTheo(chienBinh.chiSo & 0xFF);
     }
 
@@ -862,6 +872,8 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
                             slot, phien, this.layNapDanBoss(slot)),
                     thoiGianHoatAnhMs, TimeUnit.MILLISECONDS);
         }
+        ChickenMayMan.PhienTanCong phienMayMan =
+                ChickenMayMan.batDau(boss, this.chienBinhs);
         try {
             this.phatBan(boss, ketQua, (byte) 1);
             this.phaDiaHinhNeuCan(ketQua);
@@ -869,7 +881,9 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
                     : ketQua.satThuongTheoMucTieu.entrySet()) {
                 if (!this.daKetThuc && entry.getKey() != null
                         && !entry.getKey().chet && entry.getValue() > 0) {
-                    this.gaySatThuong(entry.getKey(), entry.getValue());
+                    this.gaySatThuong(
+                            entry.getKey(),
+                            phienMayMan.apDung(entry.getKey(), entry.getValue()));
                 }
             }
         } catch (Exception loi) {
@@ -910,7 +924,7 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
                 return;
             }
             if (BossCamTu.daCanTrucX(camTu, mucTieu)) {
-                // Không gửi CMD -64 chỉ để đổi Y: client sẽ ép look=0
+                // Không gửi CMD 21 chỉ để đổi Y: client sẽ ép look=0
                 // và làm Cảm tử xoay qua lại dù không hề chạy ngang.
                 System.out.println("[BOSS HAI TOA THAP][CAM_TU_DOI_CUNG_TRUC_X] boss="
                         + camTu.ten + " target=" + mucTieu.ten
@@ -935,7 +949,10 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
                         slot, phien, BossCamTu.NAP_DAN_SAU_DI_CHUYEN);
                 return;
             }
-            int daDi = (int) Math.round(Math.hypot(buoc[0] - camTu.x, buoc[1] - camTu.y));
+            short xTruoc = camTu.x;
+            short yTruoc = camTu.y;
+            int daDi = (int) Math.round(Math.hypot(
+                    buoc[0] - xTruoc, buoc[1] - yTruoc));
             if (daDi <= 0) {
                 this.sangLuotSauBoss(slot, phien, BossCamTu.NAP_DAN_SAU_DI_CHUYEN);
                 return;
@@ -954,6 +971,15 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
                 this.phatDiChuyenBoss(camTu);
             } catch (IOException ignored) {
             }
+            long thoiGianHoatAnhDiChuyenMs =
+                    BossCamTu.tinhThoiGianHoatAnhDiChuyen(
+                            xTruoc, yTruoc, camTu.x, camTu.y);
+            System.out.println("[BOSS HAI TOA THAP][CAM_TU_DI_CHUYEN] boss="
+                    + camTu.ten
+                    + " from=" + xTruoc + "," + yTruoc
+                    + " to=" + camTu.x + "," + camTu.y
+                    + " distance=" + daDi
+                    + " animationMs=" + thoiGianHoatAnhDiChuyenMs);
             if (BossCamTu.daRoiKhoiMap(camTu, this.banDo)) {
                 this.xuLyCamTuRoiKhoiMap(camTu, slot, phien);
                 return;
@@ -961,12 +987,11 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
             if (BossCamTu.daChamNguoiChoi(camTu, mucTieu)) {
                 final int slotMucTieuSauDiChuyen = slotMucTieu;
                 // CMD 22 khong duoc chen vao khi client van dang noi suy
-                // CMD -64. MessageHandler cua client se doi isMove va co the
-                // ket vinh vien truoc khi tao vien dan neu hai packet den sat nhau.
+                // CMD 21; server cho du thoi gian de CMD 22 khong cat animation.
                 this.boHenGio.schedule(
                         () -> this.hoanTatCamTuSauDiChuyen(
                                 camTu, slot, phien, slotMucTieuSauDiChuyen),
-                        BossCamTu.TRE_MOI_BUOC_MS,
+                        thoiGianHoatAnhDiChuyenMs,
                         TimeUnit.MILLISECONDS);
                 return;
             }
@@ -975,7 +1000,7 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
             // phat them packet "di bu" lam chong animation va keo dai luot.
             this.boHenGio.schedule(() -> this.sangLuotSauBoss(
                             slot, phien, BossCamTu.NAP_DAN_SAU_DI_CHUYEN),
-                    BossCamTu.TRE_MOI_BUOC_MS, TimeUnit.MILLISECONDS);
+                    thoiGianHoatAnhDiChuyenMs, TimeUnit.MILLISECONDS);
         }
     }
 
@@ -1066,6 +1091,8 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
         int soMucTieuTrung = 0;
         long thoiGianHoatAnhNo =
                 ChickenThoiGianHoatAnhDan.HIEU_UNG_KHONG_CO_QUY_DAO_MS;
+        ChickenMayMan.PhienTanCong phienMayMan =
+                ChickenMayMan.batDau(camTu, this.chienBinhs);
         try {
             ChickenKetQuaDan hieuUngNo = ChickenHoatAnhNoCamTu.tao(
                     camTu,
@@ -1099,7 +1126,9 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
             try {
                 this.gaySatThuong(
                         nguoiTrongTamNo,
-                        satThuongTheoKhoangCach);
+                        phienMayMan.apDung(
+                                nguoiTrongTamNo,
+                                satThuongTheoKhoangCach));
                 soMucTieuTrung++;
             } catch (IOException loi) {
                 System.err.println("[BOSS HAI TOA THAP][CAM_TU_LOI_DAMAGE] boss="
@@ -1292,6 +1321,10 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
         hienThiX = loatMayChu.cacDuongX;
         hienThiY = loatMayChu.cacDuongY;
 
+        ChickenMayMan.PhienTanCong phienMayMan =
+                ChickenMayMan.batDau(shooter, this.chienBinhs);
+        phienMayMan.chuanBiPhongThuTruocPhat(
+                loatMayChu.satThuongTheoMucTieu.keySet());
         for (ChickenChienBinh nguoiNhan : this.nguoiChoiConPhien()) {
             nguoiNhan.nguoiChoi.dichVu.guiLoatLaserUltronDau(
                     shooter.chiSo,
@@ -1307,7 +1340,9 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
         for (Map.Entry<ChickenChienBinh, Integer> entry
                 : loatMayChu.satThuongTheoMucTieu.entrySet()) {
             if (!this.daKetThuc && !entry.getKey().chet) {
-                this.gaySatThuong(entry.getKey(), entry.getValue());
+                this.gaySatThuong(
+                        entry.getKey(),
+                        phienMayMan.apDung(entry.getKey(), entry.getValue()));
             }
         }
 
@@ -1477,37 +1512,11 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
      * - Khi không còn ai ở 0, trừ đồng loạt mức nhỏ nhất rồi chọn người sẵn sàng.
      */
     private int timSlotTheoNapDan(int sauSlot) {
-        int sanSang = this.timSlotCoNapDanBangKhong(sauSlot);
-        if (sanSang >= 0) {
-            return sanSang;
-        }
-
-        int nhoNhat = Integer.MAX_VALUE;
-        for (int slot = 0; slot < SO_SLOT; slot++) {
-            if (this.hopLeChoLuot(slot) && this.napDan[slot] > 0) {
-                nhoNhat = Math.min(nhoNhat, this.napDan[slot]);
-            }
-        }
-        if (nhoNhat == Integer.MAX_VALUE) {
-            return -1;
-        }
-        for (int slot = 0; slot < SO_SLOT; slot++) {
-            if (this.hopLeChoLuot(slot)) {
-                this.napDan[slot] = Math.max(0, this.napDan[slot] - nhoNhat);
-            }
-        }
-        return this.timSlotCoNapDanBangKhong(sauSlot);
-    }
-
-    private int timSlotCoNapDanBangKhong(int sauSlot) {
-        int batDau = sauSlot < 0 ? 0 : (sauSlot + 1) % SO_SLOT;
-        for (int buoc = 0; buoc < SO_SLOT; buoc++) {
-            int slot = (batDau + buoc) % SO_SLOT;
-            if (this.hopLeChoLuot(slot) && this.napDan[slot] <= 0) {
-                return slot;
-            }
-        }
-        return -1;
+        return ChickenHangDoiNapDan.timSlotTiepTheo(
+                this.napDan,
+                this.thuTuHanhDongNapDan,
+                sauSlot,
+                this::hopLeChoLuot);
     }
 
     private boolean hopLeChoLuot(int slot) {
@@ -1583,7 +1592,8 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
                     this.gioHienTai.getWindX(), this.gioHienTai.getWindY());
             nguoiNhan.nguoiChoi.dichVu.guiLuotBossBaoVayTiep(
                     hienTai.chiSo, hienTai.x, hienTai.y,
-                    this.chienBinhs, this.napDan, giay);
+                    this.chienBinhs, this.napDan,
+                    this.thuTuHanhDongNapDan, giay);
         }
         int slot = hienTai.chiSo & 0xFF;
         if (slot < SO_SLOT_NGUOI_CHOI) {
@@ -1613,6 +1623,11 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
             return;
         }
         this.napDan[slot] = Math.max(1, Math.min(65_535, giaTri));
+        this.boDemThuTuHanhDongNapDan =
+                ChickenHangDoiNapDan.ghiNhanHanhDong(
+                        this.thuTuHanhDongNapDan,
+                        slot,
+                        this.boDemThuTuHanhDongNapDan);
         ChickenChienBinh chienBinh = this.chienBinhs[slot];
         System.out.println("[BOSS HAI TOA THAP][NAP_DAN] slot=" + slot
                 + " ten=" + (chienBinh == null ? "null" : chienBinh.ten)
@@ -1744,6 +1759,14 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
                 ChickenTiaLaserIronMan.taoTrongTran(
                         shooter, this.chienBinhs, goc,
                         this.banDo.getWidth(), this.banDo.getHeight());
+        ChickenMayMan.PhienTanCong phienMayMan =
+                ChickenMayMan.batDau(shooter, this.chienBinhs);
+        int chiSoMucTieuMayMan = tia.getChiSoMucTieu();
+        if (chiSoMucTieuMayMan >= 0
+                && chiSoMucTieuMayMan < this.chienBinhs.length) {
+            phienMayMan.chuanBiPhongThuTruocPhat(
+                    this.chienBinhs[chiSoMucTieuMayMan]);
+        }
         ChickenTiaLaserIronMan.phatHienThiTrongTran(
                 shooter, this.chienBinhs, goc, tia);
         int chiSoMucTieu = tia.getChiSoMucTieu();
@@ -1753,8 +1776,10 @@ public final class BossHaiToaThap extends ChickenQuanLyChien {
                     && !mucTieu.chet && mucTieu.hp > 0) {
                 this.gaySatThuong(
                         mucTieu,
-                        ChickenTiaLaserIronMan.tinhSatThuongNhuHawk(
-                                shooter.tanCong, mucTieu.giap)
+                        phienMayMan.apDung(
+                                mucTieu,
+                                ChickenTiaLaserIronMan.tinhSatThuongNhuHawk(
+                                        shooter.tanCong, mucTieu.giap))
                 );
             }
         }

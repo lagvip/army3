@@ -1,7 +1,12 @@
 package com.chicken.kiemthu;
 
 import com.chicken.avg.ChickenKyNangDacBietHawk;
+import com.chicken.avg.ChickenKyNangDacBietIronMan;
+import com.chicken.avg.ChickenKyNangDacBietLoki;
+import com.chicken.avg.ChickenKyNangDacBietThor;
+import com.chicken.avg.ChickenKyNangDacBietUltron;
 import com.chicken.chien.ChickenChienBinh;
+import com.chicken.chien.ChickenNapDanServer;
 import com.chicken.chien.ChickenQuanLyChien;
 import com.chicken.mang.ChickenDichVuGame;
 import com.chicken.mang.ChickenTinNhan;
@@ -20,6 +25,7 @@ import java.io.DataOutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -45,6 +51,8 @@ public final class ChickenKiemThuToanGame {
 
         chay("7 boss: moi luot chi nhan mot phat ban",
                 ChickenKiemThuToanGame::kiemTraMotPhatMoiLuotTatCaBoss);
+        chay("7 boss: ma tran bo luot hop le va bi chan",
+                ChickenKiemThuToanGame::kiemTraBoLuotTatCaBoss);
         chay("7 boss: chi mo GameScr sau ACK tai anh dan",
                 ChickenKiemThuToanGame::kiemTraKhongGuiGameScrSom);
         System.out.println("GAME_TEST_OK matrices=" + soMaTranDaChay
@@ -139,6 +147,23 @@ public final class ChickenKiemThuToanGame {
                 nguoiBan.hp = nguoiBan.mauToiDa = 10_000;
                 nguoiBan.quangDuongDiChuyenConLai = 100;
 
+                long phienTruocBoLuot = layLong(tran, "maPhienLuot");
+                tran.boLuot(nguoiChoi);
+                dung(layByte(tran, "luotHienTai") != 0,
+                        "bo luot hop le khong sang boss map=" + mapId);
+                bang(ChickenNapDanServer.TOI_THIEU,
+                        layMangInt(tran, "napDan")[0],
+                        "bo luot boss khong gan nap dan 250 map=" + mapId);
+                dung(layLong(tran, "maPhienLuot") != phienTruocBoLuot,
+                        "bo luot hop le khong doi ma phien map=" + mapId);
+                /*
+                 * Vô hiệu hóa task boss vừa được xếp sau phép thử bỏ lượt rồi
+                 * đưa trận về lượt người chơi để tiếp tục ma trận phát bắn.
+                 */
+                datLong(tran, "maPhienLuot",
+                        layLong(tran, "maPhienLuot") + 1_000L);
+                datByte(tran, "luotHienTai", (byte) 0);
+
                 ChickenTinNhan packetGia = new ChickenTinNhan(
                         (byte) 22,
                         taoPacketBan(
@@ -223,6 +248,196 @@ public final class ChickenKiemThuToanGame {
         }
     }
 
+    private static void kiemTraBoLuotTatCaBoss() throws Exception {
+        int soNhanhDaKiemTra = 0;
+        for (int mapId : MAP_BOSS) {
+            ChickenNguoiChoi nguoiChoi =
+                    new ChickenNguoiChoi(new DichVuBatPacket());
+            nguoiChoi.ma = 98_000 + mapId;
+            nguoiChoi.ten = "SkipMatrix" + mapId;
+            nguoiChoi.wp = 57;
+
+            SanhChoBoss sanh = new SanhChoBoss(
+                    (byte) 4,
+                    (byte) (mapId - 50),
+                    (byte) mapId,
+                    (byte) 8,
+                    1_000
+            );
+            dung(sanh.themThanhVien(new ThanhVienBoss(
+                            nguoiChoi, (byte) 0, mapId, true)),
+                    "khong them duoc player bo luot map=" + mapId);
+
+            ChickenQuanLyChien tran = taoTranBoss(mapId, sanh);
+            khacNull(tran, "khong tao duoc boss bo luot map=" + mapId);
+            try {
+                datBoolean(tran, "daBatDau", true);
+                datByte(tran, "luotHienTai", (byte) 0);
+                datLong(tran, "maPhienLuot", 20_000L + mapId);
+                ChickenChienBinh nguoi =
+                        chupChienBinh(tran)[0];
+                khacNull(nguoi,
+                        "khong co chien binh bo luot map=" + mapId);
+                nguoi.hp = nguoi.mauToiDa = 10_000;
+                nguoi.chet = false;
+
+                ChickenNguoiChoi nguoiNgoai =
+                        new ChickenNguoiChoi(new DichVuBatPacket());
+                nguoiNgoai.ma = 99_000 + mapId;
+                nguoiNgoai.ten = "SkipOutsider" + mapId;
+                xacNhanBossKhongBoLuot(
+                        tran, null, "null map=" + mapId);
+                xacNhanBossKhongBoLuot(
+                        tran, nguoiNgoai, "ngoai tran map=" + mapId);
+                soNhanhDaKiemTra += 2;
+
+                datByte(tran, "luotHienTai", (byte) 8);
+                xacNhanBossKhongBoLuot(
+                        tran, nguoiChoi, "sai luot map=" + mapId);
+                datByte(tran, "luotHienTai", (byte) 0);
+                soNhanhDaKiemTra++;
+
+                nguoi.chet = true;
+                xacNhanBossKhongBoLuot(
+                        tran, nguoiChoi, "da chet map=" + mapId);
+                nguoi.chet = false;
+                soNhanhDaKiemTra++;
+
+                datBoolean(tran, "daKetThuc", true);
+                xacNhanBossKhongBoLuot(
+                        tran, nguoiChoi, "da ket thuc map=" + mapId);
+                datBoolean(tran, "daKetThuc", false);
+                soNhanhDaKiemTra++;
+
+                nguoi.avenger = ChickenKyNangDacBietThor.AVG_THOR;
+                nguoi.thorDaDungKyNang = true;
+                xacNhanBossKhongBoLuot(
+                        tran, nguoiChoi, "Thor dang chay map=" + mapId);
+                nguoi.thorDaDungKyNang = false;
+                soNhanhDaKiemTra++;
+
+                nguoi.avenger = ChickenKyNangDacBietLoki.AVG_LOKI;
+                nguoi.lokiSkillActive = true;
+                xacNhanBossKhongBoLuot(
+                        tran, nguoiChoi, "Loki dang chay map=" + mapId);
+                nguoi.lokiSkillActive = false;
+                soNhanhDaKiemTra++;
+
+                Field dangChoDan = fieldNeuCo(
+                        tran, "slotDangChoKetThucBan");
+                if (dangChoDan != null) {
+                    dangChoDan.setInt(tran, 0);
+                    xacNhanBossKhongBoLuot(
+                            tran, nguoiChoi,
+                            "dan dang bay map=" + mapId);
+                    dangChoDan.setInt(tran, -1);
+                    soNhanhDaKiemTra++;
+                }
+
+                chuanBiBoLuotBoss(tran, nguoi);
+                nguoi.avenger = ChickenKyNangDacBietLoki.AVG_LOKI;
+                nguoi.lokiDangChoChonMucTieu = true;
+                nguoi.lokiDaGuiMenu = true;
+                tran.boLuot(nguoiChoi);
+                xacNhanBossBoLuotHopLe(tran, nguoi, mapId, "Loki");
+                dung(!nguoi.lokiDangChoChonMucTieu
+                                && !nguoi.lokiDaGuiMenu,
+                        "bo luot khong huy menu Loki map=" + mapId);
+                soNhanhDaKiemTra++;
+
+                chuanBiBoLuotBoss(tran, nguoi);
+                nguoi.avenger =
+                        ChickenKyNangDacBietUltron.AVG_ULTRON;
+                nguoi.ultronDangBanX3 = true;
+                nguoi.ultronDaGuiMenu = true;
+                tran.boLuot(nguoiChoi);
+                xacNhanBossBoLuotHopLe(tran, nguoi, mapId, "Ultron");
+                dung(!nguoi.ultronDangBanX3
+                                && !nguoi.ultronDaGuiMenu,
+                        "bo luot khong huy X3 Ultron map=" + mapId);
+                soNhanhDaKiemTra++;
+
+                chuanBiBoLuotBoss(tran, nguoi);
+                nguoi.avenger =
+                        ChickenKyNangDacBietIronMan.AVG_IRON_MAN;
+                nguoi.ironManLaserSanSang = true;
+                nguoi.ironManDaGuiMenu = true;
+                tran.boLuot(nguoiChoi);
+                xacNhanBossBoLuotHopLe(
+                        tran, nguoi, mapId, "Iron Man");
+                dung(!nguoi.ironManLaserSanSang
+                                && !nguoi.ironManDaGuiMenu,
+                        "bo luot khong huy laser Iron Man map=" + mapId);
+                soNhanhDaKiemTra++;
+            } finally {
+                tran.dungBot();
+            }
+        }
+        dung(soNhanhDaKiemTra >= 70,
+                "ma tran bo luot boss thieu nhanh: "
+                        + soNhanhDaKiemTra);
+        System.out.println("SKIP_TURN_MATRIX_OK bossBranches="
+                + soNhanhDaKiemTra + " packetCombinations=65536");
+    }
+
+    private static void chuanBiBoLuotBoss(
+            ChickenQuanLyChien tran,
+            ChickenChienBinh nguoi
+    ) throws Exception {
+        datLong(tran, "maPhienLuot",
+                layLong(tran, "maPhienLuot") + 1_000L);
+        datByte(tran, "luotHienTai", (byte) 0);
+        datBoolean(tran, "daKetThuc", false);
+        Arrays.fill(layMangInt(tran, "napDan"), 0);
+        nguoi.chet = false;
+        nguoi.hp = Math.max(1, nguoi.mauToiDa);
+        nguoi.thorDaDungKyNang = false;
+        nguoi.lokiSkillActive = false;
+        Field dangChoDan = fieldNeuCo(tran, "slotDangChoKetThucBan");
+        if (dangChoDan != null) {
+            dangChoDan.setInt(tran, -1);
+        }
+    }
+
+    private static void xacNhanBossKhongBoLuot(
+            ChickenQuanLyChien tran,
+            ChickenNguoiChoi nguoiChoi,
+            String trangThai
+    ) throws Exception {
+        byte luotTruoc = layByte(tran, "luotHienTai");
+        long phienTruoc = layLong(tran, "maPhienLuot");
+        int[] napDanTruoc = Arrays.copyOf(
+                layMangInt(tran, "napDan"),
+                layMangInt(tran, "napDan").length);
+        tran.boLuot(nguoiChoi);
+        bang(luotTruoc, layByte(tran, "luotHienTai"),
+                trangThai + " van doi luot boss");
+        bang(phienTruoc, layLong(tran, "maPhienLuot"),
+                trangThai + " van doi ma phien boss");
+        dung(Arrays.equals(
+                        napDanTruoc, layMangInt(tran, "napDan")),
+                trangThai + " van sua nap dan boss");
+    }
+
+    private static void xacNhanBossBoLuotHopLe(
+            ChickenQuanLyChien tran,
+            ChickenChienBinh nguoi,
+            int mapId,
+            String loaiAvg
+    ) throws Exception {
+        bang(ChickenNapDanServer.TOI_THIEU,
+                layMangInt(tran, "napDan")[nguoi.chiSo & 0xFF],
+                "bo luot " + loaiAvg + " khong nap 250 map=" + mapId);
+        dung(layByte(tran, "luotHienTai") != nguoi.chiSo,
+                "bo luot " + loaiAvg + " khong doi luot map=" + mapId);
+        /*
+         * Hủy hiệu lực task boss vừa được xếp, tránh nó can thiệp trường hợp
+         * AVG kế tiếp trong cùng ma trận.
+         */
+        datLong(tran, "maPhienLuot",
+                layLong(tran, "maPhienLuot") + 1_000L);
+    }
+
     private static ChickenQuanLyChien taoTranBoss(
             int mapId,
             SanhChoBoss sanh
@@ -251,6 +466,15 @@ public final class ChickenKiemThuToanGame {
         Field field = doiTuong.getClass().getDeclaredField(ten);
         field.setAccessible(true);
         return field;
+    }
+
+    private static Field fieldNeuCo(Object doiTuong, String ten)
+            throws Exception {
+        try {
+            return field(doiTuong, ten);
+        } catch (NoSuchFieldException ignored) {
+            return null;
+        }
     }
 
     private static void datBoolean(
@@ -285,6 +509,11 @@ public final class ChickenKiemThuToanGame {
     private static long layLong(Object doiTuong, String ten)
             throws Exception {
         return field(doiTuong, ten).getLong(doiTuong);
+    }
+
+    private static int[] layMangInt(Object doiTuong, String ten)
+            throws Exception {
+        return (int[]) field(doiTuong, ten).get(doiTuong);
     }
 
     private static byte[] taoPacketBan(

@@ -40,6 +40,16 @@ public final class BossCamTu {
     private BossCamTu() {
     }
 
+    public static long tinhThoiGianHoatAnhDiChuyen(
+            int xCu,
+            int yCu,
+            int xMoi,
+            int yMoi
+    ) {
+        return com.chicken.phong.boss.trandau.haitoathap.BossCamTu
+                .tinhThoiGianHoatAnhDiChuyen(xCu, yCu, xMoi, yMoi);
+    }
+
     public static ChickenChienBinh timNguoiSongGanNhat(
             ChickenChienBinh camTu,
             ChickenChienBinh[] chienBinhs

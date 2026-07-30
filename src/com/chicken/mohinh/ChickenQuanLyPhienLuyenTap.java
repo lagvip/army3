@@ -49,6 +49,9 @@ final class ChickenQuanLyPhienLuyenTap {
         phien.trainingCurrentTurn = chiSoNguoiChoi;
         phien.trainingPlayerReload = 0;
         phien.trainingBossReload = 0;
+        phien.trainingPlayerReloadOrder = 0L;
+        phien.trainingBossReloadOrder = 0L;
+        phien.trainingReloadOrderCounter = 0L;
         phien.trainingBossWeaponId = -1;
         phien.trainingBossWeaponPart = -1;
         phien.trainingBossAttack = 0;
@@ -96,6 +99,9 @@ final class ChickenQuanLyPhienLuyenTap {
         phien.trainingCurrentTurn = chiSoNguoiChoi;
         phien.trainingPlayerReload = 0;
         phien.trainingBossReload = 0;
+        phien.trainingPlayerReloadOrder = 0L;
+        phien.trainingBossReloadOrder = 0L;
+        phien.trainingReloadOrderCounter = 0L;
         phien.trainingTurnId = 1L;
         phien.trainingLastShotTurnId = -1L;
         phien.trainingActiveShotId = 0L;

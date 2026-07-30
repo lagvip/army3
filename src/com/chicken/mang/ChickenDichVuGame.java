@@ -770,6 +770,19 @@ implements IChickenDichVuGame {
         ds.writeByte(0);
         ds.flush();
         this.guiTin(ms);
+        /*
+         * Sau CMD -63, client type 0 goi init2(x, y - 108), nen toa do hien
+         * tai tren client chua phai (x, y). Neu gui thang CMD -64 toi (x, y),
+         * moi boss se mo mWait va khoa hang packet khoang 100 frame. Bao Vay
+         * co nhieu boss nen luc bat dau bi cong don thanh gan 10 giay.
+         *
+         * Gui CMD -64 tai dung toa do client vua khoi tao de chi bat
+         * isRunSpeed, sau do CMD 21 moi keo boss xuong toa do server. CMD 21
+         * van giu animation native nhung khong mo mWait khi isRunSpeed=true.
+         */
+        short yKhoiTaoClient = gioiHanShort((int) y - 108);
+        this.guiKhoiTaoDiChuyenNhanhBossBaoVay(slot, x, yKhoiTaoClient);
+        this.guiDiChuyenBossBaoVay(slot, x, y);
     }
 
     /**
@@ -919,8 +932,12 @@ implements IChickenDichVuGame {
         this.guiTin(ms);
     }
 
-    /** Di chuyển boss động bằng packet native CMD -64. */
-    public void guiDiChuyenBossBaoVay(byte slot, short x, short y) throws IOException {
+    /** Khởi tạo chạy nhanh bằng CMD -64 tại tọa độ hiện có, không mở mWait. */
+    private void guiKhoiTaoDiChuyenNhanhBossBaoVay(
+            byte slot,
+            short x,
+            short y
+    ) throws IOException {
         ChickenTinNhan ms = new ChickenTinNhan(-64);
         DataOutputStream ds = ms.boGhi();
         ds.writeByte(slot);
@@ -928,6 +945,26 @@ implements IChickenDichVuGame {
         ds.writeShort(y);
         ds.flush();
         this.guiTin(ms);
+    }
+
+    /**
+     * Di chuyen CPlayer boss bang animation native CMD 21.
+     *
+     * <p>isRunSpeed da duoc khoi tao ngay sau CMD -63, vi vay client khong goi
+     * mWait va khong khoa hang packet toan cuc toi watchdog 200 frame.</p>
+     */
+    public void guiDiChuyenBossBaoVay(byte slot, short x, short y) throws IOException {
+        ChickenTinNhan ms = new ChickenTinNhan(21);
+        DataOutputStream ds = ms.boGhi();
+        ds.writeByte(slot);
+        ds.writeShort(x);
+        ds.writeShort(y);
+        ds.flush();
+        this.guiTin(ms);
+    }
+
+    private static short gioiHanShort(int giaTri) {
+        return (short) Math.max(Short.MIN_VALUE, Math.min(Short.MAX_VALUE, giaTri));
     }
 
     /**
@@ -1465,6 +1502,19 @@ implements IChickenDichVuGame {
     }
 
     public void guiLuotDauTiep(byte whoNext, short x, short y, ChickenChienBinh[] chienBinhs, byte giay) throws IOException {
+        this.guiLuotDauTiep(
+                whoNext, x, y, chienBinhs, null, null, giay);
+    }
+
+    public void guiLuotDauTiep(
+            byte whoNext,
+            short x,
+            short y,
+            ChickenChienBinh[] chienBinhs,
+            int[] napDan,
+            long[] thuTuHanhDong,
+            byte giay
+    ) throws IOException {
         ChickenTinNhan ms = new ChickenTinNhan(24);
         DataOutputStream ds = ms.boGhi();
         ds.writeByte(whoNext);
@@ -1477,11 +1527,52 @@ implements IChickenDichVuGame {
             }
         }
         ds.writeByte(alive);
-        for (ChickenChienBinh chienBinh : chienBinhs) {
-            if (chienBinh != null && !chienBinh.chet) {
-                ds.writeByte(chienBinh.chiSo);
-                ds.writeShort(100);
+
+        boolean[] daGhi = new boolean[chienBinhs.length];
+        int current = whoNext & 0xFF;
+        if (current >= 0 && current < chienBinhs.length) {
+            ChickenChienBinh hienTai = chienBinhs[current];
+            if (hienTai != null && !hienTai.chet) {
+                ds.writeByte(hienTai.chiSo);
+                ds.writeShort(napDan == null
+                        ? 100 : layNapDanAnToan(napDan, current));
+                daGhi[current] = true;
             }
+        }
+
+        for (int lan = 0; lan < alive; lan++) {
+            int chon = -1;
+            int napNhoNhat = Integer.MAX_VALUE;
+            long thuTuNhoNhat = Long.MAX_VALUE;
+            int khoangCachVongNhoNhat = Integer.MAX_VALUE;
+            for (int slot = 0; slot < chienBinhs.length; slot++) {
+                ChickenChienBinh chienBinh = chienBinhs[slot];
+                if (daGhi[slot] || chienBinh == null || chienBinh.chet) {
+                    continue;
+                }
+                int nap = napDan == null
+                        ? 100 : layNapDanAnToan(napDan, slot);
+                long thuTu = layThuTuHanhDongAnToan(
+                        thuTuHanhDong, slot);
+                int khoangCachVong = (slot - current + chienBinhs.length)
+                        % chienBinhs.length;
+                if (nap < napNhoNhat
+                        || (nap == napNhoNhat
+                        && (thuTu < thuTuNhoNhat
+                        || (thuTu == thuTuNhoNhat
+                        && khoangCachVong < khoangCachVongNhoNhat)))) {
+                    chon = slot;
+                    napNhoNhat = nap;
+                    thuTuNhoNhat = thuTu;
+                    khoangCachVongNhoNhat = khoangCachVong;
+                }
+            }
+            if (chon < 0) {
+                break;
+            }
+            ds.writeByte(chienBinhs[chon].chiSo);
+            ds.writeShort(napNhoNhat);
+            daGhi[chon] = true;
         }
         ds.writeByte(giay);
         ds.flush();
@@ -1499,6 +1590,19 @@ implements IChickenDichVuGame {
             short y,
             ChickenChienBinh[] chienBinhs,
             int[] napDan,
+            byte giay
+    ) throws IOException {
+        this.guiLuotBossBaoVayTiep(
+                whoNext, x, y, chienBinhs, napDan, null, giay);
+    }
+
+    public void guiLuotBossBaoVayTiep(
+            byte whoNext,
+            short x,
+            short y,
+            ChickenChienBinh[] chienBinhs,
+            int[] napDan,
+            long[] thuTuHanhDong,
             byte giay
     ) throws IOException {
         ChickenTinNhan ms = new ChickenTinNhan(24);
@@ -1526,10 +1630,17 @@ implements IChickenDichVuGame {
             }
         }
 
-        // Các tên còn lại xếp theo nạp đạn tăng dần; nếu bằng nhau giữ thứ tự slot.
+        /*
+         * Các tên còn lại xếp theo nạp đạn tăng dần. Khi bằng nhau, ưu tiên
+         * người bắt đầu nạp trước (FIFO), giống bộ lập lịch authoritative.
+         * Dữ liệu cũ không có thứ tự hành động vẫn dùng thứ tự vòng để
+         * tương thích.
+         */
         for (int lan = 0; lan < alive; lan++) {
             int chon = -1;
             int napNhoNhat = Integer.MAX_VALUE;
+            long thuTuNhoNhat = Long.MAX_VALUE;
+            int khoangCachVongNhoNhat = Integer.MAX_VALUE;
             for (int slot = 0; slot < chienBinhs.length; slot++) {
                 ChickenChienBinh chienBinh = chienBinhs[slot];
                 if (daGhi[slot] || chienBinh == null || chienBinh.chet
@@ -1537,8 +1648,18 @@ implements IChickenDichVuGame {
                     continue;
                 }
                 int nap = layNapDanAnToan(napDan, slot);
-                if (nap < napNhoNhat) {
+                long thuTu = layThuTuHanhDongAnToan(
+                        thuTuHanhDong, slot);
+                int khoangCachVong = (slot - current + chienBinhs.length)
+                        % chienBinhs.length;
+                if (nap < napNhoNhat
+                        || (nap == napNhoNhat
+                        && (thuTu < thuTuNhoNhat
+                        || (thuTu == thuTuNhoNhat
+                        && khoangCachVong < khoangCachVongNhoNhat)))) {
                     napNhoNhat = nap;
+                    thuTuNhoNhat = thuTu;
+                    khoangCachVongNhoNhat = khoangCachVong;
                     chon = slot;
                 }
             }
@@ -1561,6 +1682,17 @@ implements IChickenDichVuGame {
             return 0;
         }
         return Math.max(0, Math.min(65_535, napDan[slot]));
+    }
+
+    private static long layThuTuHanhDongAnToan(
+            long[] thuTuHanhDong,
+            int slot
+    ) {
+        if (thuTuHanhDong == null
+                || slot < 0 || slot >= thuTuHanhDong.length) {
+            return 0L;
+        }
+        return Math.max(0L, thuTuHanhDong[slot]);
     }
 
     public void guiKetThucDau(byte pheThang, int kinhNghiem, int vang, int ngoc) throws IOException {
@@ -1621,6 +1753,17 @@ implements IChickenDichVuGame {
             }
             this.khach.guiTin(ms);
         }
+    }
+
+    /**
+     * Hiệu ứng Lucky native của client: bung bốn cụm /eff/star.png quanh
+     * nhân vật. Packet này chỉ hiển thị, không chứa kết quả damage.
+     */
+    public void guiHieuUngMayMan(byte chiSo) throws IOException {
+        ChickenTinNhan ms = new ChickenTinNhan(100);
+        ms.boGhi().writeByte(chiSo);
+        ms.boGhi().flush();
+        this.guiTin(ms);
     }
 
     /**

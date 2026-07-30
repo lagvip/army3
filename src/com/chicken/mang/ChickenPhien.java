@@ -54,7 +54,6 @@ implements IChickenPhien {
     private int soTinTrongCuaSo;
     private long lanDiChuyenGanNhatMs;
     private long lanGuiLenhKyNangGanNhatMs;
-    private long lanGuiLenhTiemNangGanNhatMs;
     private long batDauCuaSoLoiMs;
     private int soLoiTrongCuaSo;
     private long mocGuiNguyenLieuBossTiepTheoMs;
@@ -130,16 +129,6 @@ implements IChickenPhien {
                 return false;
             }
             this.lanGuiLenhKyNangGanNhatMs = hienTaiMs;
-        } else if (cmd == -46) {
-            /*
-             * Mỗi lần cộng điểm có ghi DB. Giới hạn riêng ngăn client sửa
-             * spam hàng trăm transaction mỗi giây nhưng vẫn đủ nhanh khi
-             * người chơi bấm liên tục bằng giao diện thường.
-             */
-            if (hienTaiMs - this.lanGuiLenhTiemNangGanNhatMs < 100L) {
-                return false;
-            }
-            this.lanGuiLenhTiemNangGanNhatMs = hienTaiMs;
         }
         return true;
     }

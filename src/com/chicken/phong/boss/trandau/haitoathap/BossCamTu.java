@@ -19,16 +19,31 @@ public final class BossCamTu {
     public static final int MEP_TRAI_AN_TOAN_MAP_51 = 115;
     public static final int MEP_PHAI_AN_TOAN_MAP_51 = 1013;
     /**
-     * CMD -64 cho CPlayer chay 36 px mat khoang 300 ms. Server cho du 650 ms
-     * de client native hoan tat noi suy va tu mo khoa luong nhan packet truoc
-     * khi phat hanh dong tiep theo.
+     * Log client thuc te cho thay CMD 21 khong khoa can 46-672 ms de toi dich.
+     * Cho 750 ms de du mot frame cuoi ma khong tao khoang cho 1-3 giay.
      */
-    public static final int TRE_MOI_BUOC_MS = 650;
+    public static final int TRE_MOI_BUOC_MS = 750;
     /** Sai số nhỏ quanh trục X không được dùng để đảo hướng liên tục. */
     private static final int NGUONG_DOI_HUONG_X = 4;
     /** Nạp đạn tạm thời sau một lượt di chuyển chưa chạm mục tiêu. */
     public static final int NAP_DAN_SAU_DI_CHUYEN = 300;
     private BossCamTu() {
+    }
+
+    /** Thoi gian hien thi do server quy dinh, khong nhan ACK/toa do tu client. */
+    public static long tinhThoiGianHoatAnhDiChuyen(
+            int xCu,
+            int yCu,
+            int xMoi,
+            int yMoi
+    ) {
+        int dx = Math.abs(xMoi - xCu);
+        int dy = yMoi - yCu;
+        if (dx == 0 && dy == 0) {
+            return 0L;
+        }
+
+        return TRE_MOI_BUOC_MS;
     }
 
     public static ChickenChienBinh timNguoiSongGanNhat(
@@ -391,7 +406,7 @@ public final class BossCamTu {
      *
      * Client khong chi kiem tra tam nhan vat; no lay mau hai chan x +/- 6.
      * Neu server chon mot pixel o mep buc, client se roi tiep trong khi server
-     * da luu Y cu. Luot sau CMD -64 keo nguoc client va tao vong xoay. Ham nay
+     * da luu Y cu. Luot sau CMD 21 keo nguoc client va tao vong xoay. Ham nay
      * bat buoc tam va ca hai chan co nen, neu can se dich vao trong buc hoac
      * chon mat nen thap hon gan nhat.
      */
@@ -429,8 +444,8 @@ public final class BossCamTu {
         }
         /*
          * Khong bao gio tra ve mot dich ma CPlayer native khong the ket thuc.
-         * CMD -64 khoa luong doc packet cho toi khi client cham dung dich; mot
-         * waypoint ao se lam ca tran dung vo han. Giu nguyen toa do server de
+         * Waypoint ao lam isMove cua client chi dung bang watchdog. Giu nguyen
+         * toa do server de
          * caller bo qua packet di chuyen trong truong hop khong tim duoc diem
          * dung hop le.
          */
@@ -656,7 +671,7 @@ public final class BossCamTu {
 
     /**
      * Khi Cảm tử đã nằm trên cùng trục X với mục tiêu nhưng bị
-     * ngăn cách theo Y, nó phải đứng chờ thay vì gửi CMD -64 chỉ
+     * ngăn cách theo Y, nó phải đứng chờ thay vì gửi CMD 21 chỉ
      * thay đổi Y. Client gốc coi X đích bằng X hiện tại là hướng
      * trái, làm sprite đổi hướng qua lại giữa các lượt.
      */

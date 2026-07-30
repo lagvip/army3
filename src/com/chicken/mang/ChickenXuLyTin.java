@@ -156,6 +156,22 @@ implements IChickenXuLyTin {
                         break;
                     case -47:
                     case 49: {
+                        int soByteLuaChon = mss.boDoc().available();
+                        /*
+                         * Nút » native gọi GameService.skipTurn() và gửi CMD 49
+                         * không payload. CMD 49 có payload vẫn được giữ cho các
+                         * client cũ từng dùng nó làm lựa chọn menu generic.
+                         */
+                        if (laLenhBoLuot(cmd, soByteLuaChon)) {
+                            ChickenNguoiChoi nguoiChoi =
+                                    this.khach.user.nguoiChoi;
+                            if (nguoiChoi != null && nguoiChoi.inTraining) {
+                                nguoiChoi.boLuotLuyenTap();
+                            } else {
+                                ChickenQuanLyPhong.boLuot(nguoiChoi);
+                            }
+                            break;
+                        }
                         /*
                          * Menu generic CMD -47 của client gốc trả lại chính CMD -47
                          * kèm một byte chỉ số mục đã chọn. Plugin PC dùng hàm
@@ -166,7 +182,6 @@ implements IChickenXuLyTin {
                          * Giữ case 49 để tương thích với client khác, nhưng client
                          * hiện tại dùng -47.
                          */
-                        int soByteLuaChon = mss.boDoc().available();
                         if (soByteLuaChon != 1 && soByteLuaChon != 2) {
                             break;
                         }
@@ -510,6 +525,10 @@ implements IChickenXuLyTin {
             case -98, -28, 6, 7, 8, 16, 18, 20, 71, 75, 83 -> true;
             default -> false;
         };
+    }
+
+    static boolean laLenhBoLuot(int cmd, int soBytePayload) {
+        return cmd == 49 && soBytePayload == 0;
     }
 
     private static boolean canNguoiChoiDaDangNhap(int cmd) {

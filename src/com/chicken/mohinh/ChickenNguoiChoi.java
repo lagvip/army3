@@ -18,6 +18,7 @@ import com.chicken.chien.ChickenYeuCauToaDoServer;
 import com.chicken.chien.ChickenDiChuyenServer;
 import com.chicken.chien.ChickenChienBinh;
 import com.chicken.chien.ChickenKetQuaDan;
+import com.chicken.chien.ChickenMayMan;
 
 import static com.chicken.luyentap.ChickenCauHinhLuyenTap.*;
 
@@ -49,6 +50,7 @@ import com.chicken.phong.ChickenQuanLyPhong;
 import com.chicken.phong.boss.sanhcho.QuanLySanhChoBoss;
 import com.chicken.phong.boss.sanhcho.SanhChoBoss;
 import com.chicken.phong.boss.trandau.ChickenSungShopBoss;
+import com.chicken.chien.ChickenHangDoiNapDan;
 import com.chicken.phong.boss.trandau.baovay.BossBanSung;
 import com.chicken.npc.chihuy.XuLyMenuChiHuy;
 import com.chicken.cuahang.ChickenTrang;
@@ -1589,6 +1591,38 @@ public class ChickenNguoiChoi {
         );
     }
 
+    /**
+     * Bỏ lượt luyện tập từ CMD 49 rỗng. Client chỉ gửi ý định; server tự kiểm
+     * tra lượt, trạng thái animation và tự tính lại hàng đợi nạp đạn.
+     */
+    public synchronized void boLuotLuyenTap() throws IOException {
+        if (!this.inTraining
+                || this.trainingSession.trainingCurrentTurn
+                    != TRAINING_PLAYER_INDEX
+                || this.trainingSession.trainingWaitingShotEnd
+                || this.trainingSession.trainingBotAnimating
+                || this.trainingSession.trainingBossState
+                    == TrainingBossState.DEAD
+                || this.trainingSession.trainingBossState
+                    == TrainingBossState.ROUND_END
+                || this.trainingSession.trainingHawkSkillActive
+                || this.trainingSession.trainingThorSkillActive
+                || this.trainingSession.trainingLokiSkillActive) {
+            return;
+        }
+
+        this.trainingSession.trainingLokiDangChoChonMucTieu = false;
+        this.trainingSession.trainingUltronDangBanX3 = false;
+        if (this.trainingSession.trainingIronManLaserSanSang) {
+            this.trainingSession.trainingIronManLaserSanSang = false;
+            this.dichVu.guiTrangThaiNgamLaserIronMan(false);
+        }
+        this.xoaTrangThaiPhatBanNguoiChoi();
+        this.chuyenLuotTheoNapDan(
+                TRAINING_PLAYER_INDEX,
+                ChickenNapDanServer.TOI_THIEU);
+    }
+
     public synchronized void xuLyBanLuyenTap(ChickenTinNhan ms) throws IOException {
         if (!this.inTraining) {
             return;
@@ -2179,6 +2213,7 @@ public class ChickenNguoiChoi {
         this.trainingSession.trainingWaitingShotEnd = true;
         final long shotId = ++this.trainingSession.trainingActiveShotId;
         this.trainingSession.trainingActiveShotResolved = false;
+        this.chuanBiMayManTruocPhatLuyenTap();
         // Loại đạn và số quỹ đạo đều lấy từ súng đang trang bị. Client chỉ gửi
         // góc/lực; server không còn dùng loại đạn cũ hoặc số viên do client đoán.
         if (danGaHaiDuong || danRiuBonDuong) {
@@ -2336,6 +2371,7 @@ public class ChickenNguoiChoi {
         long shotId = ++this.trainingSession.trainingActiveShotId;
         this.trainingSession.trainingActiveShotResolved = false;
         this.trainingSession.trainingIronManLaserSanSang = false;
+        this.chuanBiMayManTruocPhatLuyenTap();
 
         this.dichVu.guiTiaLaserIronManLuyenTap(
                 TRAINING_PLAYER_INDEX,
@@ -2502,6 +2538,7 @@ public class ChickenNguoiChoi {
         this.trainingSession.trainingUltronX3ShooterY = shooterY;
         this.trainingSession.trainingUltronX3DuongX = cacDuongX;
         this.trainingSession.trainingUltronX3DuongY = cacDuongY;
+        this.chuanBiMayManTruocPhatLuyenTap();
 
         this.huyLoatMgDangCho();
         this.trainingSession.trainingMgBurstEndAt = 0L;
@@ -2767,8 +2804,29 @@ public class ChickenNguoiChoi {
             this.trainingSession.trainingPlayerResolveTask.cancel(false);
             this.trainingSession.trainingPlayerResolveTask = null;
         }
+        ChickenChienBinh[] mucTieuMayMan =
+                this.trainingSession.trainingPendingMayManTargets;
+        ChickenMayMan.PhienTanCong phienMayMan =
+                this.trainingSession.trainingPendingMayMan;
+        this.trainingSession.trainingPendingMayManTargets = null;
+        this.trainingSession.trainingPendingMayMan = null;
+        if (mucTieuMayMan == null
+                || mucTieuMayMan.length < TRAINING_BOT_COUNT + 1
+                || phienMayMan == null) {
+            mucTieuMayMan = this.taoDanhSachMayManLuyenTap();
+            phienMayMan = null;
+            ChickenQuanLyMayChu.log(
+                    "[LUYEN_TAP][THIEU_PHIEN_MAY_MAN] playerId=" + this.ma
+                    + " shotId=" + shotId
+                    + " giuDamageGoc=true");
+        }
+        ChickenChienBinh nguoiBanMayMan = mucTieuMayMan[0];
         if (this.trainingSession.trainingPendingSelfDamage > 0) {
             int satThuong = this.trainingSession.trainingPendingSelfDamage;
+            if (phienMayMan != null) {
+                satThuong = phienMayMan.apDung(
+                        nguoiBanMayMan, satThuong);
+            }
             this.trainingSession.trainingPlayerHp = Math.max(0, this.trainingSession.trainingPlayerHp - satThuong);
             this.dichVu.guiCapNhatMauLuyenTap(
                     TRAINING_PLAYER_INDEX,
@@ -2786,6 +2844,10 @@ public class ChickenNguoiChoi {
             int satThuong = this.trainingSession.trainingPendingBotDamages[botIndex];
             if (satThuong <= 0 || this.trainingSession.trainingBotDead[botIndex]) {
                 continue;
+            }
+            if (phienMayMan != null) {
+                satThuong = phienMayMan.apDung(
+                        mucTieuMayMan[botIndex + 1], satThuong);
             }
             if (this.trainingSession.trainingBossShield) {
                 satThuong = (int) Math.max(1L, (long) satThuong * 40L / 100L);
@@ -2814,6 +2876,48 @@ public class ChickenNguoiChoi {
         this.chuyenLuotTheoNapDan(TRAINING_PLAYER_INDEX);
     }
 
+    /**
+     * Chốt lần quay và phát sao trước packet đạn. Giữ nguyên đúng các object
+     * mục tiêu để lần kết toán sau animation không quay lại lần thứ hai.
+     */
+    private void chuanBiMayManTruocPhatLuyenTap() {
+        ChickenChienBinh[] danhSach = this.taoDanhSachMayManLuyenTap();
+        this.trainingSession.trainingPendingMayManTargets = danhSach;
+        this.trainingSession.trainingPendingMayMan =
+                ChickenMayMan.batDau(danhSach[0], danhSach);
+    }
+
+    private ChickenChienBinh[] taoDanhSachMayManLuyenTap() {
+        ChickenChienBinh[] danhSach =
+                new ChickenChienBinh[TRAINING_BOT_COUNT + 1];
+        ChickenChienBinh nguoiChoiMayMan = new ChickenChienBinh(
+                this,
+                TRAINING_PLAYER_INDEX,
+                this.trainingSession.trainingPlayerX,
+                this.trainingSession.trainingPlayerY
+        );
+        nguoiChoiMayMan.hp = this.trainingSession.trainingPlayerHp;
+        nguoiChoiMayMan.mauToiDa = this.trainingSession.trainingPlayerMaxHp;
+        danhSach[0] = nguoiChoiMayMan;
+        for (int i = 0; i < TRAINING_BOT_COUNT; i++) {
+            ChickenChienBinh bot = new ChickenChienBinh(
+                    (byte) (i + 1),
+                    -9999 - i,
+                    this.trainingSession.trainingBotX[i],
+                    this.trainingSession.trainingBotY[i],
+                    this.layTenBossLuyenTap(i),
+                    this.trainingSession.trainingBossWeaponPart,
+                    this.trainingSession.trainingBossMaxHp,
+                    this.trainingSession.trainingBossAttack,
+                    0
+            );
+            bot.hp = this.trainingSession.trainingBotHp[i];
+            bot.chet = this.trainingSession.trainingBotDead[i];
+            danhSach[i + 1] = bot;
+        }
+        return danhSach;
+    }
+
     private void huyLoatMgDangCho() {
         ChickenLuyenTapBan.huyTasks(this.trainingSession.trainingMgBurstTasks);
         this.trainingSession.trainingMgBurstShotId = -1L;
@@ -2830,6 +2934,8 @@ public class ChickenNguoiChoi {
         }
         this.trainingSession.trainingMgBurstEndAt = 0L;
         this.trainingSession.trainingWaitingShotEnd = false;
+        this.trainingSession.trainingPendingMayManTargets = null;
+        this.trainingSession.trainingPendingMayMan = null;
         this.trainingSession.trainingPendingSelfHitCount = 0;
         this.trainingSession.trainingPendingSelfDamage = 0;
         for (int i = 0; i < TRAINING_BOT_COUNT; i++) {
@@ -4022,6 +4128,13 @@ public class ChickenNguoiChoi {
     }
 
     private synchronized void chuyenLuotTheoNapDan(byte benVuaBan) throws IOException {
+        this.chuyenLuotTheoNapDan(benVuaBan, -1);
+    }
+
+    private synchronized void chuyenLuotTheoNapDan(
+            byte benVuaBan,
+            int napDanSauHanhDong
+    ) throws IOException {
         if (!this.inTraining || this.trainingSession.trainingBossState == TrainingBossState.ROUND_END) {
             return;
         }
@@ -4029,11 +4142,20 @@ public class ChickenNguoiChoi {
         if (!this.capNhatTrongLucSauLuotLuyenTap(benVuaBan)) {
             return;
         }
-        this.chuyenLuotTheoNapDanKhongCapNhatTrongLuc(benVuaBan);
+        this.chuyenLuotTheoNapDanKhongCapNhatTrongLuc(
+                benVuaBan,
+                napDanSauHanhDong);
     }
 
     private synchronized void chuyenLuotTheoNapDanKhongCapNhatTrongLuc(
             byte benVuaBan
+    ) throws IOException {
+        this.chuyenLuotTheoNapDanKhongCapNhatTrongLuc(benVuaBan, -1);
+    }
+
+    private synchronized void chuyenLuotTheoNapDanKhongCapNhatTrongLuc(
+            byte benVuaBan,
+            int napDanSauHanhDong
     ) throws IOException {
         if (!this.inTraining
                 || this.trainingSession.trainingBossState == TrainingBossState.ROUND_END
@@ -4041,24 +4163,42 @@ public class ChickenNguoiChoi {
             return;
         }
         if (benVuaBan == TRAINING_PLAYER_INDEX) {
-            this.trainingSession.trainingPlayerReload = this.trainingSession.trainingPlayerReloadTime;
+            this.trainingSession.trainingPlayerReload =
+                    napDanSauHanhDong >= 0
+                            ? Math.max(
+                                    ChickenNapDanServer.TOI_THIEU,
+                                    napDanSauHanhDong)
+                            : this.trainingSession.trainingPlayerReloadTime;
         } else {
-            this.trainingSession.trainingBossReload = this.trainingSession.trainingBossReloadTime;
+            this.trainingSession.trainingBossReload =
+                    this.trainingSession.trainingBossReloadTime;
         }
-        int nhoNhat = Math.min(this.trainingSession.trainingPlayerReload, this.trainingSession.trainingBossReload);
-        if (nhoNhat > 0) {
-            this.trainingSession.trainingPlayerReload -= nhoNhat;
-            this.trainingSession.trainingBossReload -= nhoNhat;
-        }
-        boolean nguoiChoiSanSang = this.trainingSession.trainingPlayerReload <= 0;
-        boolean bossSanSang = this.trainingSession.trainingBossReload <= 0;
-        if (nguoiChoiSanSang && bossSanSang) {
-            this.trainingSession.trainingCurrentTurn = benVuaBan == TRAINING_PLAYER_INDEX ? TRAINING_BOSS_INDEX : TRAINING_PLAYER_INDEX;
-        } else if (nguoiChoiSanSang) {
-            this.trainingSession.trainingCurrentTurn = TRAINING_PLAYER_INDEX;
-        } else {
-            this.trainingSession.trainingCurrentTurn = TRAINING_BOSS_INDEX;
-        }
+        long[] thuTuLuyenTap = {
+                this.trainingSession.trainingPlayerReloadOrder,
+                this.trainingSession.trainingBossReloadOrder
+        };
+        this.trainingSession.trainingReloadOrderCounter =
+                ChickenHangDoiNapDan.ghiNhanHanhDong(
+                        thuTuLuyenTap,
+                        benVuaBan,
+                        this.trainingSession.trainingReloadOrderCounter);
+        this.trainingSession.trainingPlayerReloadOrder =
+                thuTuLuyenTap[TRAINING_PLAYER_INDEX];
+        this.trainingSession.trainingBossReloadOrder =
+                thuTuLuyenTap[TRAINING_BOSS_INDEX];
+        int[] napDanLuyenTap = {
+                this.trainingSession.trainingPlayerReload,
+                this.trainingSession.trainingBossReload
+        };
+        int slotTiep = ChickenHangDoiNapDan.timSlotTiepTheo(
+                napDanLuyenTap,
+                thuTuLuyenTap,
+                benVuaBan,
+                slot -> slot == TRAINING_PLAYER_INDEX
+                        || slot == TRAINING_BOSS_INDEX);
+        this.trainingSession.trainingPlayerReload = napDanLuyenTap[0];
+        this.trainingSession.trainingBossReload = napDanLuyenTap[1];
+        this.trainingSession.trainingCurrentTurn = (byte) slotTiep;
         this.trainingSession.trainingBossState = TrainingBossState.IDLE;
         this.trainingSession.trainingTurnId++;
         if (this.trainingSession.trainingCurrentTurn == TRAINING_PLAYER_INDEX) {
@@ -4474,6 +4614,10 @@ public class ChickenNguoiChoi {
         this.trainingSession.trainingLastShotTurnId = this.trainingSession.trainingTurnId;
         System.out.println("[HAWK] CHON_MUC_TIEU mode=training hawk=0 target="
                 + targetIndex + " skillId=" + skillId);
+        final ChickenChienBinh[] danhSachMayMan =
+                this.taoDanhSachMayManLuyenTap();
+        final ChickenMayMan.PhienTanCong phienMayMan =
+                ChickenMayMan.batDau(danhSachMayMan[0], danhSachMayMan);
 
         short[] dauNong = this.layDiemBanNguoiChoiLuyenTap(
                 ChickenHoatAnhHawk.GOC_BAY_LEN
@@ -4503,7 +4647,9 @@ public class ChickenNguoiChoi {
                 () -> this.batDauLoatMuiTenHawkRoiXuongLuyenTap(
                         phien,
                         skillId,
-                        botIndex
+                        botIndex,
+                        danhSachMayMan,
+                        phienMayMan
                 ),
                 ChickenHoatAnhHawk.THOI_GIAN_BAY_LEN_MS,
                 TimeUnit.MILLISECONDS
@@ -4513,7 +4659,9 @@ public class ChickenNguoiChoi {
     private synchronized void batDauLoatMuiTenHawkRoiXuongLuyenTap(
             long phien,
             long skillId,
-            int botIndex
+            int botIndex,
+            ChickenChienBinh[] danhSachMayMan,
+            ChickenMayMan.PhienTanCong phienMayMan
     ) {
         if (!this.inTraining
                 || phien != this.trainingSession.trainingSessionId
@@ -4557,7 +4705,9 @@ public class ChickenNguoiChoi {
                     () -> this.xuLySatThuongHawkCongDonLuyenTap(
                             phien,
                             skillId,
-                            botIndex
+                            botIndex,
+                            danhSachMayMan,
+                            phienMayMan
                     ),
                     thoiDiemMuiCuoiCham,
                     TimeUnit.MILLISECONDS
@@ -4573,7 +4723,9 @@ public class ChickenNguoiChoi {
     private synchronized void xuLySatThuongHawkCongDonLuyenTap(
             long phien,
             long skillId,
-            int botIndex
+            int botIndex,
+            ChickenChienBinh[] danhSachMayMan,
+            ChickenMayMan.PhienTanCong phienMayMan
     ) {
         if (!this.inTraining
                 || phien != this.trainingSession.trainingSessionId
@@ -4609,6 +4761,8 @@ public class ChickenNguoiChoi {
                 if (satThuong <= 0) {
                     continue;
                 }
+                satThuong = phienMayMan.apDung(
+                        danhSachMayMan[biAnhHuong + 1], satThuong);
                 this.trainingSession.trainingBotHp[biAnhHuong] = Math.max(
                         0,
                         this.trainingSession.trainingBotHp[biAnhHuong] - satThuong
@@ -4699,6 +4853,10 @@ public class ChickenNguoiChoi {
                 this.trainingSession.trainingMap,
                 cacX,
                 this.trainingSession.trainingPlayerY);
+        ChickenChienBinh[] danhSachMayMan =
+                this.taoDanhSachMayManLuyenTap();
+        ChickenMayMan.PhienTanCong phienMayMan =
+                ChickenMayMan.batDau(danhSachMayMan[0], danhSachMayMan);
         this.dichVu.guiTiaSetThor(
                 TRAINING_PLAYER_INDEX,
                 THOR_LOAI_HIEU_UNG_SET,
@@ -4708,7 +4866,8 @@ public class ChickenNguoiChoi {
         System.out.println("[THOR] PHAT_SET mode=training skillId=" + skillId
                 + " x=" + cacX[0] + "," + cacX[1] + "," + cacX[2] + "," + cacX[3]);
 
-        this.gaySatThuongThorLuyenTap(cacX, cacY);
+        this.gaySatThuongThorLuyenTap(
+                cacX, cacY, danhSachMayMan, phienMayMan);
         if (this.trainingSession.trainingBossState == TrainingBossState.ROUND_END) {
             return;
         }
@@ -4727,7 +4886,12 @@ public class ChickenNguoiChoi {
     }
 
     /** Mỗi vị trí sét tính va chạm và sát thương riêng; Thor không nằm trong vòng lặp này. */
-    private void gaySatThuongThorLuyenTap(short[] cacX, short[] cacY) throws IOException {
+    private void gaySatThuongThorLuyenTap(
+            short[] cacX,
+            short[] cacY,
+            ChickenChienBinh[] danhSachMayMan,
+            ChickenMayMan.PhienTanCong phienMayMan
+    ) throws IOException {
         int tanCong = Math.max(1, this.layTongTanCongHienTai());
         for (int botIndex = 0; botIndex < TRAINING_BOT_COUNT; botIndex++) {
             if (this.trainingSession.trainingBotDead[botIndex]
@@ -4748,6 +4912,8 @@ public class ChickenNguoiChoi {
             if (tongSatThuong <= 0) {
                 continue;
             }
+            tongSatThuong = phienMayMan.apDung(
+                    danhSachMayMan[botIndex + 1], tongSatThuong);
             this.trainingSession.trainingBotHp[botIndex] = Math.max(
                     0,
                     this.trainingSession.trainingBotHp[botIndex] - tongSatThuong
@@ -5070,6 +5236,12 @@ public class ChickenNguoiChoi {
         int tongSatThuongNguoiChoi = Math.max(
                 0,
                 ketQua.satThuongTheoMucTieu.getOrDefault(mucTieu, 0));
+        ChickenMayMan.PhienTanCong phienMayMan =
+                ChickenMayMan.batDau(
+                        boss,
+                        new ChickenChienBinh[]{mucTieu});
+        tongSatThuongNguoiChoi =
+                phienMayMan.apDung(mucTieu, tongSatThuongNguoiChoi);
 
         // Y đã được khóa từ trước khi tạo quỹ đạo; packet bắn dùng đúng
         // tọa độ nền hiện tại và không tự dịch lại đường đạn giữa animation.
