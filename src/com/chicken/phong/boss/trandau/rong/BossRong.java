@@ -160,6 +160,7 @@ public final class BossRong extends ChickenQuanLyChien {
                 + (this.sanh.getMaBan() & 0xFF)
                 + " map=55 players=" + this.demNguoiChoiSong()
                 + " bosses=1");
+        this.dongBoTatCaPow(this.chienBinhs);
         this.chuyenSangLuotTiepTheo(-1);
     }
 
@@ -214,6 +215,25 @@ public final class BossRong extends ChickenQuanLyChien {
     }
 
     @Override
+    public synchronized boolean doiSungTrongTran(
+            ChickenNguoiChoi nguoiChoi, int chiSoTui) throws IOException {
+        ChickenChienBinh chienBinh = this.layNguoiChoi(nguoiChoi);
+        if (!this.coTheNhanLenhNguoiChoi(chienBinh)) {
+            return false;
+        }
+        return this.doiSungChoChienBinh(chienBinh, this.chienBinhs,
+                this.luotHienTai, this.daKetThuc, chiSoTui);
+    }
+
+    @Override
+    public synchronized boolean kichHoatPow(ChickenNguoiChoi nguoiChoi)
+            throws IOException {
+        return this.kichHoatPowChoChienBinh(
+                this.layNguoiChoi(nguoiChoi), this.chienBinhs,
+                this.luotHienTai, this.daKetThuc);
+    }
+
+    @Override
     public synchronized void ban(ChickenNguoiChoi nguoiChoi, ChickenTinNhan ms)
             throws IOException {
         ChickenChienBinh shooter = this.layNguoiChoi(nguoiChoi);
@@ -230,8 +250,14 @@ public final class BossRong extends ChickenQuanLyChien {
 
         ChickenQuanLyDanSung.DuLieuSung duLieuSung =
                 ChickenQuanLyDanSung.theoPartSung(shooter.maVuKhi);
+        ChickenChienBinh.VatPhamChienTrongTran vatPhamDangCho =
+                shooter.layVatPhamChienDangCho();
         ChickenYeuCauBanServer.KetQua yeuCau =
-                ChickenYeuCauBanServer.doc(ms, duLieuSung, shooter.avenger);
+                vatPhamDangCho == null
+                        ? ChickenYeuCauBanServer.doc(
+                                ms, duLieuSung, shooter.avenger)
+                        : ChickenYeuCauBanServer.docVatPham(
+                                ms, vatPhamDangCho.getCauHinh());
         if (yeuCau == null) {
             return;
         }
@@ -254,6 +280,14 @@ public final class BossRong extends ChickenQuanLyChien {
         } else {
             ChickenKetQuaDan ketQua = this.taoPhatBanNguoiChoi(
                     shooter, loaiDan, goc, luc, lucPhu);
+            if (vatPhamDangCho != null) {
+                if (ketQua == null
+                        || !shooter.nguoiChoi.tieuThuMotVatPhamChien(
+                                vatPhamDangCho)) {
+                    return;
+                }
+                shooter.xoaVatPhamChienDangCho();
+            }
             ChickenMayMan.PhienTanCong phienMayMan =
                     ChickenMayMan.batDau(shooter, this.chienBinhs);
             phienMayMan.chuanBiPhongThuTruocPhat(
@@ -303,6 +337,7 @@ public final class BossRong extends ChickenQuanLyChien {
         }
         this.kyNangUltronBoss.huyKhiBoLuot(chienBinh);
         ChickenKyNangDacBietIronMan.xoaTrangThaiChoBan(chienBinh);
+        chienBinh.xoaVatPhamChienDangCho();
         this.datNapDanSauHanhDong(
                 chienBinh.chiSo & 0xFF,
                 ChickenNapDanServer.TOI_THIEU);
@@ -648,6 +683,9 @@ public final class BossRong extends ChickenQuanLyChien {
     }
 
     private synchronized void chuyenSangLuotTiepTheo(int sauSlot) throws IOException {
+        if (sauSlot >= 0 && sauSlot < this.chienBinhs.length) {
+            this.huyPowSauLuot(this.chienBinhs[sauSlot], this.chienBinhs);
+        }
         if (this.daKetThuc || this.kiemTraKetThuc()) {
             return;
         }
@@ -1124,6 +1162,80 @@ public final class BossRong extends ChickenQuanLyChien {
     private ChickenKetQuaDan taoPhatBanNguoiChoi(
             ChickenChienBinh shooter, byte loaiDan, short goc, byte luc, byte lucPhu
     ) {
+        ChickenChienBinh.VatPhamChienTrongTran vatPham =
+                shooter == null ? null : shooter.layVatPhamChienDangCho();
+        if (vatPham != null) {
+            ChickenQuanLyCongThucSung.KiemTraBanDo kiemTra =
+                    this.kiemTraBanDo();
+            return this.taoPhatBanVatPhamChoCheDo(
+                    shooter,
+                    vatPham.getCauHinh(),
+                    goc,
+                    luc,
+                    ChickenHeThongGio.layWindXChoItem(
+                            this.gioHienTai, vatPham.getIdVatPham()),
+                    ChickenHeThongGio.layWindYChoItem(
+                            this.gioHienTai, vatPham.getIdVatPham()),
+                    kiemTra,
+                    this.chienBinhs,
+                    new ChickenPhatBanServer.BoLocMucTieu() {
+                        @Override
+                        public boolean chapNhan(
+                                ChickenChienBinh nguoiBan,
+                                ChickenChienBinh mucTieu
+                        ) {
+                            return ChickenLuatVaChamPhongBoss.chapNhan(
+                                    nguoiBan, mucTieu);
+                        }
+
+                        @Override
+                        public boolean trungHitbox(
+                                ChickenChienBinh mucTieu,
+                                int danX,
+                                int danY
+                        ) {
+                            return mucTieu.bot
+                                    ? DiChuyenBossRong.trungBossRong(
+                                            danX, danY,
+                                            mucTieu.x, mucTieu.y)
+                                    : ChickenKichThuocNhanVat
+                                            .trungNguoiChoi(
+                                                    danX, danY,
+                                                    mucTieu.x, mucTieu.y);
+                        }
+
+                        @Override
+                        public int nuaRongHitbox(
+                                ChickenChienBinh mucTieu
+                        ) {
+                            return mucTieu.bot
+                                    ? CauHinhBossRong.HITBOX_LECH_TRAI
+                                    : ChickenKichThuocNhanVat
+                                            .NGUOI_CHOI_NUA_RONG;
+                        }
+
+                        @Override
+                        public int lechTrenHitbox(
+                                ChickenChienBinh mucTieu
+                        ) {
+                            return mucTieu.bot
+                                    ? CauHinhBossRong.HITBOX_LECH_TREN
+                                    : ChickenKichThuocNhanVat
+                                            .NGUOI_CHOI_LECH_TREN;
+                        }
+
+                        @Override
+                        public int lechDuoiHitbox(
+                                ChickenChienBinh mucTieu
+                        ) {
+                            return mucTieu.bot
+                                    ? -CauHinhBossRong.HITBOX_LECH_DUOI
+                                    : ChickenKichThuocNhanVat
+                                            .NGUOI_CHOI_LECH_DUOI;
+                        }
+                    }
+            );
+        }
         if (shooter != null
                 && shooter.avenger == ChickenKyNangDacBietUltron.AVG_ULTRON) {
             return this.taoPhatBanUltronThuong(shooter, loaiDan, goc, luc);
@@ -1290,7 +1402,8 @@ public final class BossRong extends ChickenQuanLyChien {
                     goc,
                     luc,
                     ketQua.cacDuongX,
-                    ketQua.cacDuongY
+                    ketQua.cacDuongY,
+                    phienMayMan.powDaKichHoat()
             );
         }
 
@@ -1382,11 +1495,13 @@ public final class BossRong extends ChickenQuanLyChien {
         if (mucTieu == null || mucTieu.chet || satThuong <= 0 || this.daKetThuc) {
             return;
         }
+        int hpTruoc = Math.max(0, mucTieu.hp);
         mucTieu.hp = Math.max(0, mucTieu.hp - satThuong);
         if (mucTieu.hp == 0) {
             mucTieu.chet = true;
         }
         this.phatCapNhatMau(mucTieu);
+        this.ghiNhanPowSauSatThuong(mucTieu, hpTruoc, this.chienBinhs);
         this.kiemTraKetThuc();
     }
 
@@ -1731,7 +1846,8 @@ public final class BossRong extends ChickenQuanLyChien {
                     goc,
                     ChickenHoatAnhHawk.LUC_HIEN_THI,
                     loat.getX(),
-                    loat.getY()
+                    loat.getY(),
+                    hawk.nguoiChoi != null && hawk.nguoiChoi.dangHienHieuUngPow()
             );
         }
     }
@@ -1825,7 +1941,8 @@ public final class BossRong extends ChickenQuanLyChien {
                     shooter.y,
                     ketQua,
                     soPhat <= 0 ? (byte) 1 : soPhat,
-                    shooter.avenger == ChickenKyNangDacBietUltron.AVG_ULTRON);
+                    shooter.avenger == ChickenKyNangDacBietUltron.AVG_ULTRON,
+                    shooter.nguoiChoi != null && shooter.nguoiChoi.dangHienHieuUngPow());
         }
     }
 
@@ -1835,9 +1952,11 @@ public final class BossRong extends ChickenQuanLyChien {
                 shooter, ketQua, this.banDo.getWidth(), this.banDo.getHeight())) {
             return false;
         }
+        int hpTruoc = Math.max(0, shooter.hp);
         shooter.hp = 0;
         shooter.chet = true;
         this.phatCapNhatMau(shooter);
+        this.ghiNhanPowSauSatThuong(shooter, hpTruoc, this.chienBinhs);
         return this.kiemTraKetThuc();
     }
 

@@ -78,11 +78,14 @@ public final class ChickenQuanLyTiemNang {
         if (daKhoiTaoKhoaDaMayChu) {
             return;
         }
-        String sql = "ALTER TABLE `players` ADD COLUMN IF NOT EXISTS "
+        String sqlThongKe = "ALTER TABLE `players` ADD COLUMN IF NOT EXISTS "
                 + "`stats_revision` BIGINT NOT NULL DEFAULT 0";
+        String sqlKho = "ALTER TABLE `players` ADD COLUMN IF NOT EXISTS "
+                + "`inventory_revision` BIGINT NOT NULL DEFAULT 0";
         try (Connection ketNoi = ChickenCoSoDuLieu.getConnection();
                 Statement lenh = ketNoi.createStatement()) {
-            lenh.execute(sql);
+            lenh.execute(sqlThongKe);
+            lenh.execute(sqlKho);
             daKhoiTaoKhoaDaMayChu = true;
         } catch (SQLException loi) {
             throw new IllegalStateException(
@@ -339,11 +342,16 @@ public final class ChickenQuanLyTiemNang {
             short[] chiSoCu = Arrays.copyOf(
                     nguoiChoi.pointAdd, nguoiChoi.pointAdd.length);
             int soLuongCu = vatPham.soLuong;
+            int[] baloCu = nguoiChoi.itemBalo == null
+                    ? new int[0] : Arrays.copyOf(
+                            nguoiChoi.itemBalo,
+                            nguoiChoi.itemBalo.length);
 
             nguoiChoi.point = (short) diemSauTay;
             datMacDinh(nguoiChoi);
             if (vatPham.soLuong == 1) {
                 nguoiChoi.itemBag[chiSoTui] = null;
+                nguoiChoi.xoaThamChieuBaloTheoOTrongTui(chiSoTui);
             } else {
                 vatPham.soLuong--;
             }
@@ -353,6 +361,7 @@ public final class ChickenQuanLyTiemNang {
                 nguoiChoi.pointAdd = chiSoCu;
                 vatPham.soLuong = soLuongCu;
                 nguoiChoi.itemBag[chiSoTui] = vatPham;
+                nguoiChoi.itemBalo = baloCu;
                 nguoiChoi.moHopThoaiOK(
                         "Không thể lưu tẩy điểm. Vật phẩm chưa bị trừ.");
                 return false;

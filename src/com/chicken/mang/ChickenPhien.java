@@ -54,6 +54,8 @@ implements IChickenPhien {
     private int soTinTrongCuaSo;
     private long lanDiChuyenGanNhatMs;
     private long lanGuiLenhKyNangGanNhatMs;
+    private long lanChuyenKhoGanNhatMs;
+    private long lanDungVatPhamGanNhatMs;
     private long batDauCuaSoLoiMs;
     private int soLoiTrongCuaSo;
     private long mocGuiNguyenLieuBossTiepTheoMs;
@@ -129,6 +131,16 @@ implements IChickenPhien {
                 return false;
             }
             this.lanGuiLenhKyNangGanNhatMs = hienTaiMs;
+        } else if (cmd == -44) {
+            if (hienTaiMs - this.lanChuyenKhoGanNhatMs < 80L) {
+                return false;
+            }
+            this.lanChuyenKhoGanNhatMs = hienTaiMs;
+        } else if (cmd == 26) {
+            if (hienTaiMs - this.lanDungVatPhamGanNhatMs < 120L) {
+                return false;
+            }
+            this.lanDungVatPhamGanNhatMs = hienTaiMs;
         }
         return true;
     }
@@ -694,7 +706,11 @@ implements IChickenPhien {
         ChickenNguoiDung us = ChickenNguoiDung.dangNhap(this, tenDangNhap, matKhau = ms.boDoc().readUTF(), phienBan = ms.boDoc().readUTF(), loai = ms.boDoc().readByte());
         if (us != null) {
             this.user = us;
-            this.user.taiDuLieuNguoiChoi();
+            if (!this.user.taiDuLieuNguoiChoi()) {
+                this.user.close();
+                this.user = null;
+                return;
+            }
             this.user.dichVu.guiPhienBan();
         }
     }

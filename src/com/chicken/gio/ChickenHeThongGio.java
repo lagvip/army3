@@ -84,6 +84,16 @@ public final class ChickenHeThongGio {
         return gio != null && sungChiuAnhHuongGio(idSung) ? gio.getWindY() : 0;
     }
 
+    public static byte layWindXChoItem(TrangThaiGio gio, int idItem) {
+        return gio != null && itemChiuAnhHuongGio(idItem)
+                ? gio.getWindX() : 0;
+    }
+
+    public static byte layWindYChoItem(TrangThaiGio gio, int idItem) {
+        return gio != null && itemChiuAnhHuongGio(idItem)
+                ? gio.getWindY() : 0;
+    }
+
     private static boolean coTrongMang(int[] mang, int giaTri) {
         for (int item : mang) {
             if (item == giaTri) {

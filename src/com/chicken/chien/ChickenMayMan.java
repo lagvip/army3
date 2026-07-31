@@ -22,7 +22,8 @@ public final class ChickenMayMan {
      * Chế độ test tạm thời: chỉ cần có 1 điểm May mắn là kích hoạt 100%.
      * Đổi thành false để trở lại công thức 10 điểm = 1%.
      */
-    public static final boolean CHE_DO_TEST_MOT_DIEM_FULL = true;
+    public static final boolean CHE_DO_TEST_MOT_DIEM_FULL =
+            ChickenCheDoTestChienDau.MAY_MAN_MOT_DIEM_FULL;
     private static final int MAU_SO = 10_000;
 
     @FunctionalInterface
@@ -75,6 +76,8 @@ public final class ChickenMayMan {
         private final ChickenChienBinh[] chienBinhs;
         private final BoTaoSo boTaoSo;
         private final boolean tangGapDoi;
+        /** POW la he so rieng, duoc phep cong don voi May man thanh x4. */
+        private final boolean powGapDoi;
         private final Map<ChickenChienBinh, Boolean> giamMotNua =
                 new IdentityHashMap<>();
         private final Set<ChickenChienBinh> daPhatHieuUng =
@@ -89,6 +92,9 @@ public final class ChickenMayMan {
             this.chienBinhs = chienBinhs == null
                     ? new ChickenChienBinh[0] : chienBinhs;
             this.boTaoSo = boTaoSo == null ? NGAU_NHIEN : boTaoSo;
+            this.powGapDoi = nguoiTanCong != null
+                    && nguoiTanCong.nguoiChoi != null
+                    && nguoiTanCong.nguoiChoi.tieuThuPowChoTanCong();
             this.tangGapDoi = quay(nguoiTanCong);
             /*
              * Hiệu ứng phía tấn công là động tác báo trước. Phát ngay khi
@@ -118,6 +124,9 @@ public final class ChickenMayMan {
                 return 0;
             }
             long satThuong = satThuongGoc;
+            if (this.powGapDoi) {
+                satThuong = Math.min(Integer.MAX_VALUE, satThuong * 2L);
+            }
             if (this.tangGapDoi) {
                 satThuong = Math.min(Integer.MAX_VALUE, satThuong * 2L);
             }
@@ -160,6 +169,10 @@ public final class ChickenMayMan {
 
         public boolean tanCongDaKichHoat() {
             return this.tangGapDoi;
+        }
+
+        public boolean powDaKichHoat() {
+            return this.powGapDoi;
         }
 
         public boolean phongThuDaKichHoat(ChickenChienBinh mucTieu) {

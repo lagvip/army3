@@ -49,9 +49,28 @@ public final class ChickenChiSoNguoiChoi {
 
     public static int tinhTanCong(ChickenNguoiChoi nguoiChoi) {
         ChickenVatPham sung = laySungHopLe(nguoiChoi);
+        return tinhTanCongVoiSung(nguoiChoi, sung);
+    }
+
+    /**
+     * Tinh lai tan cong theo khau sung server dang cho phep cam trong tran.
+     * Sung trong Balo khong co chiSo=5, vi vay khong duoc dung phep kiem tra
+     * slot trang bi cho rieng khau sung thay the. Cac mon do con lai van phai
+     * nam dung slot itemBody nhu binh thuong.
+     */
+    public static int tinhTanCongVoiSung(
+            ChickenNguoiChoi nguoiChoi,
+            ChickenVatPham sung
+    ) {
+        if (!laSungHopLe(sung)) {
+            sung = null;
+        }
         int optionTheoLoaiSung = sung == null ? -1 : layOptionTanCongTheoLoaiSung(sung.mau);
-        return tinhChiSo(nguoiChoi, OPTION_TAN_CONG, OPTION_TAN_CONG_PHAN_TRAM,
-                ChickenQuanLyTiemNang.TAN_CONG, optionTheoLoaiSung);
+        return tinhChiSo(nguoiChoi, OPTION_TAN_CONG,
+                OPTION_TAN_CONG_PHAN_TRAM,
+                ChickenQuanLyTiemNang.TAN_CONG,
+                optionTheoLoaiSung,
+                sung);
     }
 
     public static int tinhGiap(ChickenNguoiChoi nguoiChoi) {
@@ -94,7 +113,7 @@ public final class ChickenChiSoNguoiChoi {
                     -1,
                     -1
             );
-            phanTram += cong[0];
+            phanTram = congBaoHoa(phanTram, cong[0]);
         }
         return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, phanTram));
     }
@@ -139,6 +158,14 @@ public final class ChickenChiSoNguoiChoi {
     private static int tinhChiSo(ChickenNguoiChoi nguoiChoi,
             int optionCongThang, int optionPhanTram,
             int chiSoTiemNang, int optionTheoLoaiSung) {
+        return tinhChiSo(nguoiChoi, optionCongThang, optionPhanTram,
+                chiSoTiemNang, optionTheoLoaiSung, null);
+    }
+
+    private static int tinhChiSo(ChickenNguoiChoi nguoiChoi,
+            int optionCongThang, int optionPhanTram,
+            int chiSoTiemNang, int optionTheoLoaiSung,
+            ChickenVatPham sungThayThe) {
         if (nguoiChoi == null) {
             return 0;
         }
@@ -148,19 +175,25 @@ public final class ChickenChiSoNguoiChoi {
 
         if (nguoiChoi.itemBody != null) {
             for (int i = 0; i < nguoiChoi.itemBody.length; i++) {
-                ChickenVatPham trangBi = nguoiChoi.itemBody[i];
-                if (!trangBiHopLe(trangBi, i)) {
+                ChickenVatPham trangBi = i == 5 && sungThayThe != null
+                        ? sungThayThe : nguoiChoi.itemBody[i];
+                boolean hopLe = i == 5 && sungThayThe != null
+                        ? laSungHopLe(trangBi)
+                        : trangBiHopLe(trangBi, i);
+                if (!hopLe) {
                     continue;
                 }
                 long[] cong = layChiSoTuTrangBi(trangBi,
                         optionCongThang, optionPhanTram, optionTheoLoaiSung);
-                coDinh += cong[0];
-                phanTram += cong[1];
+                coDinh = congBaoHoa(coDinh, cong[0]);
+                phanTram = congBaoHoa(phanTram, cong[1]);
             }
         }
 
         coDinh = Math.max(0L, coDinh);
-        long tong = coDinh + coDinh * Math.max(0L, phanTram) / 100L;
+        long phanThuong = nhanChiaTramBaoHoa(
+                coDinh, Math.max(0L, phanTram));
+        long tong = congBaoHoa(coDinh, phanThuong);
         return (int) Math.min(Integer.MAX_VALUE, Math.max(0L, tong));
     }
 
@@ -169,7 +202,12 @@ public final class ChickenChiSoNguoiChoi {
             return null;
         }
         ChickenVatPham sung = nguoiChoi.itemBody[5];
-        return trangBiHopLe(sung, 5) && sung.mau.loai == 5 ? sung : null;
+        return trangBiHopLe(sung, 5) && laSungHopLe(sung) ? sung : null;
+    }
+
+    private static boolean laSungHopLe(ChickenVatPham sung) {
+        return sung != null && sung.mau != null && sung.mau.loai == 5
+                && sung.HP > 0;
     }
 
     private static boolean trangBiHopLe(ChickenVatPham vatPham, int viTri) {
@@ -187,16 +225,16 @@ public final class ChickenChiSoNguoiChoi {
             long[] tuItem = layChiSoTuDanhSach(trangBi.itemOptions,
                     optionCongThang, optionPhanTram, optionTheoLoaiSung,
                     true, optionDaCo, false);
-            coDinh += tuItem[0];
-            phanTram += tuItem[1];
+            coDinh = congBaoHoa(coDinh, tuItem[0]);
+            phanTram = congBaoHoa(phanTram, tuItem[1]);
         }
 
         if (trangBi.mau != null && trangBi.mau.thuocTinhs != null) {
             long[] tuMau = layChiSoTuDanhSach(trangBi.mau.thuocTinhs,
                     optionCongThang, optionPhanTram, optionTheoLoaiSung,
                     false, optionDaCo, true);
-            coDinh += tuMau[0];
-            phanTram += tuMau[1];
+            coDinh = congBaoHoa(coDinh, tuMau[0]);
+            phanTram = congBaoHoa(phanTram, tuMau[1]);
         }
         return new long[]{coDinh, phanTram};
     }
@@ -206,6 +244,7 @@ public final class ChickenChiSoNguoiChoi {
             boolean docNgoc, Set<Integer> optionDaCo, boolean chiDocOptionConThieu) {
         long coDinh = 0L;
         long phanTram = 0L;
+        int soSocketDaDoc = 0;
         if (danhSach == null) {
             return new long[]{0L, 0L};
         }
@@ -229,23 +268,43 @@ public final class ChickenChiSoNguoiChoi {
 
             int thamSo = Math.max(0, thuocTinh.thamSo);
             if (maThuocTinh == optionCongThang) {
-                coDinh += thamSo;
+                coDinh = congBaoHoa(coDinh, thamSo);
             } else if (maThuocTinh == optionPhanTram
                     || maThuocTinh == OPTION_PHAN_TRAM_CHUNG
                     || (optionTheoLoaiSung >= 0 && maThuocTinh == optionTheoLoaiSung)) {
-                phanTram += thamSo;
-            } else if (docNgoc && maThuocTinh == OPTION_SOCKET && thamSo > 0) {
+                phanTram = congBaoHoa(phanTram, thamSo);
+            } else if (docNgoc && maThuocTinh == OPTION_SOCKET
+                    && thamSo > 0
+                    && soSocketDaDoc < ChickenVatPham.SO_SOCKET_TOI_DA) {
+                soSocketDaDoc++;
                 ChickenMauVatPham mauNgoc = ChickenQuanLyMayChu.itemTemplates.get(thamSo);
                 if (mauNgoc != null && mauNgoc.loai == 12) {
                     long[] congNgoc = layChiSoTuDanhSach(mauNgoc.thuocTinhs,
                             optionCongThang, optionPhanTram, optionTheoLoaiSung,
                             false, null, false);
-                    coDinh += congNgoc[0];
-                    phanTram += congNgoc[1];
+                    coDinh = congBaoHoa(coDinh, congNgoc[0]);
+                    phanTram = congBaoHoa(phanTram, congNgoc[1]);
                 }
             }
         }
         return new long[]{coDinh, phanTram};
+    }
+
+    private static long congBaoHoa(long a, long b) {
+        if (a < 0L || b < 0L || Long.MAX_VALUE - a < b) {
+            return Long.MAX_VALUE;
+        }
+        return a + b;
+    }
+
+    private static long nhanChiaTramBaoHoa(long giaTri, long phanTram) {
+        if (giaTri <= 0L || phanTram <= 0L) {
+            return 0L;
+        }
+        if (giaTri > Long.MAX_VALUE / phanTram) {
+            return Long.MAX_VALUE;
+        }
+        return giaTri * phanTram / 100L;
     }
 
     private static int layOptionTanCongTheoLoaiSung(ChickenMauVatPham sung) {

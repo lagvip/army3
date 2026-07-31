@@ -62,6 +62,44 @@ public final class ChickenYeuCauBanServer {
         );
     }
 
+    /**
+     * Doc intent ban cua vat pham da duoc server chon tu snapshot Balo.
+     * Client van gui bulletType/toa do/so phat theo protocol cu, nhung ba
+     * truong do bi bo qua va khong the thay doi cau hinh vat pham.
+     */
+    public static KetQua docVatPham(
+            ChickenTinNhan tinNhan,
+            ChickenCongThucVatPhamChien.CauHinh cauHinh
+    ) {
+        if (tinNhan == null || cauHinh == null
+                || cauHinh.getKieuGoc()
+                        == ChickenCongThucVatPhamChien.KieuGoc.KHONG_CAN_GOC) {
+            return null;
+        }
+        byte[] duLieu = tinNhan.layDuLieu();
+        if (duLieu == null || duLieu.length != 9) {
+            return null;
+        }
+        int viTri = 0;
+        viTri++; // Loai dan client.
+        viTri += 2; // X client.
+        viTri += 2; // Y client.
+        short goc = docShort(duLieu, viTri);
+        viTri += 2;
+        int luc = duLieu[viTri++] & 0xFF;
+        viTri++; // So phat client.
+        if (viTri != duLieu.length) {
+            return null;
+        }
+        return new KetQua(
+                cauHinh.getLoaiDan(),
+                (byte) 1,
+                chuanHoaGoc(goc),
+                (byte) kep(luc, 1, 30),
+                (byte) kep(luc, 1, 30)
+        );
+    }
+
     private static short docShort(byte[] duLieu, int viTri) {
         return (short) (((duLieu[viTri] & 0xFF) << 8)
                 | (duLieu[viTri + 1] & 0xFF));

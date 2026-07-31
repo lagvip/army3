@@ -29,16 +29,26 @@ public final class ChickenNapDanServer {
         if (chienBinh == null || chienBinh.nguoiChoi == null) {
             return MAC_DINH;
         }
-        return layChoNguoiChoi(chienBinh.nguoiChoi);
+        return layChoNguoiChoiVoiSung(
+                chienBinh.nguoiChoi,
+                chienBinh.laySungDangCamTrongTran());
     }
 
     public static int layChoNguoiChoi(ChickenNguoiChoi nguoiChoi) {
         if (nguoiChoi == null) {
             return MAC_DINH;
         }
-        ChickenVatPham sung = nguoiChoi.itemBody != null
-                && nguoiChoi.itemBody.length > SLOT_SUNG
-                ? nguoiChoi.itemBody[SLOT_SUNG] : null;
+        return layChoNguoiChoiVoiSung(
+                nguoiChoi, nguoiChoi.laySungTrangBiMayChu());
+    }
+
+    public static int layChoNguoiChoiVoiSung(
+            ChickenNguoiChoi nguoiChoi,
+            ChickenVatPham sung
+    ) {
+        if (nguoiChoi == null || !laSungHopLe(sung)) {
+            return MAC_DINH;
+        }
         int napDanGoc = layNapDanGoc(sung);
         int giamNapDan =
                 ChickenChiSoNguoiChoi.tinhGiamNapDanTuTiemNang(nguoiChoi);
@@ -62,7 +72,26 @@ public final class ChickenNapDanServer {
         ChickenMauVatPham mau = sung.mau;
         int tuMau = mau == null
                 ? -1 : layOptionDuong(mau.thuocTinhs, OPTION_NAP_DAN);
-        return tuMau > 0 ? kep(tuMau) : MAC_DINH;
+        // Co item sung nhung thieu cau hinh thi khong duoc roi ve moc 250
+        // nhanh nhat. Day la du lieu hong/chua hoan thien, dung moc cham nhat
+        // de no khong tro thanh loi the can bang.
+        return tuMau > 0 ? kep(tuMau) : TOI_DA;
+    }
+
+    public static boolean coCauHinhNapDanHopLe(ChickenVatPham sung) {
+        if (sung == null || sung.mau == null || sung.mau.loai != SLOT_SUNG) {
+            return false;
+        }
+        return layOptionDuong(sung.itemOptions, OPTION_NAP_DAN) > 0
+                || layOptionDuong(sung.mau.thuocTinhs, OPTION_NAP_DAN) > 0;
+    }
+
+    private static boolean laSungHopLe(ChickenVatPham sung) {
+        return sung != null
+                && sung.mau != null
+                && sung.mau.loai == SLOT_SUNG
+                && sung.HP > 0
+                && ChickenQuanLyDanSung.theoMauSung(sung.mau) != null;
     }
 
     private static int layOptionDuong(Vector danhSach, int maOption) {

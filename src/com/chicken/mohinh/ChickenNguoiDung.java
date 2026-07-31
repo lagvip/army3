@@ -2,6 +2,8 @@ package com.chicken.mohinh;
 
 import com.chicken.dichvu.ChickenQuanLyBietDoi;
 import com.chicken.avg.ChickenQuanLyNangLuongAVG;
+import com.chicken.chien.ChickenNapDanServer;
+import com.chicken.chien.ChickenQuanLyDanSung;
 
 import com.chicken.loi.ChickenCoSoDuLieu;
 import com.chicken.loi.ChickenQuanLyMayChu;
@@ -192,6 +194,8 @@ public class ChickenNguoiDung {
                             this.nguoiChoi.napTrangThaiTiemNangTuKho(
                                     expTai, mocTai, p.getShort("point"),
                                     diemTai, res2.getLong("stats_revision"));
+                            this.nguoiChoi.napPhienBanKhoVatPham(
+                                    res2.getLong("inventory_revision"));
                             this.nguoiChoi.trainingSuccess = p.getByte("trainingSuccess");
                             this.nguoiChoi.datSoTranThangLuyenTap(p.containsKey("trainingWins") ? p.getInt("trainingWins") : 0);
                             this.nguoiChoi.busyHammer = p.getByte("busyHammer");
@@ -270,7 +274,12 @@ public class ChickenNguoiDung {
                             item4.chiSo = item4.mau.loai;
                             item4.itemOptions = item4.mau.thuocTinhs;
                             this.nguoiChoi.itemBody[item4.chiSo] = item4;
-                            int thamSo = item4.getParamById(13);
+                            int thamSo = ChickenNguoiChoi
+                                    .layDungLuongBaloHopLe(item4);
+                            if (thamSo < 0) {
+                                throw new SQLException(
+                                        "Template balo mac dinh khong hop le");
+                            }
                             this.nguoiChoi.itemBalo = new int[thamSo];
                             for (int i = 0; i < thamSo; ++i) {
                                 this.nguoiChoi.itemBalo[i] = -1;
@@ -297,7 +306,7 @@ public class ChickenNguoiDung {
         }
     }
 
-    public void taiDuLieuNguoiChoi() {
+    public boolean taiDuLieuNguoiChoi() {
         try (java.sql.Connection conn = ChickenCoSoDuLieu.getConnection();
              PreparedStatement stmt = conn.prepareStatement("SELECT * FROM `players` WHERE `account_id` = ? LIMIT 1;")) {
             stmt.setInt(1, this.user_id);
@@ -332,6 +341,8 @@ public class ChickenNguoiDung {
                 this.nguoiChoi.napTrangThaiTiemNangTuKho(
                         expTai, mocTai, p.getShort("point"),
                         diemTai, res.getLong("stats_revision"));
+                this.nguoiChoi.napPhienBanKhoVatPham(
+                        res.getLong("inventory_revision"));
                 this.nguoiChoi.trainingSuccess = p.getByte("trainingSuccess");
                 this.nguoiChoi.datSoTranThangLuyenTap(p.containsKey("trainingWins") ? p.getInt("trainingWins") : 0);
                 this.nguoiChoi.busyHammer = p.getByte("busyHammer");
@@ -346,17 +357,26 @@ public class ChickenNguoiDung {
                                             : ChickenQuanLyNangLuongAVG.NANG_LUONG_TOI_DA
                             );
                 this.nguoiChoi.power = p.getByte("power");
+                boolean khoCanDongBo = false;
+                java.util.ArrayList<ChickenVatPham> vatPhamCachLy =
+                        new java.util.ArrayList<>();
                 JSONArray bags = (JSONArray)JSON.parse(res.getString("inventory_json"));
                 for (int i = 0; i < bags.size(); ++i) {
                     ChickenVatPham vatPham = new ChickenVatPham((JSONObject)bags.get(i));
-                    if (vatPham.chiSo >= 0
+                    if (vatPham.mau != null
+                            && vatPham.soLuong > 0
+                            && vatPham.chiSo >= 0
                             && vatPham.chiSo < this.nguoiChoi.itemBag.length
                             && this.nguoiChoi.itemBag[vatPham.chiSo] == null) {
                         this.nguoiChoi.itemBag[vatPham.chiSo] = vatPham;
                     } else {
+                        khoCanDongBo = true;
+                        if (vatPham.mau != null && vatPham.soLuong > 0) {
+                            vatPhamCachLy.add(vatPham);
+                        }
                         Logger.getLogger(ChickenNguoiDung.class.getName()).log(
                                 Level.WARNING,
-                                "Bo qua vat pham tui co chi so khong hop le/bi trung: player={0}, index={1}",
+                                "Cach ly vat pham tui co chi so khong hop le/bi trung: player={0}, index={1}",
                                 new Object[]{this.nguoiChoi.ma, vatPham.chiSo}
                         );
                     }
@@ -364,20 +384,41 @@ public class ChickenNguoiDung {
                 JSONArray bodys = (JSONArray)JSON.parse(res.getString("equipped_json"));
                 for (int i = 0; i < bodys.size(); ++i) {
                     ChickenVatPham vatPham = new ChickenVatPham((JSONObject)bodys.get(i));
-                    if (vatPham.chiSo < 0
+                    boolean saiCauTruc = vatPham.mau == null
+                            || vatPham.soLuong != 1
+                            || vatPham.chiSo < 0
                             || vatPham.chiSo >= this.nguoiChoi.itemBody.length
-                            || this.nguoiChoi.itemBody[vatPham.chiSo] != null) {
+                            || vatPham.mau.loai != vatPham.chiSo
+                            || this.nguoiChoi.itemBody[vatPham.chiSo] != null;
+                    if (!saiCauTruc && vatPham.mau.loai == 4) {
+                        saiCauTruc = ChickenNguoiChoi
+                                .layDungLuongBaloHopLe(vatPham) < 0;
+                    }
+                    if (!saiCauTruc && vatPham.mau.loai == 5) {
+                        saiCauTruc = ChickenQuanLyDanSung
+                                .theoMauSung(vatPham.mau) == null
+                                || !ChickenNapDanServer
+                                .coCauHinhNapDanHopLe(vatPham);
+                    }
+                    if (saiCauTruc) {
                         Logger.getLogger(ChickenNguoiDung.class.getName()).log(
                                 Level.WARNING,
-                                "Bo qua trang bi co chi so khong hop le/bi trung: player={0}, index={1}",
-                                new Object[]{this.nguoiChoi.ma, vatPham.chiSo}
+                                "Chuyen trang bi loi ve tui: player={0}, item={1}, index={2}",
+                                new Object[]{this.nguoiChoi.ma, vatPham.ma,
+                                    vatPham.chiSo}
                         );
+                        if (vatPham.mau != null && vatPham.soLuong > 0) {
+                            vatPham.soLuong = 1;
+                            vatPhamCachLy.add(vatPham);
+                        }
+                        khoCanDongBo = true;
                         continue;
                     }
                     this.nguoiChoi.itemBody[vatPham.chiSo] = vatPham;
                     this.nguoiChoi.datTrangBiChoNhanVat(vatPham);
                     if (vatPham.mau.loai == 4) {
-                        int thamSo = vatPham.getParamById(13);
+                        int thamSo = ChickenNguoiChoi
+                                .layDungLuongBaloHopLe(vatPham);
                         this.nguoiChoi.itemBalo = new int[thamSo];
                         for (int a = 0; a < thamSo; ++a) {
                             this.nguoiChoi.itemBalo[a] = -1;
@@ -385,28 +426,68 @@ public class ChickenNguoiDung {
                     }
                 }
                 JSONArray balos = (JSONArray)JSON.parse(res.getString("pocket_json"));
+                if (balos.size() != this.nguoiChoi.itemBalo.length) {
+                    khoCanDongBo = true;
+                }
+                boolean[] vatPhamDaGanBalo =
+                        new boolean[this.nguoiChoi.itemBag.length];
                 for (int i = 0; i < balos.size() && i < this.nguoiChoi.itemBalo.length; ++i) {
-                    int chiSo = Integer.parseInt(balos.get(i).toString());
+                    int chiSo;
+                    try {
+                        chiSo = Integer.parseInt(balos.get(i).toString());
+                    } catch (NumberFormatException ex) {
+                        khoCanDongBo = true;
+                        continue;
+                    }
+                    if (chiSo == -1) {
+                        continue;
+                    }
                     if (chiSo >= 0
                             && chiSo < this.nguoiChoi.itemBag.length
-                            && this.nguoiChoi.itemBag[chiSo] != null) {
+                            && this.nguoiChoi.itemBag[chiSo] != null
+                            && ChickenNguoiChoi.laVatPhamDuocPhepTrongBalo(
+                                    this.nguoiChoi.itemBag[chiSo])
+                            && this.nguoiChoi.itemBag[chiSo].chiSo == chiSo
+                            && !vatPhamDaGanBalo[chiSo]) {
                         this.nguoiChoi.itemBalo[i] = chiSo;
+                        vatPhamDaGanBalo[chiSo] = true;
+                    } else {
+                        khoCanDongBo = true;
                     }
                 }
                 JSONArray box = (JSONArray)JSON.parse(res.getString("storage_json"));
                 for (int i = 0; i < box.size(); ++i) {
                     ChickenVatPham vatPham = new ChickenVatPham((JSONObject)box.get(i));
-                    if (vatPham.chiSo >= 0
+                    if (vatPham.mau != null
+                            && vatPham.soLuong > 0
+                            && vatPham.chiSo >= 0
                             && vatPham.chiSo < this.nguoiChoi.itemBox.length
                             && this.nguoiChoi.itemBox[vatPham.chiSo] == null) {
                         this.nguoiChoi.itemBox[vatPham.chiSo] = vatPham;
                     } else {
+                        khoCanDongBo = true;
+                        if (vatPham.mau != null && vatPham.soLuong > 0) {
+                            vatPhamCachLy.add(vatPham);
+                        }
                         Logger.getLogger(ChickenNguoiDung.class.getName()).log(
                                 Level.WARNING,
-                                "Bo qua vat pham ruong co chi so khong hop le/bi trung: player={0}, index={1}",
+                                "Cach ly vat pham ruong co chi so khong hop le/bi trung: player={0}, index={1}",
                                 new Object[]{this.nguoiChoi.ma, vatPham.chiSo}
                         );
                     }
+                }
+                for (ChickenVatPham vatPham : vatPhamCachLy) {
+                    if (!this.datVatPhamVaoKhoTrongKhiTai(vatPham)) {
+                        throw new SQLException(
+                                "Khong con cho cach ly trang bi loi player="
+                                + this.nguoiChoi.ma + " item=" + vatPham.ma);
+                    }
+                }
+                if (khoCanDongBo
+                        && !this.nguoiChoi.luuKhoVatPhamCoKetQua()) {
+                    throw new SQLException(
+                            "Khong the dong bo kho vat pham player="
+                            + this.nguoiChoi.ma);
                 }
                 int thayDoiDiem =
                         ChickenQuanLyTiemNang.dongBoQuyenLoiTheoCapHienTai(
@@ -422,13 +503,56 @@ public class ChickenNguoiDung {
                 res.close();
                 ChickenQuanLyBietDoi.taiClan(this.nguoiChoi);
                 this.nguoiChoi.dichVu.datNguoiChoi(this.nguoiChoi);
-                return;
+                return true;
             }
             res.close();
+            return true;
         }
-        catch (SQLException ex) {
-            Logger.getLogger(ChickenNguoiDung.class.getName()).log(Level.SEVERE, null, ex);
+        catch (SQLException | RuntimeException ex) {
+            int maNguoiChoiLoi = this.nguoiChoi == null
+                    ? -1 : this.nguoiChoi.ma;
+            this.nguoiChoi = null;
+            Logger.getLogger(ChickenNguoiDung.class.getName()).log(
+                    Level.SEVERE,
+                    "Khong the tai du lieu nguoi choi id=" + maNguoiChoiLoi,
+                    ex);
+            try {
+                this.dichVu.moHopThoaiOK(
+                        "Dữ liệu nhân vật không hợp lệ. Vui lòng liên hệ quản trị viên.");
+            } catch (Exception guiLoi) {
+                ex.addSuppressed(guiLoi);
+            }
+            return false;
         }
+    }
+
+    private boolean datVatPhamVaoKhoTrongKhiTai(ChickenVatPham vatPham) {
+        if (vatPham == null || vatPham.mau == null) {
+            return false;
+        }
+        for (int i = 0; i < this.nguoiChoi.itemBag.length; i++) {
+            if (this.nguoiChoi.itemBag[i] != null) {
+                continue;
+            }
+            vatPham.HP = ChickenVatPham.DO_BEN_TOI_DA;
+            vatPham.chiSo = i;
+            this.nguoiChoi.itemBag[i] = vatPham;
+            return true;
+        }
+        for (int i = 0; i < this.nguoiChoi.itemBox.length; i++) {
+            if (this.nguoiChoi.itemBox[i] != null) {
+                continue;
+            }
+            vatPham.HP = ChickenVatPham.DO_BEN_TOI_DA;
+            vatPham.chiSo = i;
+            this.nguoiChoi.itemBox[i] = vatPham;
+            return true;
+        }
+        Logger.getLogger(ChickenNguoiDung.class.getName()).log(
+                Level.SEVERE,
+                "Khong con o tui/ruong de cach ly vat pham loi: player={0}, item={1}",
+                new Object[]{this.nguoiChoi.ma, vatPham.ma});
+        return false;
     }
 
     public void close() {

@@ -40,6 +40,32 @@ public final class ChickenThoiGianHoatAnhDan {
     }
 
     /**
+     * Timeout du phong cho vien POW. Mot so bullet type native tao them Bullet
+     * theo tung nhip khi critical=1, nen can cong ca thoi gian chen cac duong
+     * hien thi ma server da bo sung cho client.
+     */
+    public static long tinh(ChickenKetQuaDan ketQua, boolean critical) {
+        long coBan = tinh(ketQua);
+        if (!critical || ketQua == null) {
+            return coBan;
+        }
+        int soDuongGoc = Math.min(
+                ketQua.cacDuongX.length, ketQua.cacDuongY.length);
+        ChickenQuyDaoPowClient.DuLieu hienThi =
+                ChickenQuyDaoPowClient.tao(
+                        ketQua.loaiDan,
+                        ketQua.cacDuongX,
+                        ketQua.cacDuongY,
+                        true);
+        int soDuongHienThi = Math.min(
+                hienThi.getCacDuongX().length,
+                hienThi.getCacDuongY().length);
+        int soDuongChen = Math.max(0, soDuongHienThi - soDuongGoc);
+        return kepThoiGian(
+                coBan + soDuongChen * 10L * MOI_DIEM_MS);
+    }
+
+    /**
      * Dan Riu chay het duong chinh roi client moi kich hoat dong thoi ba
      * duong con. Lay max don thuan se doi luot trong luc ba dau Riu van bay.
      */

@@ -38,6 +38,17 @@ final class ChickenDuongDanLaserClient {
 
     static DuLieu tao(short[] duongX, short[] duongY,
             short xMacDinh, short yMacDinh) {
+        return tao(duongX, duongY, xMacDinh, yMacDinh, false);
+    }
+
+    /**
+     * {@code neoDiemDauTaiNhanVat} chi dung cho animation AVG cu can diem neo
+     * tai than nhan vat. Sung laser thuong phai giu diem dau nong that; neu
+     * thay bang toa do chan, client se ve tia lech khoi duong va cham server.
+     */
+    static DuLieu tao(short[] duongX, short[] duongY,
+            short xMacDinh, short yMacDinh,
+            boolean neoDiemDauTaiNhanVat) {
         int soDiem = Math.min(
                 duongX == null ? 0 : duongX.length,
                 duongY == null ? 0 : duongY.length
@@ -68,8 +79,10 @@ final class ChickenDuongDanLaserClient {
             short[] y = new short[soDiem];
             System.arraycopy(duongX, 0, x, 0, soDiem);
             System.arraycopy(duongY, 0, y, 0, soDiem);
-            x[0] = xMacDinh;
-            y[0] = yMacDinh;
+            if (neoDiemDauTaiNhanVat) {
+                x[0] = xMacDinh;
+                y[0] = yMacDinh;
+            }
             return new DuLieu(x, y, (byte) 0, (byte) 0);
         }
 
@@ -125,8 +138,10 @@ final class ChickenDuongDanLaserClient {
          * Client dung diem dau lam muc tieu animation bay cua AVG. Chi neo ban
          * sao gui qua mang; quy dao vat ly server va diem va cham khong doi.
          */
-        x[0] = xMacDinh;
-        y[0] = yMacDinh;
+        if (neoDiemDauTaiNhanVat) {
+            x[0] = xMacDinh;
+            y[0] = yMacDinh;
+        }
         return new DuLieu(x, y, (byte) buocX, (byte) buocY);
     }
 

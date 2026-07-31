@@ -181,6 +181,32 @@ public final class ChickenCauHinhSatThuongSung {
         );
     }
 
+    /**
+     * Tao ho so no authoritative cho vat pham/skill khong phai sung. Ho so
+     * khong duoc chen vao bang sung, nen kiem tra day du sung van giu nguyen.
+     */
+    public static HoSoSatThuong taoHoSoNoRieng(
+            int maNguon,
+            int banKinhDayDu,
+            int banKinhNo,
+            int phanTramToiThieu,
+            boolean biDiaHinhChe
+    ) {
+        return new HoSoSatThuong(
+                maNguon,
+                true,
+                banKinhDayDu,
+                banKinhNo,
+                phanTramToiThieu,
+                KieuDuongCong.GIU_DAMAGE_GAN_TAM,
+                biDiaHinhChe,
+                6,
+                14,
+                70,
+                35
+        );
+    }
+
     /** Goi luc khoi dong de sung moi khong bi roi ve cong thuc ngam dinh. */
     public static void kiemTraDayDu() {
         for (Integer idSung : ChickenQuanLyDanSung.layTatCa().keySet()) {

@@ -120,7 +120,9 @@ public final class ChickenKiemThuPhuMayMan {
                 "Matrix" + slot,
                 (short) 57,
                 (byte) 0);
-        ketQua.mayMan = coMayMan == 0 ? 0 : 1;
+        // 10 diem la moc production nho nhat co 1%; bo sinh so tra 0 de
+        // testcase kich hoat xac dinh ma khong can bat che do dev.
+        ketQua.mayMan = coMayMan == 0 ? 0 : 10;
         return ketQua;
     }
 
@@ -128,7 +130,8 @@ public final class ChickenKiemThuPhuMayMan {
         Map<String, Integer> mongDoi = new LinkedHashMap<>();
         mongDoi.put("src/com/chicken/avg/ChickenKyNangDacBietHawk.java", 1);
         mongDoi.put("src/com/chicken/avg/ChickenKyNangDacBietThor.java", 1);
-        mongDoi.put("src/com/chicken/chien/ChickenQuanLyChien.java", 4);
+        // PvP co them mot diem bat dau May man cho item tao dan.
+        mongDoi.put("src/com/chicken/chien/ChickenQuanLyChien.java", 5);
         mongDoi.put("src/com/chicken/mohinh/ChickenNguoiChoi.java", 4);
         mongDoi.put("src/com/chicken/phong/boss/trandau/baovay/BossBaoVay.java", 5);
         mongDoi.put("src/com/chicken/phong/boss/trandau/haitoathap/BossHaiToaThap.java", 5);
@@ -146,7 +149,7 @@ public final class ChickenKiemThuPhuMayMan {
                     "so diem noi May man thay doi o " + entry.getKey());
             tong += thucTe;
         }
-        bang(52, tong, "tong diem noi May man khong khop ma tran");
+        bang(53, tong, "tong diem noi May man khong khop ma tran");
     }
 
     private static void kiemTraThuTuToanBoNguon() throws Exception {

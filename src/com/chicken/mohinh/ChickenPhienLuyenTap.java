@@ -39,6 +39,11 @@ final class ChickenPhienLuyenTap {
     /** Lần quay May mắn đã chốt trước packet đạn của phát hiện tại. */
     transient ChickenChienBinh[] trainingPendingMayManTargets;
     transient ChickenMayMan.PhienTanCong trainingPendingMayMan;
+    /**
+     * Snapshot server cua sung/vat pham trong Balo luc bat dau phien.
+     * Dung rieng cho viec xac thuc CMD 26; khong dung lam nguon HP/toa do.
+     */
+    transient ChickenChienBinh trainingVatPhamChienBinh;
     boolean trainingFirstTurnSent;
     boolean trainingBotAnimating;
     boolean trainingBossShield;

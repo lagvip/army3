@@ -26,7 +26,7 @@ public final class BossCamTu {
     /** Sai số nhỏ quanh trục X không được dùng để đảo hướng liên tục. */
     private static final int NGUONG_DOI_HUONG_X = 4;
     /** Nạp đạn tạm thời sau một lượt di chuyển chưa chạm mục tiêu. */
-    public static final int NAP_DAN_SAU_DI_CHUYEN = 300;
+    public static final int NAP_DAN_SAU_DI_CHUYEN = 350;
     private BossCamTu() {
     }
 

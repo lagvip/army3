@@ -9,6 +9,7 @@ import com.chicken.chien.ChickenQuanLyDanSung;
 import com.chicken.chien.ChickenQuanLyDanSung.DuLieuSung;
 import com.chicken.chien.ChickenKetQuaDan;
 import com.chicken.chien.ChickenNguCanhLaySung;
+import com.chicken.chien.ChickenQuyDaoPowClient;
 import com.chicken.chien.ChickenSieuCao;
 import com.chicken.avg.ChickenThanhDiChuyenAVG;
 import com.chicken.avg.ChickenQuanLyNangLuongAVG;
@@ -274,17 +275,25 @@ implements IChickenDichVuGame {
     }
 
     public void xemCuaHang(ChickenCuaHang store) throws IOException {
+        if (store == null) {
+            this.baoLoiTien("Cửa hàng không hợp lệ.");
+            return;
+        }
         ChickenTinNhan ms = new ChickenTinNhan(103);
         DataOutputStream ds = ms.boGhi();
         ds.writeByte(store.typeShop);
-        int tabNumber = store.shopTabName.size();
+        int tabNumber = Math.min(
+                store.shopTabName.size(), store.tabs.size());
         ds.writeByte(tabNumber);
         for (int i = 0; i < tabNumber; ++i) {
             ArrayList<ChickenTrang> pages = store.tabs.get(i);
             ds.writeByte(i);
             ds.writeUTF(store.shopTabName.get(i));
             ds.writeByte(pages.size());
-            ArrayList<ChickenMauVatPham> vatPhams = pages.get((int)0).vatPhams;
+            ArrayList<ChickenMauVatPham> vatPhams =
+                    pages.isEmpty()
+                            ? new ArrayList<>()
+                            : pages.get(0).vatPhams;
             int numberItem = vatPhams.size();
             ds.writeByte(numberItem);
             for (int a = 0; a < numberItem; ++a) {
@@ -405,15 +414,41 @@ implements IChickenDichVuGame {
     }
 
     public void guiBalo() throws IOException {
+        this.guiBaloNoiBo(null, false);
+    }
+
+    public void guiBaloTrongTran(ChickenChienBinh chienBinh)
+            throws IOException {
+        this.guiBaloNoiBo(chienBinh, false);
+    }
+
+    public void guiBaloLuyenTap() throws IOException {
+        this.guiBaloNoiBo(null, true);
+    }
+
+    private void guiBaloNoiBo(
+            ChickenChienBinh chienBinh,
+            boolean luyenTap
+    ) throws IOException {
         int[] vatPhams = this.nguoiChoi.itemBalo;
         ChickenTinNhan ms = new ChickenTinNhan(-42);
         DataOutputStream ds = ms.boGhi();
         ds.writeByte(0);
         ds.writeByte(vatPhams.length);
-        for (int chiSo : vatPhams) {
+        for (int viTriBalo = 0; viTriBalo < vatPhams.length; viTriBalo++) {
+            int chiSo = vatPhams[viTriBalo];
             ChickenVatPham vatPham = null;
-            if (chiSo != -1) {
-                vatPham = this.nguoiChoi.itemBag[chiSo];
+            if (chiSo >= 0
+                    && chiSo < this.nguoiChoi.itemBag.length) {
+                if (chienBinh != null) {
+                    vatPham = chienBinh.laySungTrongOTrongBalo(viTriBalo);
+                } else if (luyenTap) {
+                    vatPham = this.nguoiChoi
+                            .laySungTrongOTrongBaloLuyenTap(viTriBalo);
+                }
+                if (vatPham == null) {
+                    vatPham = this.nguoiChoi.itemBag[chiSo];
+                }
             }
             if (vatPham != null) {
                 ds.writeShort(vatPham.ma);
@@ -433,11 +468,32 @@ implements IChickenDichVuGame {
                     }
                     ds.writeShort(option.thamSo);
                 }
-                ds.writeByte(vatPham.chiSo);
+                // Truong nay danh dau item trong inventory goc, nen van la
+                // itemBag index. CMD 26 lai gui vi tri hien thi viTriBalo.
+                ds.writeByte(chiSo);
                 continue;
             }
             ds.writeShort(-1);
         }
+        ds.flush();
+        this.guiTin(ms);
+    }
+
+    /**
+     * Packet native cua client de doi sprite sung trong tran. iconSungCu duoc
+     * dat lai vao dung o Balo ma client vua bam; server chi gui du lieu da
+     * xac thuc tu snapshot tran.
+     */
+    public void guiDoiSungTrongTran(
+            byte chiSoChienBinh,
+            short partSungMoi,
+            short iconSungCu
+    ) throws IOException {
+        ChickenTinNhan ms = new ChickenTinNhan(-45);
+        DataOutputStream ds = ms.boGhi();
+        ds.writeByte(chiSoChienBinh);
+        ds.writeShort(partSungMoi);
+        ds.writeShort(iconSungCu);
         ds.flush();
         this.guiTin(ms);
     }
@@ -603,6 +659,29 @@ implements IChickenDichVuGame {
         catch (IOException ex) {
             Logger.getLogger(ChickenDichVuGame.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+
+    /** CMD 113: [slot chien dau][POW 0..100], dung dung giao thuc Angry cua client. */
+    public void guiCapNhatPow(byte chiSoChienDau, int pow) throws IOException {
+        ChickenTinNhan ms = new ChickenTinNhan(113);
+        DataOutputStream ds = ms.boGhi();
+        ds.writeByte(chiSoChienDau);
+        ds.writeByte(Math.max(0, Math.min(100, pow)));
+        ds.flush();
+        this.guiTin(ms);
+    }
+
+    /**
+     * Kich hoat POW bang dung giao thuc item co san cua client.
+     *
+     * CMD 113 chi dung cho muc thanh 0..100. Sau khi server duyet, ha thanh
+     * ve 0 roi phat CMD 26 [slot][item 100][icon 1009]; CPlayer.UseItem cua
+     * client tu tao vong POW va icon native, khong can sua core client.
+     */
+    public void guiKichHoatHieuUngPow(byte chiSoChienDau) throws IOException {
+        this.guiCapNhatPow(chiSoChienDau, 0);
+        this.guiDungVatPhamLuyenTap(
+                chiSoChienDau, (byte) 100, (short) 1009);
     }
 
     public void capNhat() {
@@ -1111,7 +1190,7 @@ implements IChickenDichVuGame {
             byte numShoot
     ) throws IOException {
         this.guiKetQuaBanBossBaoVay(
-                whoShoot, shooterX, shooterY, ketQua, numShoot, false);
+                whoShoot, shooterX, shooterY, ketQua, numShoot, false, false);
     }
 
     public void guiKetQuaBanBossBaoVay(
@@ -1122,13 +1201,28 @@ implements IChickenDichVuGame {
             byte numShoot,
             boolean neoDiemDauQuyDao
     ) throws IOException {
+        this.guiKetQuaBanBossBaoVay(
+                whoShoot, shooterX, shooterY, ketQua, numShoot,
+                neoDiemDauQuyDao, false);
+    }
+
+    public void guiKetQuaBanBossBaoVay(
+            byte whoShoot,
+            short shooterX,
+            short shooterY,
+            ChickenKetQuaDan ketQua,
+            byte numShoot,
+            boolean neoDiemDauQuyDao,
+            boolean critical
+    ) throws IOException {
         this.guiKetQuaBanNoiBo(
                 whoShoot,
                 shooterX,
                 shooterY,
                 ketQua,
                 numShoot,
-                neoDiemDauQuyDao
+                neoDiemDauQuyDao,
+                critical
         );
     }
 
@@ -1144,13 +1238,28 @@ implements IChickenDichVuGame {
             byte numShoot,
             boolean neoDiemDauQuyDao
     ) throws IOException {
+        this.guiKetQuaBanDau(
+                whoShoot, shooterX, shooterY, ketQua, numShoot,
+                neoDiemDauQuyDao, false);
+    }
+
+    public void guiKetQuaBanDau(
+            byte whoShoot,
+            short shooterX,
+            short shooterY,
+            ChickenKetQuaDan ketQua,
+            byte numShoot,
+            boolean neoDiemDauQuyDao,
+            boolean critical
+    ) throws IOException {
         this.guiKetQuaBanNoiBo(
                 whoShoot,
                 shooterX,
                 shooterY,
                 ketQua,
                 numShoot,
-                neoDiemDauQuyDao
+                neoDiemDauQuyDao,
+                critical
         );
     }
 
@@ -1160,13 +1269,24 @@ implements IChickenDichVuGame {
             short shooterY,
             ChickenKetQuaDan ketQua,
             byte numShoot,
-            boolean neoDiemDauQuyDao
+            boolean neoDiemDauQuyDao,
+            boolean critical
     ) throws IOException {
+        ChickenQuyDaoPowClient.DuLieu quyDaoHienThi =
+                ChickenQuyDaoPowClient.tao(
+                        ketQua.loaiDan,
+                        ketQua.cacDuongX,
+                        ketQua.cacDuongY,
+                        critical);
+        short[][] cacDuongHienThiX = quyDaoHienThi.getCacDuongX();
+        short[][] cacDuongHienThiY = quyDaoHienThi.getCacDuongY();
         ChickenTinNhan ms = new ChickenTinNhan(22);
         DataOutputStream ds = ms.boGhi();
         ds.writeByte(ketQua.loaiDan == ChickenDuongDanLaserClient.LOAI_DAN_LASER
                 ? 0 : 1);
-        ds.writeByte(0);
+        // Client goc dung byte critical=1 de ve vien dan POW co vien/lua do.
+        // Gia tri nay chi la hien thi; damage x2 van do server tinh.
+        ds.writeByte(critical ? 1 : 0);
         ds.writeByte(whoShoot);
         ds.writeByte(ketQua.loaiDan);
         ds.writeShort(shooterX);
@@ -1177,14 +1297,14 @@ implements IChickenDichVuGame {
         }
         ds.writeByte(numShoot <= 0 ? 1 : numShoot);
         int soDuong = Math.max(1, Math.min(255, Math.min(
-                ketQua.cacDuongX.length, ketQua.cacDuongY.length)));
+                cacDuongHienThiX.length, cacDuongHienThiY.length)));
         ds.writeByte(soDuong);
         for (int i = 0; i < soDuong; i++) {
             this.ghiMotDuongDan(
                     ds,
                     ketQua.loaiDan,
-                    i < ketQua.cacDuongX.length ? ketQua.cacDuongX[i] : null,
-                    i < ketQua.cacDuongY.length ? ketQua.cacDuongY[i] : null,
+                    i < cacDuongHienThiX.length ? cacDuongHienThiX[i] : null,
+                    i < cacDuongHienThiY.length ? cacDuongHienThiY[i] : null,
                     shooterX,
                     shooterY,
                     neoDiemDauQuyDao
@@ -1225,7 +1345,11 @@ implements IChickenDichVuGame {
         if (loaiDan == ChickenDuongDanLaserClient.LOAI_DAN_LASER) {
             ChickenDuongDanLaserClient.DuLieu laser =
                     ChickenDuongDanLaserClient.tao(
-                            duongX, duongY, xMacDinh, yMacDinh);
+                            duongX,
+                            duongY,
+                            xMacDinh,
+                            yMacDinh,
+                            neoDiemDauQuyDao);
             ChickenDuongDanLaserClient.ghiNen(ds, laser);
             // Bullet type 49 đọc bắt buộc hai byte này ngay sau từng quỹ đạo.
             return;
@@ -1266,6 +1390,22 @@ implements IChickenDichVuGame {
             short[][] cacDuongX,
             short[][] cacDuongY
     ) throws IOException {
+        this.guiLoatMuiTenHawkDau(
+                whoShoot, loaiDan, shooterX, shooterY, goc, luc,
+                cacDuongX, cacDuongY, false);
+    }
+
+    public void guiLoatMuiTenHawkDau(
+            byte whoShoot,
+            byte loaiDan,
+            short shooterX,
+            short shooterY,
+            short goc,
+            byte luc,
+            short[][] cacDuongX,
+            short[][] cacDuongY,
+            boolean critical
+    ) throws IOException {
         int soVien = Math.min(
                 cacDuongX == null ? 0 : cacDuongX.length,
                 cacDuongY == null ? 0 : cacDuongY.length
@@ -1278,7 +1418,7 @@ implements IChickenDichVuGame {
         ChickenTinNhan ms = new ChickenTinNhan(22);
         DataOutputStream ds = ms.boGhi();
         ds.writeByte(1);
-        ds.writeByte(0);
+        ds.writeByte(critical ? 1 : 0);
         ds.writeByte(whoShoot);
         ds.writeByte(loaiDan);
         ds.writeShort(shooterX);
@@ -1356,6 +1496,21 @@ implements IChickenDichVuGame {
             short[][] cacDuongX,
             short[][] cacDuongY
     ) throws IOException {
+        this.guiLoatLaserUltronDau(
+                whoShoot, shooterX, shooterY, goc, luc,
+                cacDuongX, cacDuongY, false);
+    }
+
+    public void guiLoatLaserUltronDau(
+            byte whoShoot,
+            short shooterX,
+            short shooterY,
+            short goc,
+            byte luc,
+            short[][] cacDuongX,
+            short[][] cacDuongY,
+            boolean critical
+    ) throws IOException {
         int soTia = Math.min(
                 cacDuongX == null ? 0 : cacDuongX.length,
                 cacDuongY == null ? 0 : cacDuongY.length
@@ -1375,7 +1530,8 @@ implements IChickenDichVuGame {
                 null
         );
         this.guiKetQuaBanDau(
-                whoShoot, shooterX, shooterY, ketQua, (byte) 1, true);
+                whoShoot, shooterX, shooterY, ketQua, (byte) 1, true,
+                critical);
     }
 
     /** Gửi hiệu ứng Bắn x3 của Ultron trong luyện tập bằng CMD 84. */
@@ -1712,34 +1868,37 @@ implements IChickenDichVuGame {
     }
 
     private byte demSungDau(ChickenChienBinh[] chienBinhs) {
-        byte dem = 0;
-        for (short maVuKhi : this.gomSungDau(chienBinhs)) {
-            if (maVuKhi > 0) {
-                dem++;
-            }
-        }
-        return dem;
+        return (byte)this.gomSungDau(chienBinhs).length;
     }
 
     private short[] gomSungDau(ChickenChienBinh[] chienBinhs) {
-        short[] weapons = new short[chienBinhs.length];
-        int kichThuoc = 0;
+        java.util.LinkedHashSet<Short> weapons =
+                new java.util.LinkedHashSet<>();
         for (ChickenChienBinh chienBinh : chienBinhs) {
-            if (chienBinh == null || chienBinh.maVuKhi <= 0) {
+            if (chienBinh == null) {
                 continue;
             }
-            boolean exists = false;
-            for (int i = 0; i < kichThuoc; i++) {
-                if (weapons[i] == chienBinh.maVuKhi) {
-                    exists = true;
-                    break;
+            if (chienBinh.maVuKhi > 0) {
+                weapons.add(chienBinh.maVuKhi);
+            }
+            for (short sungBalo :
+                    chienBinh.layMaHinhSungCoTheCamTrongTran()) {
+                if (sungBalo > 0) {
+                    weapons.add(sungBalo);
                 }
             }
-            if (!exists) {
-                weapons[kichThuoc++] = chienBinh.maVuKhi;
-            }
         }
-        return weapons;
+        if (weapons.size() > 255) {
+            throw new IllegalStateException(
+                    "Qua nhieu resource sung trong mot tran: "
+                            + weapons.size());
+        }
+        short[] ketQua = new short[weapons.size()];
+        int i = 0;
+        for (short weapon : weapons) {
+            ketQua[i++] = weapon;
+        }
+        return ketQua;
     }
 
     public void guiTin(ChickenTinNhan ms) {
@@ -1908,6 +2067,14 @@ implements IChickenDichVuGame {
         if (maVuKhi > 0) {
             weapons.add(maVuKhi);
         }
+        // Client cu chi tao BulletForGun cho part co trong CMD 20. Nap truoc
+        // tat ca sung snapshot Balo de -45 co the chot dung gun/bullet.
+        for (short sungBalo : this.nguoiChoi
+                .layMaHinhSungCoTheCamLuyenTap()) {
+            if (sungBalo > 0) {
+                weapons.add(sungBalo);
+            }
+        }
         if (botWeapons != null) {
             for (short botWeapon : botWeapons) {
                 if (botWeapon > 0) {
@@ -2033,8 +2200,24 @@ implements IChickenDichVuGame {
             byte luc, byte lucPhu, byte soPhat,
             short[][] cacDuongX, short[][] cacDuongY,
             boolean sieuCao) throws IOException {
-        int soVien = Math.min(cacDuongX == null ? 0 : cacDuongX.length,
-                cacDuongY == null ? 0 : cacDuongY.length);
+        this.guiKetQuaBanLuyenTap(
+                whoShoot, loaiDan, shooterX, shooterY, goc,
+                luc, lucPhu, soPhat, cacDuongX, cacDuongY,
+                sieuCao, false);
+    }
+
+    public void guiKetQuaBanLuyenTap(byte whoShoot, byte loaiDan,
+            short shooterX, short shooterY, short goc,
+            byte luc, byte lucPhu, byte soPhat,
+            short[][] cacDuongX, short[][] cacDuongY,
+            boolean sieuCao, boolean critical) throws IOException {
+        ChickenQuyDaoPowClient.DuLieu quyDaoHienThi =
+                ChickenQuyDaoPowClient.tao(
+                        loaiDan, cacDuongX, cacDuongY, critical);
+        short[][] cacDuongHienThiX = quyDaoHienThi.getCacDuongX();
+        short[][] cacDuongHienThiY = quyDaoHienThi.getCacDuongY();
+        int soVien = Math.min(
+                cacDuongHienThiX.length, cacDuongHienThiY.length);
         if (soVien <= 0) {
             return;
         }
@@ -2044,7 +2227,7 @@ implements IChickenDichVuGame {
         // Bullet 49 dùng TYPE SHOOT = 0 để client đọc thêm dXLaser/dYLaser.
         ds.writeByte(loaiDan == ChickenDuongDanLaserClient.LOAI_DAN_LASER
                 ? 0 : 1);
-        ds.writeByte(0);
+        ds.writeByte(critical ? 1 : 0);
         ds.writeByte(whoShoot);
         ds.writeByte(loaiDan);
         // Hai trường này là neo vị trí thực của người bắn trên client, không phải
@@ -2061,14 +2244,15 @@ implements IChickenDichVuGame {
             this.ghiMotDuongDan(
                     ds,
                     loaiDan,
-                    cacDuongX[vien],
-                    cacDuongY[vien],
+                    cacDuongHienThiX[vien],
+                    cacDuongHienThiY[vien],
                     shooterX,
                     shooterY
             );
         }
         this.ghiDuLieuSieuCao(
-                ds, loaiDan, cacDuongX[0], cacDuongY[0], sieuCao);
+                ds, loaiDan,
+                cacDuongHienThiX[0], cacDuongHienThiY[0], sieuCao);
         ds.flush();
         this.guiTinKetQuaBan(ms);
     }

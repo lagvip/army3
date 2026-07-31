@@ -195,6 +195,50 @@ public final class ChickenQuanLyCongThucSung {
     }
 
     /**
+     * Quyet dinh quỹ dao item parabol bang he so server da doi chieu tu
+     * client. Khong tao ID sung gia va khong cho item roi ve cong thuc sung
+     * mac dinh.
+     */
+    public static KetQuaQuyDao taoQuyDaoVatPham(
+            short batDauX,
+            short batDauY,
+            short goc,
+            byte luc,
+            ChickenCongThucVatPhamChien.CauHinh cauHinh,
+            byte windX,
+            byte windY,
+            KiemTraBanDo banDo
+    ) {
+        if (cauHinh == null || banDo == null
+                || !cauHinh.coHeSoCoDinh()
+                || cauHinh.getKieuQuyDao()
+                        != ChickenCongThucVatPhamChien.KieuQuyDao.PARABOL) {
+            throw new IllegalArgumentException(
+                    "Vat pham chua co quy dao parabol server");
+        }
+        CongThucSung congThuc = new CongThucSung(
+                -10_000 - cauHinh.getIdVatPham(),
+                (byte) 0,
+                KieuCongThuc.DAN_THUONG,
+                cauHinh.getHeSoGio(),
+                cauHinh.getTrongLuc(),
+                0,
+                MAX_STEPS
+        );
+        return taoDanFixedPoint(
+                batDauX,
+                batDauY,
+                goc,
+                luc,
+                windX,
+                windY,
+                congThuc,
+                banDo,
+                false
+        );
+    }
+
+    /**
      * Quỹ đạo viên phụ của nhóm Gà (bullet type 20).
      *
      * Client sinh viên này tại bước force2 của viên chính, vận tốc ban đầu bằng 0,

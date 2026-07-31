@@ -4,6 +4,11 @@ import com.chicken.mohinh.ChickenNguoiChoi;
 import com.chicken.avg.ChickenThanhDiChuyenAVG;
 import com.chicken.avg.ChickenCoCheBayAVG;
 import com.chicken.chiso.ChickenHieuUngDongDoi;
+import com.chicken.chiso.ChickenChiSoNguoiChoi;
+import com.chicken.vatpham.ChickenVatPham;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
 
 public class ChickenChienBinh {
     public final ChickenNguoiChoi nguoiChoi;
@@ -34,6 +39,20 @@ public class ChickenChienBinh {
     public int tocDo;
     /** Chan viec phat packet/khoi tao lap lam nhan buff Dong doi nhieu lan. */
     private boolean daApDungThuongDongDoi;
+    private int diemDongDoiDaApDung;
+    /** Sung va cac o sung Balo chi ton tai trong snapshot tran, khong ghi vao kho do. */
+    private ChickenVatPham sungDangCamTrongTran;
+    private final Map<Integer, ChickenVatPham> sungTheoOTrongBalo =
+            new HashMap<Integer, ChickenVatPham>();
+    /**
+     * Vat pham chien dau duoc khoa theo vi tri hien thi trong Balo luc vao
+     * tran. Client chi gui vi tri nay; ID, itemUsed va icon luon do snapshot
+     * server suy ra.
+     */
+    private final Map<Integer, VatPhamChienTrongTran> vatPhamTheoOTrongBalo =
+            new HashMap<Integer, VatPhamChienTrongTran>();
+    /** Vat pham tao dan da duoc server duyet, dang cho CMD 22 that. */
+    private VatPhamChienTrongTran vatPhamChienDangCho;
     /** Thể lực di chuyển tối đa do server chốt từ option 26 khi vào trận. */
     public int theLucDiChuyenToiDa;
     /** Quãng đường chủ động còn lại trong lượt hiện tại. */
@@ -82,6 +101,7 @@ public class ChickenChienBinh {
          */
         this.avenger = nguoiChoi.avenger;
         this.duocPhepBay = ChickenCoCheBayAVG.laIdBayDuocPhep(this.avenger);
+        this.khoiTaoSungTrongTran(nguoiChoi);
         this.maVuKhi = layVuKhiHienThiTrongTran(nguoiChoi);
         this.x = x;
         this.y = y;
@@ -192,6 +212,7 @@ public class ChickenChienBinh {
             return false;
         }
         this.daApDungThuongDongDoi = true;
+        this.diemDongDoiDaApDung = Math.max(0, diemDongDoi);
 
         int mauCu = Math.max(1, this.mauToiDa);
         int mauMoi = Math.max(1,
@@ -207,6 +228,188 @@ public class ChickenChienBinh {
         this.giap = ChickenHieuUngDongDoi.tinhChiSoSauThuong(
                 this.giap, diemDongDoi);
         return true;
+    }
+
+    private void khoiTaoSungTrongTran(ChickenNguoiChoi nguoiChoi) {
+        this.sungDangCamTrongTran = nguoiChoi == null
+                ? null : nguoiChoi.laySungTrangBiMayChu();
+        this.sungTheoOTrongBalo.clear();
+        this.vatPhamTheoOTrongBalo.clear();
+        this.vatPhamChienDangCho = null;
+        if (nguoiChoi == null || nguoiChoi.itemBalo == null
+                || nguoiChoi.itemBag == null) {
+            return;
+        }
+        // CMD 26 cua client gui vi tri hien thi trong Balo (0..4), khong gui
+        // index that trong itemBag. Snapshot tran vi the phai duoc khoa theo
+        // viTriBalo; itemBalo[viTriBalo] chi dung de tim vat pham ban dau.
+        for (int viTriBalo = 0;
+                viTriBalo < nguoiChoi.itemBalo.length;
+                viTriBalo++) {
+            int chiSoTui = nguoiChoi.itemBalo[viTriBalo];
+            if (chiSoTui < 0 || chiSoTui >= nguoiChoi.itemBag.length) {
+                continue;
+            }
+            ChickenVatPham sung = nguoiChoi.itemBag[chiSoTui];
+            if (ChickenNguoiChoi.laSungThuongDuocPhepTrongBalo(sung)) {
+                this.sungTheoOTrongBalo.put(viTriBalo, sung);
+                continue;
+            }
+            if (sung != null && sung.mau != null && sung.soLuong > 0
+                    && ChickenCongThucVatPhamChien.khopMauVatPham(
+                            sung.mau)) {
+                ChickenCongThucVatPhamChien.CauHinh cauHinh =
+                        ChickenCongThucVatPhamChien.theoIdVatPham(sung.ma);
+                this.vatPhamTheoOTrongBalo.put(
+                        viTriBalo,
+                        new VatPhamChienTrongTran(
+                                viTriBalo,
+                                chiSoTui,
+                                sung.ma,
+                                sung.mau.iconID,
+                                cauHinh
+                        )
+                );
+            }
+        }
+    }
+
+    public ChickenVatPham laySungDangCamTrongTran() {
+        return this.sungDangCamTrongTran;
+    }
+
+    public ChickenVatPham laySungTrongOTrongBalo(int viTriBalo) {
+        return this.sungTheoOTrongBalo.get(viTriBalo);
+    }
+
+    public VatPhamChienTrongTran layVatPhamChienTrongOTrongBalo(
+            int viTriBalo
+    ) {
+        return this.vatPhamTheoOTrongBalo.get(viTriBalo);
+    }
+
+    public VatPhamChienTrongTran layVatPhamChienDangCho() {
+        return this.vatPhamChienDangCho;
+    }
+
+    /**
+     * Chon vat pham chi thay doi state tran, chua tru kho. Vat pham chi bi
+     * tru sau khi CMD 22 hop le duoc server chap nhan.
+     */
+    public boolean chonVatPhamChienTrongTran(int viTriBalo) {
+        VatPhamChienTrongTran vatPham =
+                this.vatPhamTheoOTrongBalo.get(viTriBalo);
+        if (!this.laNguoiChoiThat() || vatPham == null) {
+            return false;
+        }
+        if (this.vatPhamChienDangCho != null) {
+            return this.vatPhamChienDangCho == vatPham;
+        }
+        this.vatPhamChienDangCho = vatPham;
+        return true;
+    }
+
+    public void xoaVatPhamChienDangCho() {
+        this.vatPhamChienDangCho = null;
+    }
+
+    /**
+     * Danh sach resource sung ma client co the cam trong snapshot tran nay.
+     * Client cu chi tao BulletForGun cho cac part nam trong CMD 20.
+     */
+    public short[] layMaHinhSungCoTheCamTrongTran() {
+        LinkedHashSet<Short> cacMa = new LinkedHashSet<>();
+        themMaHinhSung(cacMa, this.sungDangCamTrongTran);
+        for (ChickenVatPham sung : this.sungTheoOTrongBalo.values()) {
+            themMaHinhSung(cacMa, sung);
+        }
+        short[] ketQua = new short[cacMa.size()];
+        int i = 0;
+        for (short ma : cacMa) {
+            ketQua[i++] = ma;
+        }
+        return ketQua;
+    }
+
+    private static void themMaHinhSung(
+            LinkedHashSet<Short> cacMa,
+            ChickenVatPham sung
+    ) {
+        if (ChickenNguoiChoi.laSungThuongDuocPhepTrongBalo(sung)
+                && sung.mau.part > 0) {
+            cacMa.add(sung.mau.part);
+        }
+    }
+
+    /**
+     * Doi sung tren snapshot tran. Tra ve khau vua cat vao o Balo, hoac null
+     * neu packet chon o khong hop le. Inventory that tuyet doi khong bi sua.
+     */
+    public ChickenVatPham doiSungTrongTran(int viTriBalo) {
+        if (!this.laNguoiChoiThat()
+                || !ChickenNguoiChoi.laSungThuongDuocPhepTrongBalo(
+                        this.sungDangCamTrongTran)) {
+            return null;
+        }
+        ChickenVatPham sungMoi = this.sungTheoOTrongBalo.get(viTriBalo);
+        if (!ChickenNguoiChoi.laSungThuongDuocPhepTrongBalo(sungMoi)) {
+            return null;
+        }
+        ChickenVatPham sungCu = this.sungDangCamTrongTran;
+        this.sungTheoOTrongBalo.put(viTriBalo, sungCu);
+        this.sungDangCamTrongTran = sungMoi;
+        this.vatPhamChienDangCho = null;
+        this.maVuKhi = sungMoi.mau.part;
+        int tanCongMoi = Math.max(0,
+                ChickenChiSoNguoiChoi.tinhTanCongVoiSung(
+                        this.nguoiChoi, sungMoi));
+        this.tanCong = this.daApDungThuongDongDoi
+                ? ChickenHieuUngDongDoi.tinhChiSoSauThuong(
+                        tanCongMoi, this.diemDongDoiDaApDung)
+                : tanCongMoi;
+        return sungCu;
+    }
+
+    public static final class VatPhamChienTrongTran {
+        private final int viTriBalo;
+        private final int chiSoTui;
+        private final int idVatPham;
+        private final short icon;
+        private final ChickenCongThucVatPhamChien.CauHinh cauHinh;
+
+        private VatPhamChienTrongTran(
+                int viTriBalo,
+                int chiSoTui,
+                int idVatPham,
+                short icon,
+                ChickenCongThucVatPhamChien.CauHinh cauHinh
+        ) {
+            this.viTriBalo = viTriBalo;
+            this.chiSoTui = chiSoTui;
+            this.idVatPham = idVatPham;
+            this.icon = icon;
+            this.cauHinh = cauHinh;
+        }
+
+        public int getViTriBalo() {
+            return this.viTriBalo;
+        }
+
+        public int getChiSoTui() {
+            return this.chiSoTui;
+        }
+
+        public int getIdVatPham() {
+            return this.idVatPham;
+        }
+
+        public short getIcon() {
+            return this.icon;
+        }
+
+        public ChickenCongThucVatPhamChien.CauHinh getCauHinh() {
+            return this.cauHinh;
+        }
     }
 
     /**

@@ -267,6 +267,12 @@ implements IChickenXuLyTin {
                         this.khach.user.dichVu.guiDuLieu();
                         break;
                     case 103:
+                        if (mss.boDoc().available() != 0) {
+                            this.khach.ghiNhanPacketLoi(
+                                    cmd, new IllegalArgumentException(
+                                            "CMD 103 khong co payload"));
+                            break;
+                        }
                         this.khach.user.nguoiChoi.xemCuaHang(ChickenCuaHang.SHOP_EQUIP);
                         break;
                     case -43:
@@ -276,9 +282,52 @@ implements IChickenXuLyTin {
                         this.khach.user.nguoiChoi.yeuCauMuaVatPham(mss);
                         break;
                     case 26:
+                        int kichThuocCmd26 = mss.boDoc().available();
+                        if (kichThuocCmd26 == 1) {
+                            int giaTriCmd26 = mss.boDoc().readUnsignedByte();
+                            if (giaTriCmd26 == 100) {
+                                this.khach.user.nguoiChoi
+                                        .kichHoatPowTrongTran();
+                            } else {
+                                this.khach.user.nguoiChoi.doiSungTrongTran(
+                                        giaTriCmd26);
+                            }
+                            break;
+                        }
+                        if (kichThuocCmd26 != 2) {
+                            this.khach.ghiNhanPacketLoi(
+                                    cmd, new IllegalArgumentException(
+                                            "Sai kich thuoc CMD 26"));
+                            break;
+                        }
+                        int loaiDungVatPham = mss.layDuLieu()[1] & 0xFF;
+                        if (loaiDungVatPham != 0 && loaiDungVatPham != 1) {
+                            this.khach.ghiNhanPacketLoi(
+                                    cmd, new IllegalArgumentException(
+                                            "Loai CMD 26 khong hop le"));
+                            break;
+                        }
                         this.khach.user.nguoiChoi.dungVatPham(mss);
                         break;
                     case -44:
+                        if (mss.boDoc().available() != 2) {
+                            this.khach.ghiNhanPacketLoi(
+                                    cmd, new IllegalArgumentException(
+                                            "Sai kich thuoc CMD -44"));
+                            break;
+                        }
+                        int loaiChuyenVatPham = mss.layDuLieu()[0] & 0xFF;
+                        if (loaiChuyenVatPham != 0
+                                && loaiChuyenVatPham != 1
+                                && loaiChuyenVatPham != 4
+                                && loaiChuyenVatPham != 5
+                                && loaiChuyenVatPham != 6
+                                && loaiChuyenVatPham != 7) {
+                            this.khach.ghiNhanPacketLoi(
+                                    cmd, new IllegalArgumentException(
+                                            "Loai CMD -44 khong hop le"));
+                            break;
+                        }
                         this.khach.user.nguoiChoi.chuyenVatPham(mss);
                         break;
                     case -25:
@@ -288,6 +337,12 @@ implements IChickenXuLyTin {
                         this.khach.user.nguoiChoi.yeuCauBanVatPham(mss);
                         break;
                     case -33:
+                        if (mss.boDoc().available() != 0) {
+                            this.khach.ghiNhanPacketLoi(
+                                    cmd, new IllegalArgumentException(
+                                            "CMD -33 khong co payload"));
+                            break;
+                        }
                         this.khach.user.nguoiChoi.xemCuaHang(ChickenCuaHang.SHOP_ITEM);
                         break;
                     case -46:
