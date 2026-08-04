@@ -1,7 +1,9 @@
 package com.chicken.phong.boss.trandau;
 
 import com.chicken.chien.ChickenQuanLyChien;
+import com.chicken.chien.ChickenDieuKienVaoTran;
 import com.chicken.mohinh.ChickenNguoiChoi;
+import com.chicken.loi.ChickenQuanLyMayChu;
 import com.chicken.phong.boss.sanhcho.ChickenKinhTeBoss;
 import com.chicken.phong.boss.sanhcho.QuanLySanhChoBoss;
 import com.chicken.phong.boss.sanhcho.SanhChoBoss;
@@ -59,6 +61,35 @@ public final class VaoTranBoss {
             int mapId = sanh.getMaBanDo() & 0xFF;
             if (!CauHinhMapBoss.laMapBossHopLe(mapId)) {
                 nguoiChoi.startOKDlg2("Map boss không hợp lệ.");
+                return;
+            }
+            for (ThanhVienBoss ve : sanh.chupThanhVien()) {
+                if (ve == null) {
+                    continue;
+                }
+                ChickenNguoiChoi thanhVienTrongPhong = ve.getNguoiChoi();
+                String loiDieuKien =
+                        ChickenDieuKienVaoTran.layLoi(thanhVienTrongPhong);
+                if (loiDieuKien == null) {
+                    continue;
+                }
+                ChickenQuanLyMayChu.log(
+                        "[BAT_DAU][TU_CHOI_TRANG_BI] mode=Boss"
+                        + " mapId=" + mapId
+                        + " playerId="
+                        + (thanhVienTrongPhong == null
+                                ? -1 : thanhVienTrongPhong.ma));
+                if (thanhVienTrongPhong != null) {
+                    thanhVienTrongPhong.startOKDlg2(loiDieuKien);
+                }
+                if (thanhVienTrongPhong != nguoiChoi) {
+                    nguoiChoi.startOKDlg2(
+                            "Không thể bắt đầu: "
+                            + (thanhVienTrongPhong == null
+                                    ? "một thành viên"
+                                    : thanhVienTrongPhong.ten)
+                            + " chưa trang bị súng hợp lệ hoặc chưa đủ cấp.");
+                }
                 return;
             }
 

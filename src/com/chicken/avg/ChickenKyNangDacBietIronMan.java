@@ -1,6 +1,7 @@
 package com.chicken.avg;
 
 import com.chicken.chien.ChickenChienBinh;
+import com.chicken.chien.ChickenTrangThaiHanhDongLuot;
 
 /** Trang thai skill laser nguc Iron Man: chon skill roi ngam va ban mot lan. */
 public final class ChickenKyNangDacBietIronMan {
@@ -35,6 +36,8 @@ public final class ChickenKyNangDacBietIronMan {
 
     public synchronized boolean kichHoat(ChickenChienBinh ironMan) {
         if (ironMan == null || ironMan.chet
+                || !ChickenTrangThaiHanhDongLuot
+                        .coTheKichHoatKyNang(ironMan)
                 || ironMan.avenger != AVG_IRON_MAN
                 || ironMan.ironManDaDungKyNang
                 || ironMan.ironManLaserSanSang
@@ -87,6 +90,8 @@ public final class ChickenKyNangDacBietIronMan {
             byte luotHienTai
     ) {
         if (ironMan == null || ironMan.chet
+                || !ChickenTrangThaiHanhDongLuot
+                        .coTheKichHoatKyNang(ironMan)
                 || ironMan.avenger != AVG_IRON_MAN
                 || ironMan.ironManDaDungKyNang
                 || ironMan.ironManLaserSanSang

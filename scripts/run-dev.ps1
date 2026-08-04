@@ -5,6 +5,35 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $jdkHome = 'C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot'
 
+# VS Code/PowerShell only inherits environment variables when its process is
+# started. Pull current per-user Chicken secrets into this development process
+# so a newly configured password works without restarting the editor. Existing
+# process-level values still win, which keeps explicit one-off overrides useful.
+$chickenEnvironmentVariables = @(
+    'CHICKEN_DB_HOST',
+    'CHICKEN_DB_USER',
+    'CHICKEN_DB_PASSWORD',
+    'CHICKEN_DB_NAME',
+    'CHICKEN_SMTP_HOST',
+    'CHICKEN_SMTP_PORT',
+    'CHICKEN_SMTP_USERNAME',
+    'CHICKEN_SMTP_PASSWORD',
+    'CHICKEN_SMTP_FROM',
+    'CHICKEN_SMTP_STARTTLS',
+    'CHICKEN_SMTP_SSL',
+    'CHICKEN_OTP_PEPPER'
+)
+
+foreach ($variableName in $chickenEnvironmentVariables) {
+    $processValue = [Environment]::GetEnvironmentVariable($variableName, 'Process')
+    if ([string]::IsNullOrWhiteSpace($processValue)) {
+        $userValue = [Environment]::GetEnvironmentVariable($variableName, 'User')
+        if (-not [string]::IsNullOrWhiteSpace($userValue)) {
+            [Environment]::SetEnvironmentVariable($variableName, $userValue, 'Process')
+        }
+    }
+}
+
 if (-not (Test-Path (Join-Path $jdkHome 'bin\java.exe'))) {
     throw "JDK 21 was not found at: $jdkHome"
 }

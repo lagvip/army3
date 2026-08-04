@@ -1,7 +1,9 @@
 package com.chicken.phong;
 
 import com.chicken.chien.ChickenQuanLyChien;
+import com.chicken.chien.ChickenDieuKienVaoTran;
 import com.chicken.avg.ChickenQuanLyNangLuongAVG;
+import com.chicken.loi.ChickenQuanLyMayChu;
 import com.chicken.mohinh.ChickenNguoiChoi;
 import java.io.IOException;
 
@@ -170,6 +172,25 @@ public class ChickenChoDau {
             return;
         }
         ChickenNguoiChoi[] thamGia = this.chupNguoiChoi();
+        for (ChickenNguoiChoi thanhVien : thamGia) {
+            if (thanhVien == null) {
+                continue;
+            }
+            String loiDieuKien = ChickenDieuKienVaoTran.layLoi(thanhVien);
+            if (loiDieuKien == null) {
+                continue;
+            }
+            ChickenQuanLyMayChu.log(
+                    "[BAT_DAU][TU_CHOI_TRANG_BI] mode=PvP"
+                    + " playerId=" + thanhVien.ma);
+            thanhVien.startOKDlg2(loiDieuKien);
+            if (thanhVien != nguoiChoi) {
+                nguoiChoi.startOKDlg2(
+                        "Không thể bắt đầu: " + thanhVien.ten
+                        + " chưa trang bị súng hợp lệ hoặc chưa đủ cấp.");
+            }
+            return;
+        }
         if (!ChickenQuanLyNangLuongAVG.tieuHaoKhiBatDauTran(
                 thamGia,
                 "PvP"

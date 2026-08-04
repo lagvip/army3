@@ -2,6 +2,7 @@ package com.chicken.avg;
 
 import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.chien.ChickenChienBinh;
+import com.chicken.chien.ChickenTrangThaiHanhDongLuot;
 import com.chicken.chien.ChickenMayMan;
 import com.chicken.mang.ChickenTinNhan;
 import java.io.IOException;
@@ -82,6 +83,10 @@ public final class ChickenKyNangDacBietThor {
     ) throws IOException {
         if (thor == null || ms == null) {
             System.out.println("[THOR] KHONG_TIM_THAY_THOR");
+            return;
+        }
+        if (!ChickenTrangThaiHanhDongLuot
+                .coTheKichHoatKyNang(thor)) {
             return;
         }
         if (thor.avenger != AVG_THOR

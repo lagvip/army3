@@ -26,11 +26,22 @@ public final class ChickenXuLyTinTestSupport {
     private static final int[] LENH_CHUYEN_SCENE = {
         -98, -28, 6, 7, 8, 16, 18, 20, 71, 75, 83
     };
+    private static final int[] PART_TAO_NHAN_VAT = {
+        0, 6, 11, 16, 21,
+        8, 2, 17, 22, 12,
+        57, 27, 54,
+        7, 1, 18, 23, 13,
+        10, 4, 20, 25, 15,
+        9, 3, 19, 24, 14
+    };
 
     private ChickenXuLyTinTestSupport() {
     }
 
     public static void tuKiemTra() throws Exception {
+        kiemTraTaiKhoanMoiMoManTaoNhanVat();
+        kiemTraMaTranBaoMatTaiNguyenTaoNhanVat();
+        kiemTraGioiHanTaiNguyenVaTaoNhanVat();
         for (int cmd : LENH_CHUYEN_SCENE) {
             dung(ChickenXuLyTin.laLenhChuyenScenePhong(cmd),
                     "thieu lenh scene cmd=" + cmd);
@@ -69,6 +80,7 @@ public final class ChickenXuLyTinTestSupport {
         kiemTraCmd26MotByteDoiSungPvp();
         kiemTraCmd26PowPvp();
         kiemTraCoDanDoPowNative();
+        kiemTraPacketDanLazerHaiGiaiDoan();
         kiemTraCmd20NapTruocSungTrongBalo();
 
         QuanLySanhChoBoss.khoiTao();
@@ -142,6 +154,307 @@ public final class ChickenXuLyTinTestSupport {
         } finally {
             QuanLySanhChoBoss.khoiTao();
         }
+    }
+
+    /**
+     * Hoi quy luong dang ky -> dang nhap cua tai khoan chua co player.
+     * CMD -37 chi can tai khoan da xac thuc; neu doi san player thi server
+     * khong bao gio co co hoi gui CMD -99 mo man hinh tao nhan vat.
+     */
+    private static void kiemTraTaiKhoanMoiMoManTaoNhanVat()
+            throws Exception {
+        PhienKhongDuocNgat phien = new PhienKhongDuocNgat(97_037);
+        DichVuBatPacket dichVu = new DichVuBatPacket(phien);
+        ChickenNguoiDung user = new ChickenNguoiDung(phien, dichVu);
+        datMaTaiKhoan(user, 97_037);
+        phien.user = user;
+
+        new ChickenXuLyTin(phien).khiCoTin(
+                new ChickenTinNhan((byte) -37, new byte[0]));
+
+        dung(!phien.daBiNgat,
+                "CMD-37 cua tai khoan moi lam ngat ket noi");
+        dung(dichVu.cacLenh.size() == 1
+                        && dichVu.cacLenh.get(0) == -99,
+                "tai khoan moi khong nhan dung mot CMD-99 tao nhan vat");
+
+        PhienKhongDuocNgat chuaDangNhap =
+                new PhienKhongDuocNgat(97_038);
+        DichVuBatPacket dichVuChuaDangNhap =
+                new DichVuBatPacket(chuaDangNhap);
+        chuaDangNhap.datDichVu(dichVuChuaDangNhap);
+        new ChickenXuLyTin(chuaDangNhap).khiCoTin(
+                new ChickenTinNhan((byte) -37, new byte[0]));
+        dung(dichVuChuaDangNhap.cacLenh.isEmpty(),
+                "CMD-37 chua xac thuc van nhan phan hoi tao nhan vat");
+
+        // Man tao nhan vat phai tai duoc tung Small image khi chua co player.
+        phien.mucPhong = 2;
+        dichVu.xoaPacket();
+        new ChickenXuLyTin(phien).khiCoTin(
+                new ChickenTinNhan((byte) -41,
+                        new byte[]{0, (byte) 159}));
+        dung(dichVu.cacLenh.size() == 1
+                        && dichVu.cacLenh.get(0) == -41,
+                "tai khoan moi bi chan CMD-41 tai sprite nhan vat");
+        DataInputStream icon = new DataInputStream(
+                new ByteArrayInputStream(dichVu.cacDuLieu.get(0)));
+        dung(icon.readUnsignedShort() == 159,
+                "phan hoi CMD-41 sai ID icon");
+        int soByteAnh = icon.readInt();
+        byte[] anh = icon.readNBytes(soByteAnh);
+        dung(soByteAnh > 8 && anh.length == soByteAnh
+                        && (anh[0] & 0xFF) == 0x89
+                        && anh[1] == 'P' && anh[2] == 'N'
+                        && anh[3] == 'G' && icon.available() == 0,
+                "CMD-41 khong tra du PNG cua sprite nhan vat");
+
+        dung(ChickenXuLyTin.chiCanTaiKhoanDaXacThuc(-41)
+                        && ChickenXuLyTin.chiCanTaiKhoanDaXacThuc(-37)
+                        && ChickenXuLyTin.chiCanTaiKhoanDaXacThuc(-99)
+                        && !ChickenXuLyTin.chiCanTaiKhoanDaXacThuc(22),
+                "phan tang xac thuc tai khoan/nhan vat bi sai");
+    }
+
+    /**
+     * Ma tran bao mat cho dung loi vua sua: tai khoan da xac thuc nhung chua
+     * co player. Quet 28 part tao nhan vat tren 4 muc phong = 112 yeu cau anh
+     * that, toan bo mien byte command va cac packet CMD -41 sai kich thuoc.
+     */
+    private static void kiemTraMaTranBaoMatTaiNguyenTaoNhanVat()
+            throws Exception {
+        int soAnhDaQuet = 0;
+        for (int mucPhong = 1; mucPhong <= 4; mucPhong++) {
+            PhienKhongDuocNgat phien =
+                    new PhienKhongDuocNgat(98_000 + mucPhong);
+            DichVuBatPacket dichVu = new DichVuBatPacket(phien);
+            phien.user = new ChickenNguoiDung(phien, dichVu);
+            phien.mucPhong = (byte) mucPhong;
+            ChickenXuLyTin router = new ChickenXuLyTin(phien);
+
+            for (int id : PART_TAO_NHAN_VAT) {
+                dichVu.xoaPacket();
+                router.khiCoTin(new ChickenTinNhan((byte) -41,
+                        new byte[]{(byte) (id >>> 8), (byte) id}));
+                dung(!phien.daBiNgat,
+                        "tai sprite hop le lam ngat phien x=" + mucPhong
+                                + " id=" + id);
+                dung(dichVu.cacLenh.size() == 1
+                                && dichVu.cacLenh.get(0) == -41,
+                        "sprite tao nhan vat khong duoc tra x=" + mucPhong
+                                + " id=" + id);
+                DataInputStream doc = new DataInputStream(
+                        new ByteArrayInputStream(dichVu.cacDuLieu.get(0)));
+                dung(doc.readUnsignedShort() == id,
+                        "server tra nham ID sprite x=" + mucPhong
+                                + " id=" + id);
+                int doDai = doc.readInt();
+                byte[] png = doc.readNBytes(doDai);
+                dung(doDai > 8 && png.length == doDai
+                                && (png[0] & 0xFF) == 0x89
+                                && png[1] == 'P' && png[2] == 'N'
+                                && png[3] == 'G' && doc.available() == 0,
+                        "sprite khong phai PNG day du x=" + mucPhong
+                                + " id=" + id);
+                soAnhDaQuet++;
+            }
+        }
+        dung(soAnhDaQuet == 112,
+                "chua quet du 112 sprite man tao nhan vat");
+
+        // Khong duoc vo tinh mo them command gameplay cho account chua co player.
+        int soCommandDaQuet = 0;
+        for (int cmd = Byte.MIN_VALUE; cmd <= Byte.MAX_VALUE; cmd++) {
+            boolean mongDoi = switch (cmd) {
+                case -99, -41, -38, -37, -32, -31 -> true;
+                default -> false;
+            };
+            dung(ChickenXuLyTin.chiCanTaiKhoanDaXacThuc(cmd) == mongDoi,
+                    "phan quyen sai command=" + cmd);
+            soCommandDaQuet++;
+        }
+        dung(soCommandDaQuet == 256,
+                "chua quet du mien byte command");
+
+        // Packet chua dang nhap khong duoc lay mot icon hop le.
+        PhienKhongDuocNgat voDanh = new PhienKhongDuocNgat(98_100);
+        DichVuBatPacket dichVuVoDanh = new DichVuBatPacket(voDanh);
+        voDanh.datDichVu(dichVuVoDanh);
+        voDanh.mucPhong = 2;
+        new ChickenXuLyTin(voDanh).khiCoTin(new ChickenTinNhan((byte) -41,
+                new byte[]{0, (byte) 159}));
+        dung(dichVuVoDanh.cacLenh.isEmpty(),
+                "phien vo danh tai duoc sprite");
+
+        // Moi do dai khac dung hai byte deu phai bi tu choi, khong co response.
+        int soPayloadSaiDaQuet = 0;
+        for (int doDai = 0; doDai <= 100; doDai++) {
+            if (doDai == 2) {
+                continue;
+            }
+            PhienKhongDuocNgat phien =
+                    new PhienKhongDuocNgat(98_200 + doDai);
+            DichVuBatPacket dichVu = new DichVuBatPacket(phien);
+            phien.user = new ChickenNguoiDung(phien, dichVu);
+            phien.mucPhong = 2;
+            byte[] payload = new byte[doDai];
+            new ChickenXuLyTin(phien).khiCoTin(
+                    new ChickenTinNhan((byte) -41, payload));
+            dung(dichVu.cacLenh.isEmpty(),
+                    "CMD-41 sai kich thuoc van co response len=" + doDai);
+            soPayloadSaiDaQuet++;
+        }
+        dung(soPayloadSaiDaQuet == 100,
+                "chua quet du 100 payload CMD-41 sai kich thuoc");
+
+        // Hai byte van phai bi chan neu ID/scale nam ngoai mien cho phep.
+        int[] idNgoaiMien = {3000, 3001, 32767, 65535};
+        int[] mucPhongNgoaiMien = {0, 5, 127, 255};
+        int soBienDaQuet = 0;
+        for (int mucPhong : mucPhongNgoaiMien) {
+            for (int id : idNgoaiMien) {
+                PhienKhongDuocNgat phien =
+                        new PhienKhongDuocNgat(98_400 + soBienDaQuet);
+                DichVuBatPacket dichVu = new DichVuBatPacket(phien);
+                phien.user = new ChickenNguoiDung(phien, dichVu);
+                phien.mucPhong = (byte) mucPhong;
+                new ChickenXuLyTin(phien).khiCoTin(
+                        new ChickenTinNhan((byte) -41,
+                                new byte[]{(byte) (id >>> 8), (byte) id}));
+                dung(dichVu.cacLenh.isEmpty(),
+                        "CMD-41 ngoai bien van co response scale="
+                                + mucPhong + " id=" + id);
+                soBienDaQuet++;
+            }
+        }
+        dung(soBienDaQuet == 16,
+                "chua quet du ma tran ID/scale ngoai bien");
+
+        System.out.println("ACCOUNT_RESOURCE_SECURITY_MATRIX_OK"
+                + " validSprites=" + soAnhDaQuet
+                + " commandDomain=" + soCommandDaQuet
+                + " malformedPayloads=" + soPayloadSaiDaQuet
+                + " invalidBounds=" + soBienDaQuet);
+    }
+
+    private static void kiemTraGioiHanTaiNguyenVaTaoNhanVat()
+            throws Exception {
+        int[] lenhTaiDuLieu = {-31, -32, -37, -38};
+        int soPayloadDuDaChan = 0;
+        for (int i = 0; i < lenhTaiDuLieu.length; i++) {
+            int cmd = lenhTaiDuLieu[i];
+            PhienKhongDuocNgat phien =
+                    new PhienKhongDuocNgat(98_600 + i);
+            DichVuBatPacket dichVu = new DichVuBatPacket(phien);
+            ChickenNguoiDung user = new ChickenNguoiDung(phien, dichVu);
+            datMaTaiKhoan(user, 98_600 + i);
+            phien.user = user;
+
+            new ChickenXuLyTin(phien).khiCoTin(
+                    new ChickenTinNhan((byte) cmd, new byte[]{1}));
+            dung(dichVu.cacLenh.isEmpty(),
+                    "CMD tai du lieu co payload du van duoc xu ly cmd="
+                            + cmd);
+            dung(!phien.daBiNgat,
+                    "mot payload du lam ngat phien cmd=" + cmd);
+            soPayloadDuDaChan++;
+        }
+
+        PhienKhongDuocNgat phienLap =
+                new PhienKhongDuocNgat(98_610);
+        DichVuBatPacket dichVuLap = new DichVuBatPacket(phienLap);
+        ChickenNguoiDung userLap =
+                new ChickenNguoiDung(phienLap, dichVuLap);
+        datMaTaiKhoan(userLap, 98_610);
+        phienLap.user = userLap;
+        ChickenXuLyTin routerLap = new ChickenXuLyTin(phienLap);
+        routerLap.khiCoTin(new ChickenTinNhan((byte) -37, new byte[0]));
+        dung(dichVuLap.cacLenh.size() == 1
+                        && dichVuLap.cacLenh.get(0) == -99,
+                "CMD-37 hop le khong mo man tao nhan vat");
+        dichVuLap.xoaPacket();
+        routerLap.khiCoTin(new ChickenTinNhan((byte) -37, new byte[0]));
+        dung(dichVuLap.cacLenh.isEmpty(),
+                "CMD-37 lap trong cung phien van tao response");
+
+        int accountTaiLai = 98_620;
+        PhienKhongDuocNgat taiLanMot = phienCoTaiKhoan(
+                98_621, accountTaiLai);
+        PhienKhongDuocNgat taiLanHai = phienCoTaiKhoan(
+                98_622, accountTaiLai);
+        PhienKhongDuocNgat taiLanBa = phienCoTaiKhoan(
+                98_623, accountTaiLai);
+        dung(taiLanMot.choPhepYeuCauTaiDuLieu(-31, 10_000L),
+                "tai du lieu lan dau bi chan");
+        dung(taiLanHai.choPhepYeuCauTaiDuLieu(-31, 10_001L),
+                "mot lan reconnect that bi chan");
+        dung(!taiLanBa.choPhepYeuCauTaiDuLieu(-31, 10_002L),
+                "reconnect vuot quota van tai duoc blob lon");
+        dung(!taiLanMot.choPhepYeuCauTaiDuLieu(-31, 70_001L),
+                "cung phien tai lai du lieu lan hai");
+
+        int accountMoi = 98_630;
+        PhienKhongDuocNgat phienA = phienCoTaiKhoan(98_631, accountMoi);
+        PhienKhongDuocNgat phienB = phienCoTaiKhoan(98_632, accountMoi);
+        for (int i = 0; i < 225; i++) {
+            dung(phienA.choPhepXuLyLenh(5, 20_000L),
+                    "quota account chan som phien A i=" + i);
+            dung(phienB.choPhepXuLyLenh(5, 20_000L),
+                    "quota account chan som phien B i=" + i);
+        }
+        dung(!phienA.choPhepXuLyLenh(5, 20_000L),
+                "tai khoan chua co player vuot 450 packet/giay");
+
+        PhienKhongDuocNgat phienDaCoNhanVat =
+                new PhienKhongDuocNgat(98_640);
+        DichVuBatPacket dichVuDaCoNhanVat =
+                new DichVuBatPacket(phienDaCoNhanVat);
+        ChickenNguoiDung userDaCoNhanVat = new ChickenNguoiDung(
+                phienDaCoNhanVat, dichVuDaCoNhanVat);
+        datMaTaiKhoan(userDaCoNhanVat, 98_640);
+        ChickenNguoiChoi nguoiChoi =
+                new ChickenNguoiChoi(dichVuDaCoNhanVat);
+        nguoiChoi.ma = 98_641;
+        userDaCoNhanVat.nguoiChoi = nguoiChoi;
+        phienDaCoNhanVat.user = userDaCoNhanVat;
+        ChickenXuLyTin routerDaCoNhanVat =
+                new ChickenXuLyTin(phienDaCoNhanVat);
+        for (int i = 0; i < 8; i++) {
+            routerDaCoNhanVat.khiCoTin(
+                    new ChickenTinNhan((byte) -99, new byte[0]));
+        }
+        dung(dichVuDaCoNhanVat.cacLenh.isEmpty(),
+                "CMD-99 tao lai van cham luong tao nhan vat");
+        dung(phienDaCoNhanVat.daBiNgat,
+                "spam CMD-99 tao lai khong bi ngat sau nguong loi");
+
+        System.out.println("ACCOUNT_RESOURCE_RATE_LIMIT_OK"
+                + " emptyPayloadCommands=4 malformedBlocked="
+                + soPayloadDuDaChan
+                + " sameSessionReplay=blocked reconnectQuota=2"
+                + " accountWithoutPlayerRate=450"
+                + " existingPlayerCreateSpam=blocked");
+    }
+
+    private static PhienKhongDuocNgat phienCoTaiKhoan(
+            int maPhien,
+            int maTaiKhoan
+    ) throws Exception {
+        PhienKhongDuocNgat phien = new PhienKhongDuocNgat(maPhien);
+        DichVuBatPacket dichVu = new DichVuBatPacket(phien);
+        ChickenNguoiDung user = new ChickenNguoiDung(phien, dichVu);
+        datMaTaiKhoan(user, maTaiKhoan);
+        phien.user = user;
+        return phien;
+    }
+
+    private static void datMaTaiKhoan(
+            ChickenNguoiDung user,
+            int maTaiKhoan
+    ) throws Exception {
+        Field field = ChickenNguoiDung.class.getDeclaredField("user_id");
+        field.setAccessible(true);
+        field.setInt(user, maTaiKhoan);
     }
 
     private static void kiemTraCmd49DiQuaRouterPvp() throws Exception {
@@ -512,9 +825,73 @@ public final class ChickenXuLyTinTestSupport {
         if (loaiDan == 17 || loaiDan == 19) {
             in.readUnsignedByte();
         }
+        if (loaiDan == 14 || loaiDan == 40) {
+            in.readUnsignedByte();
+            in.readUnsignedByte();
+        }
         in.readUnsignedByte();
         dung(in.readUnsignedByte() == soDuong,
                 thongBao + " (sai so duong hien thi)");
+    }
+
+    /** Bullet 14 bat buoc co goc/luc byte va hai path o ca PvP lan tap. */
+    private static void kiemTraPacketDanLazerHaiGiaiDoan()
+            throws Exception {
+        DichVuBatPacket dichVu = new DichVuBatPacket(
+                new PhienKhongDuocNgat(97_128));
+        short[][] duongX = {
+            new short[]{100, 110, 120}, new short[]{120}
+        };
+        short[][] duongY = {
+            new short[]{200, 190, 210}, new short[]{210}
+        };
+        ChickenKetQuaDan ketQua = new ChickenKetQuaDan(
+                (byte) 14, (short) 100, (short) 200,
+                (short) 45, (byte) 30, (byte) 30,
+                duongX, duongY, java.util.Collections.emptyMap());
+
+        dichVu.guiKetQuaBanDau(
+                (byte) 0, (short) 100, (short) 200,
+                ketQua, (byte) 1, false, false);
+        xacNhanPacketDanLazer(dichVu, 0, 22);
+
+        dichVu.guiKetQuaBanLuyenTap(
+                (byte) 0, (byte) 14,
+                (short) 100, (short) 200, (short) 45,
+                (byte) 30, (byte) 30, (byte) 1,
+                duongX, duongY, false, false);
+        xacNhanPacketDanLazer(dichVu, 1, 84);
+    }
+
+    private static void xacNhanPacketDanLazer(
+            DichVuBatPacket dichVu,
+            int chiSoPacket,
+            int lenh
+    ) throws Exception {
+        dung(dichVu.cacLenh.get(chiSoPacket) == lenh,
+                "Dan Lazer sai lenh packet " + lenh);
+        DataInputStream in = new DataInputStream(new ByteArrayInputStream(
+                dichVu.cacDuLieu.get(chiSoPacket)));
+        dung(in.readUnsignedByte() == 1,
+                "Dan Lazer sai typeShoot");
+        dung(in.readUnsignedByte() == 0,
+                "Dan Lazer bi gia critical");
+        dung(in.readUnsignedByte() == 0,
+                "Dan Lazer sai whoShoot");
+        dung(in.readUnsignedByte() == 14,
+                "Dan Lazer sai bulletType");
+        dung(in.readShort() == 100 && in.readShort() == 200,
+                "Dan Lazer sai toa do shooter");
+        dung(in.readUnsignedShort() == 45,
+                "Dan Lazer sai goc short");
+        dung(in.readUnsignedByte() == 45,
+                "Dan Lazer thieu goc byte native");
+        dung(in.readUnsignedByte() == 30,
+                "Dan Lazer thieu luc byte native");
+        dung(in.readUnsignedByte() == 1,
+                "Dan Lazer sai numShoot");
+        dung(in.readUnsignedByte() == 2,
+                "Dan Lazer thieu path type 15");
     }
 
     /**

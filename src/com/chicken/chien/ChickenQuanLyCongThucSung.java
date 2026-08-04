@@ -86,6 +86,48 @@ public final class ChickenQuanLyCongThucSung {
         int getWidth();
         int getHeight();
         boolean coVaCham(short x, short y);
+
+        /**
+         * Cac cot voi rong dang con hieu luc, moi phan tu la {tamX, yDat}.
+         * Mac dinh rong de map test/cu van tuong thich.
+         */
+        default short[][] layCacVoiRong() {
+            return new short[0][];
+        }
+
+        /** Dem cac cot loc ma mot doan duong dan cat qua. */
+        default int demVoiRongCatDoan(int x1, int y1, int x2, int y2) {
+            int soCot = 0;
+            short[][] cacVoiRong = layCacVoiRong();
+            if (cacVoiRong == null) {
+                return 0;
+            }
+            for (short[] voiRong : cacVoiRong) {
+                if (voiRong == null || voiRong.length < 2) {
+                    continue;
+                }
+                int tamX = voiRong[0];
+                int yDat = voiRong[1];
+                boolean catCotX = Math.max(x1, x2)
+                        >= tamX - VOI_RONG_NUA_RONG
+                        && Math.min(x1, x2)
+                        <= tamX + VOI_RONG_NUA_RONG;
+                boolean trongChieuCao = Math.min(y1, y2) <= yDat + 100
+                        && Math.max(y1, y2) >= -100;
+                if (catCotX && trongChieuCao) {
+                    soCot++;
+                }
+            }
+            return soCot;
+        }
+
+        /**
+         * Pixel va cham co thuoc lop dia hinh duoc phep xoa hay khong.
+         * Ban do don gian/test mac dinh coi moi pixel va cham la co the pha.
+         */
+        default boolean coThePhaDiaHinh(short x, short y) {
+            return coVaCham(x, y);
+        }
     }
 
     private static final int FIXED_TRIG = 1024;
@@ -95,6 +137,11 @@ public final class ChickenQuanLyCongThucSung {
     /** Độ sâu an toàn dưới đáy map dành cho quỹ đạo đạn thông thường. */
     public static final int BIEN_DUOI_NGOAI_MAP = 80;
     private static final int BIEN_NGANG_LAZER = 100;
+    private static final int VOI_RONG_NUA_RONG = 10;
+    private static final int VOI_RONG_LECH_LEN_MOI_BUOC = 4;
+    /** Client gun 9 chi cho ngam tu 20 do den 160 do. */
+    public static final int GOC_LAZER_TOI_THIEU = 20;
+    public static final int GOC_LAZER_TOI_DA = 160;
     private static final Map<Integer, CongThucSung> THEO_ID_SUNG = new LinkedHashMap<>();
 
     private static final CongThucSung MAC_DINH =
@@ -159,6 +206,42 @@ public final class ChickenQuanLyCongThucSung {
         return result != null ? result : MAC_DINH;
     }
 
+    public static boolean laSungLazer(int idSung) {
+        return theoIdSung(idSung).getKieu() == KieuCongThuc.LAZER_RIENG;
+    }
+
+    /**
+     * Kiem tra intent goc cua sung laser theo dung angleLock[9] cua client.
+     * Nguoi choi gui goc ngoai khoang nay phai bi tu choi, khong duoc de
+     * client sua packet ban ngang/xuong roi bat server chap nhan.
+     */
+    public static boolean laGocBanHopLeChoSung(short goc, int idSung) {
+        if (!laSungLazer(idSung)) {
+            return true;
+        }
+        int gocChuan = chuanHoaGoc(goc);
+        return gocChuan >= GOC_LAZER_TOI_THIEU
+                && gocChuan <= GOC_LAZER_TOI_DA;
+    }
+
+    /** Chuan hoa goc noi bo cho AI/engine; packet nguoi choi van phai validate truoc. */
+    public static short chuanHoaGocTheoIdSung(short goc, int idSung) {
+        int gocChuan = chuanHoaGoc(goc);
+        if (laSungLazer(idSung)
+                && (gocChuan < GOC_LAZER_TOI_THIEU
+                || gocChuan > GOC_LAZER_TOI_DA)) {
+            /*
+             * Goc ngoai nua tren la goc chui xuong. Giu huong ngang cua tia:
+             * nua ben phai kep ve 20, nua ben trai kep ve 160. Khong dung
+             * Math.min/max truc tiep vi 359 do se bi lat sang huong trai.
+             */
+            gocChuan = gocChuan <= 90 || gocChuan >= 270
+                    ? GOC_LAZER_TOI_THIEU
+                    : GOC_LAZER_TOI_DA;
+        }
+        return (short) gocChuan;
+    }
+
     public static CongThucSung theoPartSung(short partSung) {
         ChickenQuanLyDanSung.DuLieuSung duLieu = ChickenQuanLyDanSung.theoPartSung(partSung);
         return duLieu == null ? MAC_DINH : theoIdSung(duLieu.getIdSung());
@@ -209,12 +292,36 @@ public final class ChickenQuanLyCongThucSung {
             byte windY,
             KiemTraBanDo banDo
     ) {
+        boolean laChuotGanBom = cauHinh != null
+                && cauHinh.getKieuQuyDao()
+                        == ChickenCongThucVatPhamChien.KieuQuyDao.CHUOT_GAN_BOM;
+        boolean laDanXuyenDat = cauHinh != null
+                && cauHinh.getKieuQuyDao()
+                        == ChickenCongThucVatPhamChien.KieuQuyDao.XUYEN_DAT;
+        boolean laQuyDaoCoDinhHoTro = cauHinh != null
+                && (cauHinh.getKieuQuyDao()
+                        == ChickenCongThucVatPhamChien.KieuQuyDao.PARABOL
+                    || cauHinh.getKieuQuyDao()
+                        == ChickenCongThucVatPhamChien.KieuQuyDao.LAZER
+                    || cauHinh.getKieuQuyDao()
+                        == ChickenCongThucVatPhamChien.KieuQuyDao.VOI_RONG
+                    || cauHinh.getKieuQuyDao()
+                        == ChickenCongThucVatPhamChien.KieuQuyDao.TEN_LUA_X4
+                    || laDanXuyenDat
+                    || laChuotGanBom);
         if (cauHinh == null || banDo == null
-                || !cauHinh.coHeSoCoDinh()
-                || cauHinh.getKieuQuyDao()
-                        != ChickenCongThucVatPhamChien.KieuQuyDao.PARABOL) {
+                || (!cauHinh.coHeSoCoDinh() && !laChuotGanBom)
+                || !laQuyDaoCoDinhHoTro) {
             throw new IllegalArgumentException(
                     "Vat pham chua co quy dao parabol server");
+        }
+        if (laChuotGanBom) {
+            return taoQuyDaoChuotGanBom(
+                    batDauX, batDauY, goc, luc, banDo);
+        }
+        if (laDanXuyenDat) {
+            return taoQuyDaoXuyenDat(
+                    batDauX, batDauY, goc, luc, cauHinh, banDo);
         }
         CongThucSung congThuc = new CongThucSung(
                 -10_000 - cauHinh.getIdVatPham(),
@@ -236,6 +343,184 @@ public final class ChickenQuanLyCongThucSung {
                 banDo,
                 false
         );
+    }
+
+    /**
+     * Khop Bullet type 25 cua client: dan bo qua moi pixel dia hinh, bi trong
+     * luc am keo nguoc len va chi ket thuc khi ra bien rieng cua undergUpdate.
+     * Hitbox nhan vat van duoc lop phat ban server cat sau khi tao path.
+     */
+    private static KetQuaQuyDao taoQuyDaoXuyenDat(
+            short batDauX,
+            short batDauY,
+            short goc,
+            byte luc,
+            ChickenCongThucVatPhamChien.CauHinh cauHinh,
+            KiemTraBanDo banDo
+    ) {
+        List<Short> xs = new ArrayList<Short>();
+        List<Short> ys = new ArrayList<Short>();
+        int angle = chuanHoaGoc(goc);
+        int power = Math.max(1, Math.min(30, luc & 0xFF));
+        int dx = (power * cos1024(angle)) >> 10;
+        int dy = -((power * sin1024(angle)) >> 10);
+        int x = batDauX;
+        int y = batDauY;
+        int carryGravity = 0;
+
+        for (int step = 1; step <= MAX_STEPS; step++) {
+            int nx = x + dx;
+            int ny = y + dy;
+            xs.add((short) nx);
+            ys.add((short) ny);
+
+            // Bullet.undergUpdate() no tai dung cac bien nay.
+            if (nx < 0 || nx > banDo.getWidth()
+                    || ny > banDo.getHeight() || ny < 100) {
+                break;
+            }
+
+            carryGravity += cauHinh.getTrongLuc();
+            if (Math.abs(carryGravity) >= 100) {
+                dy += carryGravity / 100;
+                carryGravity %= 100;
+            }
+            x = nx;
+            y = ny;
+        }
+        return ketQuaGiongNhau(xs, ys, batDauX, batDauY);
+    }
+
+    /**
+     * Bullet 22 khong phai dan bay. Client cu thuc hien mouseUpdate(): chuot
+     * duoc tha xuong nen, chay ngang hai pixel moi nhip va ton tai 3 * luc
+     * nhip. Goc chi chon huong trai/phai; gio va thanh phan goc doc khong lam
+     * thay doi quang duong. Path van do server tao de va cham va diem no la
+     * authoritative tren moi client.
+     */
+    private static KetQuaQuyDao taoQuyDaoChuotGanBom(
+            short batDauX,
+            short batDauY,
+            short goc,
+            byte luc,
+            KiemTraBanDo banDo
+    ) {
+        List<Short> xs = new ArrayList<Short>();
+        List<Short> ys = new ArrayList<Short>();
+        int x = batDauX;
+        int y = batDauY;
+        int caoMap = Math.max(1, banDo.getHeight());
+
+        // Tha chuot xuong pixel nen dau tien. Gia toc roi tang dan de path
+        // khong qua dai khi nguoi dung dang o tren cao.
+        int vanTocRoi = 0;
+        boolean daChamNen = false;
+        for (int nhip = 0; nhip < 120; nhip++) {
+            if (x < 0 || x >= banDo.getWidth()
+                    || y < 0 || y >= caoMap) {
+                break;
+            }
+            if (coNenDuoiChuot(banDo, x, y)) {
+                daChamNen = true;
+                break;
+            }
+            vanTocRoi++;
+            int yTiep = Math.min(caoMap - 1,
+                    y + Math.max(1, vanTocRoi / 2));
+            short[] chamNen = timVaChamDauTienTrenDoan(
+                    (short) x, (short) Math.min(caoMap - 1, y + 4),
+                    (short) x, (short) Math.min(caoMap - 1, yTiep + 4),
+                    banDo);
+            if (chamNen != null) {
+                y = Math.max(0, chamNen[1] - 4);
+                xs.add((short) x);
+                ys.add((short) y);
+                daChamNen = true;
+                break;
+            }
+            y = yTiep;
+            xs.add((short) x);
+            ys.add((short) y);
+            if (y >= caoMap - 1) {
+                break;
+            }
+        }
+
+        // Khong co nen ben duoi thi chuot roi khoi map, khong tu bay ngang.
+        if (!daChamNen) {
+            return ketQuaGiongNhau(xs, ys, batDauX, batDauY);
+        }
+
+        int gocChuan = chuanHoaGoc(goc);
+        int huong = cos1024(gocChuan) >= 0 ? 1 : -1;
+        int soNhipChay = 3 * Math.max(1, Math.min(30, luc & 0xFF));
+        boolean dangRoi = false;
+        int giaTocRoi = 0;
+        for (int nhip = 0; nhip < soNhipChay; nhip++) {
+            if (dangRoi) {
+                giaTocRoi++;
+                y += giaTocRoi / 2;
+            }
+            int xTiep = x + huong * 2;
+            if (xTiep < 0 || xTiep >= banDo.getWidth()
+                    || y < 0 || y >= caoMap) {
+                break;
+            }
+
+            int soCotLoc = banDo.demVoiRongCatDoan(x, y, xTiep, y);
+            if (soCotLoc > 0) {
+                y -= VOI_RONG_LECH_LEN_MOI_BUOC * soCotLoc;
+            }
+            if (y < 0 || y >= caoMap) {
+                break;
+            }
+
+            // Tuong cao ngay truoc mat chan chuot va cho no no tai cho.
+            int yCan = Math.max(0, y - 5);
+            if (banDo.coVaCham((short) xTiep, (short) yCan)) {
+                break;
+            }
+
+            x = xTiep;
+            if (!coNenDuoiChuot(banDo, x, y)) {
+                if (soCotLoc == 0) {
+                    dangRoi = true;
+                }
+            } else {
+                // Giong mouseUpdate(): moi nhip co nen thi leo len mot pixel;
+                // nhip sau tu roi lai nen, tao chuyen dong bam doc on dinh.
+                y--;
+                giaTocRoi = 0;
+                dangRoi = false;
+            }
+            xs.add((short) x);
+            ys.add((short) y);
+        }
+        return ketQuaGiongNhau(xs, ys, batDauX, batDauY);
+    }
+
+    private static boolean coNenDuoiChuot(
+            KiemTraBanDo banDo,
+            int x,
+            int y
+    ) {
+        int yKiemTra = y + 4;
+        if (yKiemTra < 0 || yKiemTra >= banDo.getHeight()) {
+            return false;
+        }
+        return coVaChamTrongMap(banDo, x - 8, yKiemTra)
+                || coVaChamTrongMap(banDo, x, yKiemTra)
+                || coVaChamTrongMap(banDo, x + 8, yKiemTra);
+    }
+
+    private static boolean coVaChamTrongMap(
+            KiemTraBanDo banDo,
+            int x,
+            int y
+    ) {
+        return x >= 0 && x < banDo.getWidth()
+                && y >= 0 && y < banDo.getHeight()
+                && banDo.coVaCham((short) x, (short) y);
     }
 
     /**
@@ -426,6 +711,9 @@ public final class ChickenQuanLyCongThucSung {
     private static KetQuaQuyDao taoQuyDaoTheoCongThuc(short batDauX, short batDauY,
             short goc, byte luc, byte windX, byte windY, CongThucSung congThuc,
             KiemTraBanDo banDo) {
+        if (congThuc.getKieu() == KieuCongThuc.LAZER_RIENG) {
+            goc = chuanHoaGocTheoIdSung(goc, congThuc.getIdSung());
+        }
         switch (congThuc.getKieu()) {
             case BOOMERANG_QUAY_VE:
                 return taoDanFixedPoint(batDauX, batDauY, goc, luc, windX, windY,
@@ -574,10 +862,21 @@ public final class ChickenQuanLyCongThucSung {
         int carryGravity = 0;
         boolean curveBackRight = dx <= 0;
         int curveState = -1;
-
         for (int step = 1; step <= congThuc.getSoBuocToiDa(); step++) {
             int nx = x + dx;
             int ny = y + dy;
+
+            /*
+             * Client ve voi rong thanh cot rong 20px tu tren man hinh toi
+             * diem roi. Server ap dung cung vung va tu sua van toc doc;
+             * vi the damage/va cham khong phu thuoc client co chay VFX hay
+             * collisionTornado() hay khong.
+             */
+            int soCotLoc = banDo.demVoiRongCatDoan(x, y, nx, ny);
+            if (soCotLoc > 0) {
+                dy -= VOI_RONG_LECH_LEN_MOI_BUOC * soCotLoc;
+                ny = y + dy;
+            }
             short px = (short) nx;
             short py = (short) ny;
 

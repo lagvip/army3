@@ -2,6 +2,7 @@ package com.chicken.avg;
 
 import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.chien.ChickenChienBinh;
+import com.chicken.chien.ChickenTrangThaiHanhDongLuot;
 import com.chicken.chien.ChickenMayMan;
 import com.chicken.mang.ChickenTinNhan;
 import java.io.IOException;
@@ -94,6 +95,10 @@ public final class ChickenKyNangDacBietHawk {
     public void nhanLenh(ChickenChienBinh nguoiDung, ChickenTinNhan ms) throws IOException {
         if (nguoiDung == null) {
             System.out.println("[HAWK] KHONG_TIM_THAY_HAWK");
+            return;
+        }
+        if (!ChickenTrangThaiHanhDongLuot
+                .coTheKichHoatKyNang(nguoiDung)) {
             return;
         }
         if (nguoiDung.avenger != AVG_HAWK) {
@@ -398,6 +403,8 @@ public final class ChickenKyNangDacBietHawk {
 
     private boolean coTheDungKyNang(ChickenChienBinh hawk) {
         return hawk != null
+                && ChickenTrangThaiHanhDongLuot
+                        .coTheKichHoatKyNang(hawk)
                 && !this.dieuKhien.daKetThuc()
                 && !hawk.chet
                 && hawk.chiSo == this.dieuKhien.luotHienTai()

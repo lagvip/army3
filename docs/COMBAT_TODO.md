@@ -25,3 +25,18 @@ Khi thực hiện:
 - Cần kiểm thử ma trận cho PvP, luyện tập, toàn bộ boss và RPG: gọi lặp, gọi
   chéo chế độ, packet trễ sau chuyển cảnh, reconnect, thoát hợp lệ và packet
   animation đến muộn.
+
+## Lỗi hiển thị Laser của bot luyện tập
+
+Trạng thái: **đã xác định nguyên nhân, tạm hoãn sửa**.
+
+- Ván lỗi dùng súng nhóm Laser (`bulletType=49`); server vẫn gửi một quỹ đạo
+  hợp lệ và chỉ cập nhật HP sau điểm va chạm, nên không phải damage ma.
+- Khi điểm cao nhất của quỹ đạo nằm ngay tại điểm xuất phát (ví dụ góc gần
+  `179°`), `ChickenDuongDanLaserClient` suy ra `dXLaser=0` và `dYLaser=0`.
+- Client gốc chỉ bật `paintLazerGirl` khi cả hai bước Laser khác 0. Vì vậy
+  không thấy viên/tia bay nhưng vụ nổ và damage authoritative vẫn xảy ra.
+- Khi sửa phải bổ sung nhánh quỹ đạo không có đoạn bay lên: lấy hướng từ điểm
+  xuất phát tới điểm cuối cho phần hiển thị, giữ nguyên quỹ đạo va chạm và
+  damage của server; kiểm thử PC và JAR với góc ngang, dọc, chúc xuống và điểm
+  cao nhất ở phần tử đầu/cuối.

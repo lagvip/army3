@@ -6,6 +6,7 @@ import com.chicken.tiemnang.ChickenQuanLyTiemNang;
 import com.chicken.vatpham.ChickenMauVatPham;
 import com.chicken.vatpham.ChickenThuocTinhVatPham;
 import com.chicken.vatpham.ChickenVatPham;
+import com.chicken.vatpham.ChickenYeuCauCapVatPham;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Vector;
@@ -104,7 +105,7 @@ public final class ChickenChiSoNguoiChoi {
         long phanTram = 0L;
         for (int i = 0; i < nguoiChoi.itemBody.length; i++) {
             ChickenVatPham trangBi = nguoiChoi.itemBody[i];
-            if (!trangBiHopLe(trangBi, i)) {
+            if (!trangBiHopLe(nguoiChoi, trangBi, i)) {
                 continue;
             }
             long[] cong = layChiSoTuTrangBi(
@@ -179,7 +180,9 @@ public final class ChickenChiSoNguoiChoi {
                         ? sungThayThe : nguoiChoi.itemBody[i];
                 boolean hopLe = i == 5 && sungThayThe != null
                         ? laSungHopLe(trangBi)
-                        : trangBiHopLe(trangBi, i);
+                                && ChickenYeuCauCapVatPham.datYeuCau(
+                                        nguoiChoi.cap, trangBi)
+                        : trangBiHopLe(nguoiChoi, trangBi, i);
                 if (!hopLe) {
                     continue;
                 }
@@ -202,7 +205,8 @@ public final class ChickenChiSoNguoiChoi {
             return null;
         }
         ChickenVatPham sung = nguoiChoi.itemBody[5];
-        return trangBiHopLe(sung, 5) && laSungHopLe(sung) ? sung : null;
+        return trangBiHopLe(nguoiChoi, sung, 5)
+                && laSungHopLe(sung) ? sung : null;
     }
 
     private static boolean laSungHopLe(ChickenVatPham sung) {
@@ -210,9 +214,17 @@ public final class ChickenChiSoNguoiChoi {
                 && sung.HP > 0;
     }
 
-    private static boolean trangBiHopLe(ChickenVatPham vatPham, int viTri) {
+    private static boolean trangBiHopLe(
+            ChickenNguoiChoi nguoiChoi,
+            ChickenVatPham vatPham,
+            int viTri
+    ) {
         return vatPham != null && vatPham.mau != null
-                && vatPham.chiSo == viTri && vatPham.mau.loai == viTri;
+                && vatPham.chiSo == viTri
+                && vatPham.mau.loai == viTri
+                && nguoiChoi != null
+                && ChickenYeuCauCapVatPham.datYeuCau(
+                        nguoiChoi.cap, vatPham);
     }
 
     private static long[] layChiSoTuTrangBi(ChickenVatPham trangBi,

@@ -1,5 +1,6 @@
 package com.chicken.mohinh;
 
+import com.chicken.chien.ChickenNgungGio;
 import com.chicken.cuahang.ChickenCuaHang;
 import com.chicken.loi.ChickenQuanLyMayChu;
 import com.chicken.mang.ChickenDichVuGame;
@@ -7,6 +8,7 @@ import com.chicken.mang.ChickenPhien;
 import com.chicken.mang.ChickenTinNhan;
 import com.chicken.mang.ChickenXuLyTin;
 import com.chicken.vatpham.ChickenMauVatPham;
+import com.chicken.vatpham.ChickenGoiMuaVatPham;
 import com.chicken.vatpham.ChickenVatPham;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -34,6 +36,18 @@ public final class ChickenCuaHangTestSupport {
     private static final int OVERFLOW_PRICE = 32_004;
     private static final int BOTH_CURRENCIES = 32_005;
     private static final int FREE_ITEM = 32_006;
+    private static final int BUNDLE_NGUNG_GIO =
+            ChickenNgungGio.ID_VAT_PHAM;
+    private static final int BUNDLE_DAN_TRAI_PHA =
+            ChickenGoiMuaVatPham.ID_DAN_TRAI_PHA;
+    private static final int BUNDLE_DAN_LAZER =
+            ChickenGoiMuaVatPham.ID_DAN_LAZER;
+    private static final int BUNDLE_DAN_VOI_RONG =
+            ChickenGoiMuaVatPham.ID_DAN_VOI_RONG;
+    private static final int BUNDLE_CHUOT_GAN_BOM =
+            ChickenGoiMuaVatPham.ID_CHUOT_GAN_BOM;
+    private static final int BUNDLE_TEN_LUA_X4 =
+            ChickenGoiMuaVatPham.ID_TEN_LUA_X4;
     private static final int SO_TO_HOP_PACKET_MUA = 65_536;
     private static final int SO_ID_VAT_PHAM_WIRE = 65_536;
     private static final int SO_TO_HOP_PACKET_BAN = 65_536;
@@ -53,6 +67,24 @@ public final class ChickenCuaHangTestSupport {
             banSaoMau.put(
                     ma, ChickenQuanLyMayChu.itemTemplates.get(ma));
         }
+        banSaoMau.put(
+                BUNDLE_NGUNG_GIO,
+                ChickenQuanLyMayChu.itemTemplates.get(BUNDLE_NGUNG_GIO));
+        banSaoMau.put(
+                BUNDLE_DAN_TRAI_PHA,
+                ChickenQuanLyMayChu.itemTemplates.get(BUNDLE_DAN_TRAI_PHA));
+        banSaoMau.put(
+                BUNDLE_DAN_LAZER,
+                ChickenQuanLyMayChu.itemTemplates.get(BUNDLE_DAN_LAZER));
+        banSaoMau.put(
+                BUNDLE_DAN_VOI_RONG,
+                ChickenQuanLyMayChu.itemTemplates.get(BUNDLE_DAN_VOI_RONG));
+        banSaoMau.put(
+                BUNDLE_CHUOT_GAN_BOM,
+                ChickenQuanLyMayChu.itemTemplates.get(BUNDLE_CHUOT_GAN_BOM));
+        banSaoMau.put(
+                BUNDLE_TEN_LUA_X4,
+                ChickenQuanLyMayChu.itemTemplates.get(BUNDLE_TEN_LUA_X4));
 
         try {
             ChickenMauVatPham stackGold =
@@ -69,9 +101,22 @@ public final class ChickenCuaHangTestSupport {
                     mau(BOTH_CURRENCIES, 6, 10, 2);
             ChickenMauVatPham free =
                     mau(FREE_ITEM, 6, 0, 0);
+            ChickenMauVatPham ngungGio =
+                    mau(BUNDLE_NGUNG_GIO, 10, 5, 0);
+            ChickenMauVatPham danTraiPha =
+                    mau(BUNDLE_DAN_TRAI_PHA, 10, 7, 0);
+            ChickenMauVatPham danLazer =
+                    mau(BUNDLE_DAN_LAZER, 10, 9, 0);
+            ChickenMauVatPham danVoiRong =
+                    mau(BUNDLE_DAN_VOI_RONG, 10, 10, 0);
+            ChickenMauVatPham chuotGanBom =
+                    mau(BUNDLE_CHUOT_GAN_BOM, 10, 3, 0);
+            ChickenMauVatPham tenLuaX4 =
+                    mau(BUNDLE_TEN_LUA_X4, 10, 4, 0);
             for (ChickenMauVatPham mau : List.of(
                     stackGold, stackGem, equipGold, unsold,
-                    overflow, both, free)) {
+                    overflow, both, free, ngungGio, danTraiPha,
+                    danLazer, danVoiRong, chuotGanBom, tenLuaX4)) {
                 ChickenQuanLyMayChu.itemTemplates.put(
                         mau.ma & 0xFFFF, mau);
             }
@@ -79,7 +124,9 @@ public final class ChickenCuaHangTestSupport {
             ChickenCuaHang.SHOP_ITEM.themTab(
                     "Shop test item",
                     new ArrayList<>(List.of(
-                            stackGold, stackGem, overflow, both)));
+                            stackGold, stackGem, overflow, both,
+                            ngungGio, danTraiPha, danLazer,
+                            danVoiRong, chuotGanBom, tenLuaX4)));
             ChickenCuaHang.SHOP_EQUIP.themTab(
                     "Shop test equip",
                     new ArrayList<>(List.of(equipGold)));
@@ -87,8 +134,15 @@ public final class ChickenCuaHangTestSupport {
             kiemTraPhanTrangVaDanhMuc();
             kiemTraToanBoDoDaiVaGiaTriPacketMua();
             kiemTraMuaBangVangVaNgoc();
+            kiemTraGoiMuaNgungGio();
+            kiemTraGoiMuaDanTraiPha();
+            kiemTraGoiMuaDanLazer();
+            kiemTraGoiMuaDanVoiRong();
+            kiemTraGoiMuaChuotGanBom();
+            kiemTraGoiMuaTenLuaX4();
             kiemTraXepChongVaSucChuaTui();
             kiemTraGiaTienVaQuyenMua();
+            kiemTraCapYeuCauMua();
             kiemTraRollbackVaTrangThaiChienDau();
             kiemTraMuaDongThoi();
             kiemTraMoShopVaChuyenTrang();
@@ -285,10 +339,25 @@ public final class ChickenCuaHangTestSupport {
         chong.nguoiChoi.yeuCauMuaVatPham(
                 tinMua((byte) 0, STACK_GOLD, 1));
         dung(chong.nguoiChoi.itemBag[7].soLuong == 99
-                        && chong.nguoiChoi.vang == vangTruoc
+                        && tongSoLuong(chong.nguoiChoi, STACK_GOLD) == 100
+                        && chong.nguoiChoi.vang < vangTruoc
                         && chong.nguoiChoi.soLanLuu
-                                == soLanLuuTruoc,
-                "stack vuot 99 van tru tien/commit");
+                                == soLanLuuTruoc + 1,
+                "phan du khong duoc tach sang chong moi");
+
+        BoTest nhieuChongCu = boTest();
+        nhieuChongCu.nguoiChoi.vang = 10_000;
+        nhieuChongCu.nguoiChoi.itemBag[4] =
+                vatPham(STACK_GOLD, 95, 4);
+        nhieuChongCu.nguoiChoi.itemBag[9] =
+                vatPham(STACK_GOLD, 98, 9);
+        nhieuChongCu.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, STACK_GOLD, 10));
+        dung(nhieuChongCu.nguoiChoi.itemBag[4].soLuong == 99
+                        && nhieuChongCu.nguoiChoi.itemBag[9].soLuong == 99
+                        && tongSoLuong(
+                                nhieuChongCu.nguoiChoi, STACK_GOLD) == 203,
+                "khong lap lan luot cac chong cu truoc khi tao chong moi");
 
         BoTest dayNhungCoStack = boTest();
         dayNhungCoStack.nguoiChoi.vang = 10_000;
@@ -309,6 +378,228 @@ public final class ChickenCuaHangTestSupport {
         dung(day.nguoiChoi.vang == vangDay
                         && day.nguoiChoi.soLanLuu == 0,
                 "tui day van tru tien");
+
+        BoTest thieuOChoNhieuChong = boTest();
+        thieuOChoNhieuChong.nguoiChoi.vang = 1_000;
+        lapDayTui(thieuOChoNhieuChong.nguoiChoi, EQUIP_GOLD);
+        thieuOChoNhieuChong.nguoiChoi.itemBag[50] =
+                vatPham(BUNDLE_NGUNG_GIO, 98, 50);
+        thieuOChoNhieuChong.nguoiChoi.itemBag[51] = null;
+        thieuOChoNhieuChong.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_NGUNG_GIO, 99));
+        dung(thieuOChoNhieuChong.nguoiChoi.vang == 1_000
+                        && thieuOChoNhieuChong.nguoiChoi.itemBag[50]
+                                .soLuong == 98
+                        && thieuOChoNhieuChong.nguoiChoi.itemBag[51] == null
+                        && thieuOChoNhieuChong.nguoiChoi.soLanLuu == 0,
+                "thieu o van mua do dang nhieu chong");
+    }
+
+    private static void kiemTraGoiMuaNgungGio() throws Exception {
+        BoTest motGoi = boTest();
+        motGoi.nguoiChoi.vang = 100;
+        motGoi.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_NGUNG_GIO, 1));
+        dung(motGoi.nguoiChoi.vang == 95,
+                "Ngung gio mua mot goi bi tinh sai gia");
+        dung(tongSoLuong(
+                        motGoi.nguoiChoi, BUNDLE_NGUNG_GIO) == 3,
+                "Ngung gio mua mot khong nhan du ba");
+        dung(motGoi.nguoiChoi.soLanLuu == 1,
+                "Ngung gio mua mot khong commit dung mot lan");
+
+        BoTest nhieuGoi = boTest();
+        nhieuGoi.nguoiChoi.vang = 100;
+        nhieuGoi.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_NGUNG_GIO, 2));
+        dung(nhieuGoi.nguoiChoi.vang == 90
+                        && tongSoLuong(
+                                nhieuGoi.nguoiChoi,
+                                BUNDLE_NGUNG_GIO) == 6,
+                "Ngung gio mua nhieu goi sai gia hoac so luong nhan");
+
+        BoTest satTran = boTest();
+        satTran.nguoiChoi.vang = 100;
+        satTran.nguoiChoi.itemBag[7] =
+                vatPham(BUNDLE_NGUNG_GIO, 96, 7);
+        satTran.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_NGUNG_GIO, 1));
+        dung(satTran.nguoiChoi.vang == 95
+                        && satTran.nguoiChoi.itemBag[7].soLuong == 99,
+                "Ngung gio khong cong dung den tran stack 99");
+
+        BoTest vuotTran = boTest();
+        vuotTran.nguoiChoi.vang = 100;
+        vuotTran.nguoiChoi.itemBag[7] =
+                vatPham(BUNDLE_NGUNG_GIO, 97, 7);
+        vuotTran.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_NGUNG_GIO, 1));
+        dung(vuotTran.nguoiChoi.vang == 95
+                        && vuotTran.nguoiChoi.itemBag[7].soLuong == 99
+                        && tongSoLuong(
+                                vuotTran.nguoiChoi,
+                                BUNDLE_NGUNG_GIO) == 100
+                        && vuotTran.nguoiChoi.soLanLuu == 1,
+                "Ngung gio khong tach phan du sang chong moi");
+
+        BoTest goiQuaLon = boTest();
+        goiQuaLon.nguoiChoi.vang = 1_000;
+        goiQuaLon.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_NGUNG_GIO, 34));
+        dung(goiQuaLon.nguoiChoi.vang == 830
+                        && tongSoLuong(
+                                goiQuaLon.nguoiChoi,
+                                BUNDLE_NGUNG_GIO) == 102
+                        && goiQuaLon.nguoiChoi.itemBag[0].soLuong == 99
+                        && goiQuaLon.nguoiChoi.itemBag[1].soLuong == 3
+                        && goiQuaLon.nguoiChoi.soLanLuu == 1,
+                "Ngung gio mua nhieu khong tach dung nhieu chong");
+    }
+
+    private static void kiemTraGoiMuaDanTraiPha() throws Exception {
+        BoTest motGoi = boTest();
+        motGoi.nguoiChoi.vang = 100;
+        motGoi.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_DAN_TRAI_PHA, 1));
+        dung(motGoi.nguoiChoi.vang == 93,
+                "Dan trai pha mua mot goi bi tinh sai gia");
+        dung(tongSoLuong(
+                        motGoi.nguoiChoi, BUNDLE_DAN_TRAI_PHA) == 5,
+                "Dan trai pha mua mot khong nhan du nam");
+        dung(motGoi.nguoiChoi.soLanLuu == 1,
+                "Dan trai pha mua mot khong commit dung mot lan");
+
+        BoTest nhieuGoi = boTest();
+        nhieuGoi.nguoiChoi.vang = 100;
+        nhieuGoi.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_DAN_TRAI_PHA, 2));
+        dung(nhieuGoi.nguoiChoi.vang == 86
+                        && tongSoLuong(
+                                nhieuGoi.nguoiChoi,
+                                BUNDLE_DAN_TRAI_PHA) == 10,
+                "Dan trai pha mua nhieu goi sai gia hoac so luong nhan");
+
+        BoTest vuotTran = boTest();
+        vuotTran.nguoiChoi.vang = 100;
+        vuotTran.nguoiChoi.itemBag[7] =
+                vatPham(BUNDLE_DAN_TRAI_PHA, 95, 7);
+        vuotTran.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_DAN_TRAI_PHA, 1));
+        dung(vuotTran.nguoiChoi.vang == 93
+                        && vuotTran.nguoiChoi.itemBag[7].soLuong == 99
+                        && tongSoLuong(
+                                vuotTran.nguoiChoi,
+                                BUNDLE_DAN_TRAI_PHA) == 100
+                        && vuotTran.nguoiChoi.soLanLuu == 1,
+                "Dan trai pha khong tach phan du sang chong moi");
+    }
+
+    private static void kiemTraGoiMuaDanLazer() throws Exception {
+        BoTest motGoi = boTest();
+        motGoi.nguoiChoi.vang = 100;
+        motGoi.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_DAN_LAZER, 1));
+        dung(motGoi.nguoiChoi.vang == 91,
+                "Dan Lazer mua mot goi bi tinh sai gia");
+        dung(tongSoLuong(
+                        motGoi.nguoiChoi, BUNDLE_DAN_LAZER) == 5,
+                "Dan Lazer mua mot khong nhan du nam");
+        dung(motGoi.nguoiChoi.soLanLuu == 1,
+                "Dan Lazer mua mot khong commit dung mot lan");
+
+        BoTest nhieuGoi = boTest();
+        nhieuGoi.nguoiChoi.vang = 1_000;
+        nhieuGoi.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_DAN_LAZER, 20));
+        dung(nhieuGoi.nguoiChoi.vang == 820
+                        && tongSoLuong(
+                                nhieuGoi.nguoiChoi,
+                                BUNDLE_DAN_LAZER) == 100
+                        && nhieuGoi.nguoiChoi.itemBag[0].soLuong == 99
+                        && nhieuGoi.nguoiChoi.itemBag[1].soLuong == 1
+                        && nhieuGoi.nguoiChoi.soLanLuu == 1,
+                "Dan Lazer mua nhieu khong tach chong 99 + 1");
+    }
+
+    private static void kiemTraGoiMuaDanVoiRong() throws Exception {
+        BoTest motGoi = boTest();
+        motGoi.nguoiChoi.vang = 100;
+        motGoi.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_DAN_VOI_RONG, 1));
+        dung(motGoi.nguoiChoi.vang == 90,
+                "Dan voi rong mua mot goi bi tinh sai gia");
+        dung(tongSoLuong(
+                        motGoi.nguoiChoi, BUNDLE_DAN_VOI_RONG) == 2,
+                "Dan voi rong mua mot khong nhan du hai");
+        dung(motGoi.nguoiChoi.soLanLuu == 1,
+                "Dan voi rong mua mot khong commit dung mot lan");
+
+        BoTest nhieuGoi = boTest();
+        nhieuGoi.nguoiChoi.vang = 1_000;
+        nhieuGoi.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_DAN_VOI_RONG, 50));
+        dung(nhieuGoi.nguoiChoi.vang == 500
+                        && tongSoLuong(
+                                nhieuGoi.nguoiChoi,
+                                BUNDLE_DAN_VOI_RONG) == 100
+                        && nhieuGoi.nguoiChoi.itemBag[0].soLuong == 99
+                        && nhieuGoi.nguoiChoi.itemBag[1].soLuong == 1
+                        && nhieuGoi.nguoiChoi.soLanLuu == 1,
+                "Dan voi rong mua nhieu khong tach chong 99 + 1");
+    }
+
+    private static void kiemTraGoiMuaChuotGanBom() throws Exception {
+        BoTest motGoi = boTest();
+        motGoi.nguoiChoi.vang = 100;
+        motGoi.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_CHUOT_GAN_BOM, 1));
+        dung(motGoi.nguoiChoi.vang == 97,
+                "Chuot gan bom mua mot goi bi tinh sai gia");
+        dung(tongSoLuong(
+                        motGoi.nguoiChoi, BUNDLE_CHUOT_GAN_BOM) == 5,
+                "Chuot gan bom mua mot khong nhan du nam");
+        dung(motGoi.nguoiChoi.soLanLuu == 1,
+                "Chuot gan bom mua mot khong commit dung mot lan");
+
+        BoTest nhieuGoi = boTest();
+        nhieuGoi.nguoiChoi.vang = 1_000;
+        nhieuGoi.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_CHUOT_GAN_BOM, 20));
+        dung(nhieuGoi.nguoiChoi.vang == 940
+                        && tongSoLuong(
+                                nhieuGoi.nguoiChoi,
+                                BUNDLE_CHUOT_GAN_BOM) == 100
+                        && nhieuGoi.nguoiChoi.itemBag[0].soLuong == 99
+                        && nhieuGoi.nguoiChoi.itemBag[1].soLuong == 1
+                        && nhieuGoi.nguoiChoi.soLanLuu == 1,
+                "Chuot gan bom mua nhieu khong tach chong 99 + 1");
+    }
+
+    private static void kiemTraGoiMuaTenLuaX4() throws Exception {
+        BoTest motGoi = boTest();
+        motGoi.nguoiChoi.vang = 100;
+        motGoi.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_TEN_LUA_X4, 1));
+        dung(motGoi.nguoiChoi.vang == 96,
+                "Ten lua x4 mua mot goi bi tinh sai gia");
+        dung(tongSoLuong(
+                        motGoi.nguoiChoi, BUNDLE_TEN_LUA_X4) == 5,
+                "Ten lua x4 mua mot khong nhan du nam");
+        dung(motGoi.nguoiChoi.soLanLuu == 1,
+                "Ten lua x4 mua mot khong commit dung mot lan");
+
+        BoTest nhieuGoi = boTest();
+        nhieuGoi.nguoiChoi.vang = 1_000;
+        nhieuGoi.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_TEN_LUA_X4, 20));
+        dung(nhieuGoi.nguoiChoi.vang == 920
+                        && tongSoLuong(
+                                nhieuGoi.nguoiChoi,
+                                BUNDLE_TEN_LUA_X4) == 100
+                        && nhieuGoi.nguoiChoi.itemBag[0].soLuong == 99
+                        && nhieuGoi.nguoiChoi.itemBag[1].soLuong == 1
+                        && nhieuGoi.nguoiChoi.soLanLuu == 1,
+                "Ten lua x4 mua nhieu khong tach chong 99 + 1");
     }
 
     private static void kiemTraGiaTienVaQuyenMua()
@@ -363,6 +654,53 @@ public final class ChickenCuaHangTestSupport {
                 "item hai gia khong dung loai tien client chon");
     }
 
+    private static void kiemTraCapYeuCauMua() throws Exception {
+        ChickenMauVatPham mau =
+                ChickenQuanLyMayChu.itemTemplates.get(STACK_GOLD);
+        byte bacCu = mau.cap;
+        int capYeuCauCu = mau.strRequire;
+        try {
+            // Bac item khong phai cap nhan vat yeu cau.
+            mau.cap = 99;
+            mau.strRequire = 10;
+
+            BoTest thieuCap = boTest();
+            thieuCap.nguoiChoi.cap = 9;
+            thieuCap.nguoiChoi.vang = 100;
+            thieuCap.nguoiChoi.yeuCauMuaVatPham(
+                    tinMua((byte) 0, STACK_GOLD, 1));
+            dung(thieuCap.nguoiChoi.vang == 100
+                            && demVatPham(thieuCap.nguoiChoi) == 0
+                            && thieuCap.nguoiChoi.soLanLuu == 0,
+                    "cap thap van mua duoc item");
+
+            BoTest bangCap = boTest();
+            bangCap.nguoiChoi.cap = 10;
+            bangCap.nguoiChoi.vang = 100;
+            bangCap.nguoiChoi.yeuCauMuaVatPham(
+                    tinMua((byte) 0, STACK_GOLD, 1));
+            dung(bangCap.nguoiChoi.vang == 0
+                            && tongSoLuong(
+                                    bangCap.nguoiChoi, STACK_GOLD) == 1
+                            && bangCap.nguoiChoi.soLanLuu == 1,
+                    "cap bang strength_required khong mua duoc item");
+
+            mau.strRequire = -1;
+            BoTest duLieuLoi = boTest();
+            duLieuLoi.nguoiChoi.cap = 99;
+            duLieuLoi.nguoiChoi.vang = 100;
+            duLieuLoi.nguoiChoi.yeuCauMuaVatPham(
+                    tinMua((byte) 0, STACK_GOLD, 1));
+            dung(duLieuLoi.nguoiChoi.vang == 100
+                            && demVatPham(duLieuLoi.nguoiChoi) == 0
+                            && duLieuLoi.nguoiChoi.soLanLuu == 0,
+                    "template cap loi van mua duoc");
+        } finally {
+            mau.cap = bacCu;
+            mau.strRequire = capYeuCauCu;
+        }
+    }
+
     private static void kiemTraRollbackVaTrangThaiChienDau()
             throws Exception {
         BoTest loiLuu = boTest();
@@ -387,6 +725,20 @@ public final class ChickenCuaHangTestSupport {
         dung(loiStack.nguoiChoi.vang == 1_000
                         && loiStack.nguoiChoi.itemBag[4].soLuong == 8,
                 "loi DB khong rollback stack");
+
+        BoTest loiNhieuStack = boTest();
+        loiNhieuStack.nguoiChoi.vang = 1_000;
+        loiNhieuStack.nguoiChoi.itemBag[4] =
+                vatPham(BUNDLE_NGUNG_GIO, 98, 4);
+        loiNhieuStack.nguoiChoi.choPhepLuu = false;
+        loiNhieuStack.nguoiChoi.yeuCauMuaVatPham(
+                tinMua((byte) 0, BUNDLE_NGUNG_GIO, 34));
+        dung(loiNhieuStack.nguoiChoi.vang == 1_000
+                        && loiNhieuStack.nguoiChoi.itemBag[4].soLuong == 98
+                        && tongSoLuong(
+                                loiNhieuStack.nguoiChoi,
+                                BUNDLE_NGUNG_GIO) == 98,
+                "loi DB khong rollback toan bo giao dich nhieu chong");
 
         BoTest trongTran = boTest();
         trongTran.nguoiChoi.vang = 1_000;

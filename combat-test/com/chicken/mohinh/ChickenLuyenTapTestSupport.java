@@ -107,6 +107,15 @@ public final class ChickenLuyenTapTestSupport {
              * Map giả của test không nạp terrain. Dùng quyền bay thật của
              * Iron Man để phép thử bỏ lượt không bị nhánh rơi vực lấn át.
              */
+            ChickenVatPham sungTruocKhiGiaLapBay =
+                    nguoiChoi.itemBody[5];
+            ChickenVatPham ironManGiaLap = new ChickenVatPham(391);
+            ironManGiaLap.mau = new ChickenMauVatPham(
+                    (short) 391, (byte) 5, (byte) 0,
+                    "Iron Man test", "", (byte) 1, 0,
+                    (short) 1883, (short) 223, false);
+            ironManGiaLap.chiSo = 5;
+            nguoiChoi.itemBody[5] = ironManGiaLap;
             nguoiChoi.avenger =
                     com.chicken.avg.ChickenKyNangDacBietIronMan.AVG_IRON_MAN;
             /*
@@ -202,7 +211,45 @@ public final class ChickenLuyenTapTestSupport {
             nguoiChoi.inTraining = true;
 
             khoiTaoPhien(phien);
+            phien.trainingBotDead[0] = true;
+            phien.trainingPlayerReload = 0;
+            phien.trainingBossReload = 0;
+            phien.trainingPlayerReloadTime = 777;
+            phien.trainingHawkSkillActive = true;
+            phien.trainingLokiDangChoChonMucTieu = true;
+            Method xuLyHetGio = ChickenNguoiChoi.class.getDeclaredMethod(
+                    "xuLyHetGioLuotNguoiChoiLuyenTap",
+                    long.class, long.class);
+            xuLyHetGio.setAccessible(true);
+            xuLyHetGio.invoke(
+                    nguoiChoi,
+                    phien.trainingSessionId,
+                    phien.trainingTurnId);
+            bang(1, (int) phien.trainingCurrentTurn,
+                    "server het 25 giay khong chuyen luot luyen tap");
+            bang(250, phien.trainingPlayerReload,
+                    "luyen tap het gio chua tao dan lai lay nap sung");
+            dung(!phien.trainingHawkSkillActive
+                            && !phien.trainingLokiDangChoChonMucTieu,
+                    "het gio khong huy item buff/menu skill chua tao dan");
+
+            khoiTaoPhien(phien);
+            phien.trainingBotDead[0] = true;
+            phien.trainingWaitingShotEnd = true;
+            phien.trainingLastShotTurnId = phien.trainingTurnId;
+            phien.trainingPlayerReload = 19;
+            xuLyHetGio.invoke(
+                    nguoiChoi,
+                    phien.trainingSessionId,
+                    phien.trainingTurnId);
+            bang(0, (int) phien.trainingCurrentTurn,
+                    "dan da tao nhung timer lai bien thanh bo luot");
+            bang(19, phien.trainingPlayerReload,
+                    "timer sua nap dan khi server dang cho animation dan");
+
+            khoiTaoPhien(phien);
             nguoiChoi.avenger = 0;
+            nguoiChoi.itemBody[5] = sungTruocKhiGiaLapBay;
 
             long maPhienTruocLenhLap = phien.trainingSessionId;
             int soTinTruocLenhLap = dichVu.tongSoTin();
@@ -497,6 +544,16 @@ public final class ChickenLuyenTapTestSupport {
         return (ChickenVatPham) field.get(nguoiChoi);
     }
 
+    private static void datSungDangCamLuyenTap(
+            ChickenNguoiChoi nguoiChoi,
+            ChickenVatPham sung
+    ) throws Exception {
+        Field field = ChickenNguoiChoi.class.getDeclaredField(
+                "sungDangCamLuyenTap");
+        field.setAccessible(true);
+        field.set(nguoiChoi, sung);
+    }
+
     private static void xacNhanDoiSungLuyenTapBiChan(
             ChickenNguoiChoi nguoiChoi,
             DichVuBatPacket dichVu,
@@ -605,6 +662,28 @@ public final class ChickenLuyenTapTestSupport {
             DichVuBatPacket dichVu
     ) throws Exception {
         nguoiChoi.avenger = 8;
+        ChickenVatPham sungTruocUltron = nguoiChoi.itemBody[5];
+        ChickenVatPham sungDangCamTruocUltron =
+                laySungDangCamLuyenTap(nguoiChoi);
+        ChickenVatPham ultronGiaLap = new ChickenVatPham(398);
+        ultronGiaLap.mau = new ChickenMauVatPham(
+                (short) 398, (byte) 5, (byte) 0,
+                "Ultron test", "", (byte) 1, 0,
+                (short) 1946, (short) 262, false);
+        ultronGiaLap.chiSo = 5;
+        nguoiChoi.itemBody[5] = ultronGiaLap;
+        /*
+         * Fixture giả lập người chơi đã vào trận bằng AT4 rồi kích hoạt bộ
+         * AVG Ultron. Giữ súng snapshot của trận để đường đạn vẫn có mapping,
+         * còn quyền dùng AVG phải đến từ trang bị thật ở itemBody[5].
+         */
+        datSungDangCamLuyenTap(nguoiChoi, sungTruocUltron);
+        byte avengerChienBinhCu =
+                phien.trainingVatPhamChienBinh == null
+                        ? 0 : phien.trainingVatPhamChienBinh.avenger;
+        if (phien.trainingVatPhamChienBinh != null) {
+            phien.trainingVatPhamChienBinh.avenger = 8;
+        }
         phien.trainingBossState =
                 ChickenNguoiChoi.TrainingBossState.IDLE;
         phien.trainingCurrentTurn = 0;
@@ -654,6 +733,11 @@ public final class ChickenLuyenTapTestSupport {
         dung(!phien.trainingWaitingShotEnd,
                 "Ultron X3 luyen tap khong dong loat sau ba vien");
         nguoiChoi.avenger = 0;
+        nguoiChoi.itemBody[5] = sungTruocUltron;
+        datSungDangCamLuyenTap(nguoiChoi, sungDangCamTruocUltron);
+        if (phien.trainingVatPhamChienBinh != null) {
+            phien.trainingVatPhamChienBinh.avenger = avengerChienBinhCu;
+        }
     }
 
     private static void kiemTraThuongVaBangKetQua(

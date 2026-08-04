@@ -28,6 +28,7 @@ import com.chicken.npc.chihuy.XuLyMenuChiHuy;
 import com.chicken.phong.boss.sanhcho.DebugSanhBoss;
 import com.chicken.phong.boss.sanhcho.QuanLySanhChoBoss;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,6 +37,7 @@ import java.util.ArrayList;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -54,6 +56,9 @@ implements IChickenDichVuGame {
                 thread.setDaemon(true);
                 return thread;
             });
+    private static final int SO_ICON_TOI_DA_CUA_CLIENT = 3000;
+    private static final ConcurrentHashMap<Byte, byte[]> PHIEN_BAN_ICON_THEO_MUC_PHONG =
+            new ConcurrentHashMap<>();
     private final Object khoaHangRaoGuiTin = new Object();
     private final Deque<ChickenTinNhan> tinChoLaySung = new ArrayDeque<>();
     private boolean dangChoLaySung;
@@ -80,6 +85,50 @@ implements IChickenDichVuGame {
         ds.writeUTF(ChickenQuanLyMayChu.dataSize[this.khach.mucPhong - 1]);
         ds.flush();
         this.guiTin(ms);
+    }
+
+    /**
+     * Gui bang phien ban icon ma client goc da ho tro qua CMD -53.
+     *
+     * Client luu Small&lt;id&gt; trong RMS. Neu khong co bang nay, cache cu duoc
+     * dung mai ke ca khi PNG tren server da thay doi. Dinh dang phien ban cua
+     * client goc la kich thuoc file modulo 127.
+     */
+    public void guiPhienBanIcon() throws IOException {
+        byte mucPhong = this.khach.mucPhong;
+        byte[] phienBan = PHIEN_BAN_ICON_THEO_MUC_PHONG.computeIfAbsent(
+                mucPhong,
+                ChickenDichVuGame::taoPhienBanIcon);
+        ChickenTinNhan ms = new ChickenTinNhan(-53);
+        DataOutputStream ds = ms.boGhi();
+        ds.writeShort(phienBan.length);
+        ds.write(phienBan);
+        ds.flush();
+        this.guiTin(ms);
+    }
+
+    private static byte[] taoPhienBanIcon(byte mucPhong) {
+        byte[] phienBan = new byte[SO_ICON_TOI_DA_CUA_CLIENT];
+        File thuMuc = new File("res/icon/item/" + mucPhong);
+        File[] tep = thuMuc.listFiles();
+        if (tep == null) {
+            return phienBan;
+        }
+        for (File file : tep) {
+            String ten = file.getName();
+            if (!file.isFile() || !ten.startsWith("Small") || !ten.endsWith(".png")) {
+                continue;
+            }
+            try {
+                int id = Integer.parseInt(ten.substring(5, ten.length() - 4));
+                if (id >= 0 && id < phienBan.length) {
+                    phienBan[id] = (byte) (file.length() % 127L);
+                }
+            } catch (NumberFormatException ignored) {
+                // Tep khong theo mau Small<ID>.png khong thuoc giao thuc icon.
+            }
+        }
+        return phienBan;
     }
 
     public void taiXuong() throws IOException {
@@ -237,11 +286,25 @@ implements IChickenDichVuGame {
     }
 
     public void yeuCauIcon(ChickenTinNhan ms) throws IOException {
-        short ma = ms.boDoc().readShort();
+        DataInputStream doc = ms.boDoc();
+        if (doc.available() != 2) {
+            throw new IOException("CMD -41 phai co dung 2 byte");
+        }
+        int ma = doc.readUnsignedShort();
+        if (ma >= SO_ICON_TOI_DA_CUA_CLIENT
+                || this.khach.mucPhong < 1
+                || this.khach.mucPhong > 4) {
+            throw new IOException("Yeu cau icon ngoai pham vi");
+        }
+        byte[] ab = ChickenTienIch.layTep(
+                "res/icon/item/" + this.khach.mucPhong
+                + "/Small" + ma + ".png");
+        if (ab == null || ab.length == 0) {
+            throw new IOException("Icon khong ton tai: " + ma);
+        }
         ChickenTinNhan mss = new ChickenTinNhan(-41);
         DataOutputStream ds = mss.boGhi();
         ds.writeShort(ma);
-        byte[] ab = ChickenTienIch.layTep("res/icon/item/" + this.khach.mucPhong + "/Small" + ma + ".png");
         ds.writeInt(ab.length);
         ds.write(ab);
         ds.flush();
@@ -414,23 +477,42 @@ implements IChickenDichVuGame {
     }
 
     public void guiBalo() throws IOException {
-        this.guiBaloNoiBo(null, false);
+        this.guiBaloNoiBo(this.nguoiChoi, null, false);
+    }
+
+    /** Gui Balo persistent cua dung tai khoan, khong phu thuoc back-reference. */
+    public void guiBaloCua(ChickenNguoiChoi nguoiChoi) throws IOException {
+        this.guiBaloNoiBo(nguoiChoi, null, false);
     }
 
     public void guiBaloTrongTran(ChickenChienBinh chienBinh)
             throws IOException {
-        this.guiBaloNoiBo(chienBinh, false);
+        this.guiBaloNoiBo(null, chienBinh, false);
     }
 
     public void guiBaloLuyenTap() throws IOException {
-        this.guiBaloNoiBo(null, true);
+        this.guiBaloNoiBo(this.nguoiChoi, null, true);
+    }
+
+    public void guiBaloLuyenTap(ChickenChienBinh chienBinh)
+            throws IOException {
+        this.guiBaloNoiBo(null, chienBinh, true);
     }
 
     private void guiBaloNoiBo(
+            ChickenNguoiChoi chuBaloChiDinh,
             ChickenChienBinh chienBinh,
             boolean luyenTap
     ) throws IOException {
-        int[] vatPhams = this.nguoiChoi.itemBalo;
+        ChickenNguoiChoi chuBalo = chienBinh != null
+                && chienBinh.nguoiChoi != null
+                        ? chienBinh.nguoiChoi
+                        : chuBaloChiDinh != null
+                                ? chuBaloChiDinh : this.nguoiChoi;
+        if (chuBalo == null) {
+            throw new IOException("Khong xac dinh duoc chu balo trong tran");
+        }
+        int[] vatPhams = chuBalo.itemBalo;
         ChickenTinNhan ms = new ChickenTinNhan(-42);
         DataOutputStream ds = ms.boGhi();
         ds.writeByte(0);
@@ -438,16 +520,25 @@ implements IChickenDichVuGame {
         for (int viTriBalo = 0; viTriBalo < vatPhams.length; viTriBalo++) {
             int chiSo = vatPhams[viTriBalo];
             ChickenVatPham vatPham = null;
-            if (chiSo >= 0
-                    && chiSo < this.nguoiChoi.itemBag.length) {
-                if (chienBinh != null) {
-                    vatPham = chienBinh.laySungTrongOTrongBalo(viTriBalo);
-                } else if (luyenTap) {
-                    vatPham = this.nguoiChoi
+            ChickenChienBinh.VatPhamChienTrongTran vatPhamChien =
+                    chienBinh == null
+                            ? null
+                            : chienBinh
+                                    .layVatPhamChienTrongOTrongBalo(
+                                            viTriBalo);
+            boolean anViDaDungTrongTran = vatPhamChien != null
+                    && !chienBinh.coTheDungVatPhamChienTrongTran(
+                            vatPhamChien);
+            if (!anViDaDungTrongTran && chiSo >= 0
+                    && chiSo < chuBalo.itemBag.length) {
+                if (luyenTap) {
+                    vatPham = chuBalo
                             .laySungTrongOTrongBaloLuyenTap(viTriBalo);
+                } else if (chienBinh != null) {
+                    vatPham = chienBinh.laySungTrongOTrongBalo(viTriBalo);
                 }
                 if (vatPham == null) {
-                    vatPham = this.nguoiChoi.itemBag[chiSo];
+                    vatPham = chuBalo.itemBag[chiSo];
                 }
             }
             if (vatPham != null) {
@@ -831,6 +922,50 @@ implements IChickenDichVuGame {
             short y,
             int mauToiDa
     ) throws IOException {
+        this.guiTaoBossDong(
+                slot, id, ten, head, leg, body, hat, wing, vuKhi,
+                x, y, mauToiDa, (byte) 0, true);
+    }
+
+    /**
+     * Tạo Cảm tử dự bị ngay tại tọa độ server sau khi Cảm tử cũ đã chết.
+     * Loại hiển thị 1 là nhánh native không có máy bay/thả rơi.
+     */
+    public void guiTaoCamTuDuBiNgay(
+            byte slot,
+            int id,
+            String ten,
+            short head,
+            short leg,
+            short body,
+            short hat,
+            short wing,
+            short vuKhi,
+            short x,
+            short y,
+            int mauToiDa
+    ) throws IOException {
+        this.guiTaoBossDong(
+                slot, id, ten, head, leg, body, hat, wing, vuKhi,
+                x, y, mauToiDa, (byte) 1, false);
+    }
+
+    private void guiTaoBossDong(
+            byte slot,
+            int id,
+            String ten,
+            short head,
+            short leg,
+            short body,
+            short hat,
+            short wing,
+            short vuKhi,
+            short x,
+            short y,
+            int mauToiDa,
+            byte loaiHienThi,
+            boolean guiDiChuyenKhoiTao
+    ) throws IOException {
         ChickenTinNhan ms = new ChickenTinNhan(-63);
         DataOutputStream ds = ms.boGhi();
         ds.writeByte(0);
@@ -846,9 +981,12 @@ implements IChickenDichVuGame {
         ds.writeShort(x);
         ds.writeShort(y);
         ds.writeShort(Math.max(1, Math.min(65535, mauToiDa)));
-        ds.writeByte(0);
+        ds.writeByte(loaiHienThi);
         ds.flush();
         this.guiTin(ms);
+        if (!guiDiChuyenKhoiTao) {
+            return;
+        }
         /*
          * Sau CMD -63, client type 0 goi init2(x, y - 108), nen toa do hien
          * tai tren client chua phai (x, y). Neu gui thang CMD -64 toi (x, y),
@@ -1294,6 +1432,12 @@ implements IChickenDichVuGame {
         ds.writeShort(ketQua.goc);
         if (ketQua.loaiDan == 17 || ketQua.loaiDan == 19) {
             ds.writeByte(ketQua.lucPhu);
+        }
+        // Client native doc them goc/luc byte cho bullet 14 va 40 truoc
+        // numShoot. Khong ghi hai byte nay se lam lech toan bo packet CMD22.
+        if (ketQua.loaiDan == 14 || ketQua.loaiDan == 40) {
+            ds.writeByte(ketQua.goc);
+            ds.writeByte(ketQua.luc);
         }
         ds.writeByte(numShoot <= 0 ? 1 : numShoot);
         int soDuong = Math.max(1, Math.min(255, Math.min(
@@ -2237,6 +2381,11 @@ implements IChickenDichVuGame {
         ds.writeShort(goc);
         if (loaiDan == 17 || loaiDan == 19) {
             ds.writeByte(lucPhu);
+        }
+        // Giu cung layout CMD22 cho CMD84 cua luyen tap.
+        if (loaiDan == 14 || loaiDan == 40) {
+            ds.writeByte(goc);
+            ds.writeByte(luc);
         }
         ds.writeByte(soPhat <= 0 ? 1 : soPhat);
         ds.writeByte(soVien);

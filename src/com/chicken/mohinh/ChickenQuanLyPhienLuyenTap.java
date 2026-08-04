@@ -55,6 +55,7 @@ final class ChickenQuanLyPhienLuyenTap {
         phien.trainingBossWeaponId = -1;
         phien.trainingBossWeaponPart = -1;
         phien.trainingBossAttack = 0;
+        phien.trainingBossPendingReloadAfterAction = -1;
         phien.trainingTurnId = 0L;
         phien.trainingLastShotTurnId = -1L;
         phien.trainingActiveShotId = 0L;
@@ -126,6 +127,7 @@ final class ChickenQuanLyPhienLuyenTap {
         phien.trainingUltronDaCoGocNgam = false;
         phien.trainingPendingSelfHitCount = 0;
         phien.trainingPendingDamagePerBullet = 0;
+        phien.trainingBossPendingReloadAfterAction = -1;
 
         for (int i = 0; i < phien.trainingPendingBotHitCounts.length; i++) {
             phien.trainingPendingBotHitCounts[i] = 0;

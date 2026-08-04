@@ -65,7 +65,13 @@ final class ChickenDuongDanLaserClient {
         soDiem = Math.min(Short.MAX_VALUE, soDiem);
         int chiSoDinh = 0;
         for (int i = 1; i < soDiem; i++) {
-            if (duongY[i] < duongY[chiSoDinh]) {
+            /*
+             * Cong thuc laser co the tao hai diem cung Y o dinh: diem dau
+             * van la buoc parabol nam ngang, diem cuoi moi la noi engine doi
+             * sang tia thang. Lay diem cuoi cung cua mat dinh de vector ke
+             * tiep chinh la vector laser, khong phai buoc ngang gia.
+             */
+            if (duongY[i] <= duongY[chiSoDinh]) {
                 chiSoDinh = i;
             }
         }
@@ -105,17 +111,25 @@ final class ChickenDuongDanLaserClient {
         x[x.length - 1] = duongX[soDiem - 1];
         y[y.length - 1] = duongY[soDiem - 1];
 
-        int chiSoBuocDau = 1;
-        while (chiSoBuocDau <= chiSoDinh
-                && duongX[chiSoBuocDau] == duongX[0]
-                && duongY[chiSoBuocDau] == duongY[0]) {
-            chiSoBuocDau++;
+        /*
+         * Sau dinh, engine server da doi van toc sang tia thang that. Lay
+         * chinh vector do de ve animation; buoc dau cua doan parabol con
+         * chiu gio/trong luc nen khong nhat thiet song song voi tia laser.
+         *
+         * Client ve nua dau bang (dx, dy), sau dinh lai ve (dx, -dy), vi
+         * vay vector di xuong cua server phai dao dau thanh phan Y khi gui.
+         */
+        int chiSoSauDinh = chiSoDinh + 1;
+        while (chiSoSauDinh < soDiem
+                && duongX[chiSoSauDinh] == duongX[chiSoDinh]
+                && duongY[chiSoSauDinh] == duongY[chiSoDinh]) {
+            chiSoSauDinh++;
         }
-        int dxTia = chiSoBuocDau <= chiSoDinh
-                ? duongX[chiSoBuocDau] - duongX[0]
+        int dxTia = chiSoSauDinh < soDiem
+                ? duongX[chiSoSauDinh] - duongX[chiSoDinh]
                 : duongX[chiSoDinh] - duongX[0];
-        int dyTia = chiSoBuocDau <= chiSoDinh
-                ? duongY[chiSoBuocDau] - duongY[0]
+        int dyTia = chiSoSauDinh < soDiem
+                ? -(duongY[chiSoSauDinh] - duongY[chiSoDinh])
                 : duongY[chiSoDinh] - duongY[0];
         int buocX = giuKhacKhongSauChiaDoi(
                 kepByteCoDau(dxTia), duongX[chiSoDinh] - duongX[0]);

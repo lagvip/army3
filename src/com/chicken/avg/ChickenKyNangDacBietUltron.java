@@ -1,6 +1,7 @@
 package com.chicken.avg;
 
 import com.chicken.chien.ChickenChienBinh;
+import com.chicken.chien.ChickenTrangThaiHanhDongLuot;
 
 /**
  * Kỹ năng đặc biệt của AVG Ultron: Bắn x3.
@@ -28,6 +29,8 @@ public final class ChickenKyNangDacBietUltron {
     public void guiTinHieuKyNangNeuCo(ChickenChienBinh ultron) {
         if (ultron == null
                 || ultron.chet
+                || !ChickenTrangThaiHanhDongLuot
+                        .coTheKichHoatKyNang(ultron)
                 || !ultron.coPhien()
                 || ultron.avenger != AVG_ULTRON
                 || ultron.ultronDaDungKyNang

@@ -9,7 +9,10 @@ import com.chicken.chien.ChickenChienBinh;
 import com.chicken.chien.ChickenNapDanServer;
 import com.chicken.chien.ChickenQuanLyChien;
 import com.chicken.chien.ChickenQuanLyDanSung;
+import com.chicken.chien.ChickenTrongLucDiaHinhServer;
 import com.chicken.chiso.ChickenChiSoNguoiChoi;
+import com.chicken.bando.ChickenDuLieuBanDo;
+import com.chicken.bando.ChickenQuanLyBanDo;
 import com.chicken.mang.ChickenDichVuGame;
 import com.chicken.mang.ChickenTinNhan;
 import com.chicken.mohinh.ChickenNguoiChoi;
@@ -26,6 +29,9 @@ import com.chicken.vatpham.ChickenMauThuocTinhVatPham;
 import com.chicken.vatpham.ChickenMauVatPham;
 import com.chicken.vatpham.ChickenThuocTinhVatPham;
 import com.chicken.vatpham.ChickenVatPham;
+import com.chicken.tienich.ChickenTienIch;
+import com.chicken.taikhoan.ChickenBaoMatTaiKhoanTestSupport;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -56,11 +62,16 @@ public final class ChickenKiemThuToanGame {
          */
         ChickenKiemThuBan.main(args);
         ChickenKiemThuPow.main(args);
+        ChickenBaoMatTaiKhoanTestSupport.chay();
 
         chay("7 boss: moi luot chi nhan mot phat ban",
                 ChickenKiemThuToanGame::kiemTraMotPhatMoiLuotTatCaBoss);
         chay("7 boss: ma tran bo luot hop le va bi chan",
                 ChickenKiemThuToanGame::kiemTraBoLuotTatCaBoss);
+        chay("7 boss: het gio nguoi choi luon la bo luot 250",
+                ChickenKiemThuToanGame::kiemTraHetGioLaBoLuotTatCaBoss);
+        chay("map 51: server luu dung Y sau khi pha nen duoi Phien quan",
+                ChickenKiemThuToanGame::kiemTraDongBoYPhienQuanMap51);
         chay("7 boss: chi mo GameScr sau ACK tai anh dan",
                 ChickenKiemThuToanGame::kiemTraKhongGuiGameScrSom);
         chay("7 boss: doi sung Balo dung snapshot va chan packet sai",
@@ -73,6 +84,85 @@ public final class ChickenKiemThuToanGame {
                 + " inventoryMutation=0");
         System.out.println("GAME_TEST_OK matrices=" + soMaTranDaChay
                 + " bossMaps=" + MAP_BOSS.length);
+    }
+
+    private static void kiemTraDongBoYPhienQuanMap51() throws Exception {
+        ArrayList<ChickenDuLieuBanDo.MapDataEntry> entrysCu =
+                ChickenDuLieuBanDo.entrys;
+        ArrayList<ChickenDuLieuBanDo.MapBrickEntry> bricksCu =
+                ChickenDuLieuBanDo.brickEntrys;
+        try {
+            byte[] duLieu = ChickenTienIch.layTep("res/map/51");
+            dung(duLieu != null && duLieu.length > 5,
+                    "thieu res/map/51 cho test trong luc");
+            ChickenDuLieuBanDo.entrys = new ArrayList<>();
+            ChickenDuLieuBanDo.brickEntrys = new ArrayList<>();
+            ChickenDuLieuBanDo.entrys.add(
+                    new ChickenDuLieuBanDo.MapDataEntry(
+                            duLieu, (byte) 51, "Hai toa thap gravity",
+                            (short) 0, (byte) 15));
+
+            ChickenQuanLyBanDo map = new ChickenQuanLyBanDo(51);
+            ChickenChienBinh phienQuan = new ChickenChienBinh(
+                    (byte) 8, -51_008, (short) 422, (short) 125,
+                    "Phien quan gravity", (short) 57,
+                    1_050, 100, 0);
+            map.phaDiaHinh(424, 125, (byte) 21);
+            int soCapNhat =
+                    ChickenTrongLucDiaHinhServer.dongBoYSauPhaDiaHinh(
+                            map, new ChickenChienBinh[]{phienQuan},
+                            chienBinh -> false);
+
+            bang(1, soCapNhat,
+                    "server khong cap nhat Y Phien quan sau pha nen");
+            bang(134, phienQuan.y,
+                    "Y server khong khop log LAND client map 51");
+        } finally {
+            ChickenDuLieuBanDo.entrys = entrysCu;
+            ChickenDuLieuBanDo.brickEntrys = bricksCu;
+        }
+        System.out.println("MAP51_TERRAIN_FALL_SYNC_OK slot=8 y=125>134");
+    }
+
+    /**
+     * Het dong ho khi nguoi choi chua ban la bo luot, khong phai mot phat ban.
+     * Vi vay ket qua khong duoc phu thuoc sung/AVG dang cam.
+     */
+    private static void kiemTraHetGioLaBoLuotTatCaBoss() throws Exception {
+        for (int mapId : MAP_BOSS) {
+            DichVuBatPacket dichVu = new DichVuBatPacket();
+            ChickenNguoiChoi nguoiChoi = new ChickenNguoiChoi(dichVu);
+            nguoiChoi.ma = 95_000 + mapId;
+            nguoiChoi.ten = "BossTimeout" + mapId;
+            nguoiChoi.wp = 57;
+
+            SanhChoBoss sanh = new SanhChoBoss(
+                    (byte) 4, (byte) (mapId - 50), (byte) mapId,
+                    (byte) 8, 1_000);
+            dung(sanh.themThanhVien(new ThanhVienBoss(
+                            nguoiChoi, (byte) 0, mapId, true)),
+                    "khong them duoc player timeout map=" + mapId);
+
+            ChickenQuanLyChien tran = taoTranBoss(mapId, sanh);
+            khacNull(tran, "khong tao duoc boss timeout map=" + mapId);
+            try {
+                ChickenChienBinh nguoi = chupChienBinh(tran)[0];
+                khacNull(nguoi, "thieu chien binh timeout map=" + mapId);
+                // Dung mot ma sung co nap dan khac 250 de bat hoi quy ro rang.
+                nguoi.maVuKhi = 57;
+                Method tinhNap = tran.getClass().getDeclaredMethod(
+                        "layNapDanKhiHetThoiGian",
+                        int.class, ChickenChienBinh.class);
+                tinhNap.setAccessible(true);
+                int napDan = (Integer) tinhNap.invoke(tran, 0, nguoi);
+                bang(ChickenNapDanServer.TOI_THIEU, napDan,
+                        "het gio van lay nap dan sung map=" + mapId);
+            } finally {
+                tran.dungBot();
+            }
+        }
+        System.out.println("BOSS_TIMEOUT_SKIP_OK maps=" + MAP_BOSS.length
+                + " reload=" + ChickenNapDanServer.TOI_THIEU);
     }
 
     /**
@@ -352,6 +442,15 @@ public final class ChickenKiemThuToanGame {
             nguoiChoi.ma = 97_000 + mapId;
             nguoiChoi.ten = "BossSceneHandshake" + mapId;
             nguoiChoi.wp = 57;
+            ChickenVatPham toNhen = new ChickenVatPham(229);
+            toNhen.mau = new ChickenMauVatPham(
+                    (short) 229, (byte) 10, (byte) 9,
+                    "To nhen", "", (byte) 1, 0,
+                    (short) 229, (short) 0, false);
+            toNhen.chiSo = 0;
+            toNhen.soLuong = 2;
+            nguoiChoi.itemBag[0] = toNhen;
+            nguoiChoi.itemBalo = new int[]{0, -1, -1, -1, -1};
 
             SanhChoBoss sanh = new SanhChoBoss(
                     (byte) 4,
@@ -370,6 +469,22 @@ public final class ChickenKiemThuToanGame {
                 tran.batDau();
                 bang(1, dichVu.demLenh(20),
                         "boss khong gui dung mot CMD20 map=" + mapId);
+                bang(1, dichVu.demLenh(-42),
+                        "boss khong gui lai balo chien dau map=" + mapId);
+                ChickenTinNhan tinBalo = dichVu.layTinCuoi(-42);
+                khacNull(tinBalo,
+                        "boss thieu packet balo map=" + mapId);
+                try (DataInputStream duLieu = new DataInputStream(
+                        new ByteArrayInputStream(tinBalo.layDuLieu()))) {
+                    bang(0, duLieu.readUnsignedByte(),
+                            "sai mode balo boss map=" + mapId);
+                    bang(5, duLieu.readUnsignedByte(),
+                            "sai so o balo boss map=" + mapId);
+                    bang(229, duLieu.readUnsignedShort(),
+                            "To nhen bi mat khi vao boss map=" + mapId);
+                }
+                bang(2, toNhen.soLuong,
+                        "vao boss tu tru To nhen trong kho map=" + mapId);
                 bang(0, dichVu.demLenh(-67),
                         "boss gui -67 truoc ACK tai anh dan map=" + mapId);
             } finally {

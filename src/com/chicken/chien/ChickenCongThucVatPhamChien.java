@@ -36,7 +36,8 @@ public final class ChickenCongThucVatPhamChien {
         KHOAN_DAT,
         TU_NO,
         UFO_HO_TRO,
-        LECH_DUONG_DAN
+        LECH_DUONG_DAN,
+        KHONG_TAO_DAN
     }
 
     public enum KieuGoc {
@@ -133,10 +134,19 @@ public final class ChickenCongThucVatPhamChien {
 
     static {
         // Vat pham an/khong ban van duoc giu de bang server khop day du client.
+        // Cuu thuong ca nhan la action 0 tuc thoi, khong tao dan.
+        dangKyKhongCanGoc(220, 0, -1, KieuQuyDao.KHONG_TAO_DAN);
         dangKyCoDinh(221, 1, 5, KieuQuyDao.PARABOL,
                 KieuGoc.TU_DO, 0, 80);
         dangKyTheoSung(222, 2, -1, KieuQuyDao.NHAN_DOI_SO_PHAT_SUNG);
+        // Di chuyen x2 kich hoat ngay, khong tao dan hay cho CMD 22.
+        dangKyKhongCanGoc(223, 3, -1, KieuQuyDao.KHONG_TAO_DAN);
+        // Ngung gio la action 5 native cua client, khong tao dan. Server dat
+        // gio luot hien tai ve 0; client chi nhan packet de ve hieu ung.
+        dangKyKhongCanGoc(225, 5, -1, KieuQuyDao.KHONG_TAO_DAN);
 
+        // Client type 6 van can du ba path, nhung ca ba dung chung mot goc.
+        // Server noi dai tung path de ve thanh mot vien khoan no ba lan.
         dangKyCoDinh(226, 6, 6, KieuQuyDao.PARABOL,
                 KieuGoc.TU_DO, 70, 90);
         dangKyCoDinh(227, 7, 7, KieuQuyDao.PARABOL,
@@ -145,6 +155,9 @@ public final class ChickenCongThucVatPhamChien {
                 KieuGoc.TU_DO, 0, 80);
         dangKyCoDinh(229, 9, 8, KieuQuyDao.PARABOL,
                 KieuGoc.TU_DO, 70, 70);
+        // Cuu thuong la action tuc thoi cua client: CMD 26 ve hieu ung,
+        // CMD 51 ve HP. No khong tao Bullet va khong cho CMD 22 tiep quan.
+        dangKyKhongCanGoc(230, 10, -1, KieuQuyDao.KHONG_TAO_DAN);
         dangKyCoDinh(231, 11, 16, KieuQuyDao.PARABOL,
                 KieuGoc.TU_DO, 0, 100);
 

@@ -13,3 +13,11 @@ cache/
 *.iml
 *.before-inventory-100.bak
 *.bak
+
+# Local secrets and TLS private material
+.env
+.env.*
+config.local.conf
+config/tls/*.key
+config/tls/*.p12
+config/tls/*.pfx

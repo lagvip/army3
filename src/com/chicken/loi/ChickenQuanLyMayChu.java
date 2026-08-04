@@ -8,6 +8,10 @@ import com.chicken.dulieu.ChickenAnhNho;
 import com.chicken.vatpham.ChickenThuocTinhVatPham;
 import com.chicken.vatpham.ChickenMauThuocTinhVatPham;
 import com.chicken.vatpham.ChickenMauVatPham;
+import com.chicken.vatpham.ChickenYeuCauCapVatPham;
+import com.chicken.taikhoan.ChickenBaoMatTaiKhoan;
+import com.chicken.taikhoan.ChickenGuiEmail;
+import com.chicken.taikhoan.ChickenXacMinhTaiKhoan;
 import com.chicken.bando.ChickenDuLieuBanDo;
 import com.chicken.mang.ChickenPhien;
 import com.chicken.mang.kenh.ChickenMayChuNetty;
@@ -27,6 +31,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -39,6 +44,11 @@ import java.util.logging.Logger;
 public class ChickenQuanLyMayChu {
     public static final String GAME_NAME = "Chicken LT";
     private static boolean goLoi;
+    private static boolean xacMinhEmailBatBuoc;
+    private static boolean mfaQuanTriBatBuoc;
+    private static boolean tlsBatBuoc;
+    private static String tlsChungChi;
+    private static String tlsKhoaRieng;
     protected static String mayChu;
     protected static short cong;
     protected static String mysql_host;
@@ -118,6 +128,11 @@ public class ChickenQuanLyMayChu {
                     int vang = res.getInt("buy_gold");
                     int ngoc = res.getInt("buy_gem");
                     ChickenMauVatPham vatPham = new ChickenMauVatPham((short)ma, loai, gioiTinh, ten, desc, cap, require, icon, part, false);
+                    if (!ChickenYeuCauCapVatPham.cauHinhHopLe(vatPham)) {
+                        throw new SQLException(
+                                "Cap yeu cau vat pham khong hop le: id="
+                                + ma + ", strength_required=" + require);
+                    }
                     JSONArray arr = (JSONArray)JSON.parse((String)res.getString("options"));
                     for (int i = 0; i < arr.size(); ++i) {
                         ChickenDuLieuJson p = new ChickenDuLieuJson((JSONObject)arr.get(i));
@@ -324,7 +339,7 @@ public class ChickenQuanLyMayChu {
             System.out.println("Config file not found!");
             System.exit(0);
         }
-        String duLieu = new String(ab);
+        String duLieu = new String(ab, StandardCharsets.UTF_8);
         HashMap<String, String> configMap = new HashMap<String, String>();
         StringBuilder sbd = new StringBuilder();
         boolean bo = false;
@@ -338,7 +353,9 @@ public class ChickenQuanLyMayChu {
                     String khoa = sbf.substring(0, j).trim();
                     String giaTri = sbf.substring(j + 1).trim();
                     configMap.put(khoa, giaTri);
-                    System.out.println("config: " + khoa + "-" + giaTri);
+                    System.out.println("config: " + khoa + "-"
+                            + (laKhoaCauHinhBiMat(khoa)
+                                    ? "[REDACTED]" : giaTri));
                 }
                 sbd.setLength(0);
                 continue;
@@ -352,10 +369,22 @@ public class ChickenQuanLyMayChu {
         goLoi = ChickenQuanLyMayChu.cfgBool(configMap, false, "debug-mode", "debug");
         mayChu = ChickenQuanLyMayChu.cfgStr(configMap, "localhost", "server-host", "host");
         cong = ChickenQuanLyMayChu.cfgShort(configMap, (short)14445, "server-port", "post");
-        mysql_host = ChickenQuanLyMayChu.cfgStr(configMap, "127.0.0.1", "database-host", "mysql-host");
-        mysql_user = ChickenQuanLyMayChu.cfgStr(configMap, "root", "database-user", "mysql-user");
-        mysql_pass = ChickenQuanLyMayChu.cfgStr(configMap, "", "database-password", "mysql-password");
-        mysql_database = ChickenQuanLyMayChu.cfgStr(configMap, "chicken3", "database-name", "mysql-database");
+        mysql_host = ChickenQuanLyMayChu.bienMoiTruongHoac(
+                "CHICKEN_DB_HOST",
+                ChickenQuanLyMayChu.cfgStr(configMap, "127.0.0.1",
+                        "database-host", "mysql-host"));
+        mysql_user = ChickenQuanLyMayChu.bienMoiTruongHoac(
+                "CHICKEN_DB_USER",
+                ChickenQuanLyMayChu.cfgStr(configMap, "root",
+                        "database-user", "mysql-user"));
+        mysql_pass = ChickenQuanLyMayChu.bienMoiTruongHoac(
+                "CHICKEN_DB_PASSWORD",
+                ChickenQuanLyMayChu.cfgStr(configMap, "",
+                        "database-password", "mysql-password"));
+        mysql_database = ChickenQuanLyMayChu.bienMoiTruongHoac(
+                "CHICKEN_DB_NAME",
+                ChickenQuanLyMayChu.cfgStr(configMap, "chicken3",
+                        "database-name", "mysql-database"));
         vBig = ChickenQuanLyMayChu.cfgByte(configMap, (byte)0, "client-version-big", "vBig");
         vData = ChickenQuanLyMayChu.cfgByte(configMap, (byte)0, "client-version-data", "vData");
         vItem = ChickenQuanLyMayChu.cfgByte(configMap, (byte)0, "client-version-item", "vItem");
@@ -382,6 +411,18 @@ public class ChickenQuanLyMayChu {
         trainingGoldReward = Math.max(0, ChickenQuanLyMayChu.cfgInt(
                 configMap, trainingGoldReward,
                 "reward-training-gold"));
+        xacMinhEmailBatBuoc = ChickenQuanLyMayChu.cfgBool(
+                configMap, false, "account-email-verification-required");
+        mfaQuanTriBatBuoc = ChickenQuanLyMayChu.cfgBool(
+                configMap, false, "account-admin-mfa-required");
+        tlsBatBuoc = ChickenQuanLyMayChu.cfgBool(
+                configMap, false, "network-tls-enabled");
+        tlsChungChi = ChickenQuanLyMayChu.cfgStr(
+                configMap, "config/tls/server.crt",
+                "network-tls-certificate");
+        tlsKhoaRieng = ChickenQuanLyMayChu.cfgStr(
+                configMap, "config/tls/server.key",
+                "network-tls-private-key");
     }
 
     private static String cfgStr(HashMap<String, String> map, String def, String... keys) {
@@ -413,6 +454,24 @@ public class ChickenQuanLyMayChu {
         return v != null ? Boolean.parseBoolean(v) : def;
     }
 
+    private static String bienMoiTruongHoac(String ten, String macDinh) {
+        String giaTri = System.getenv(ten);
+        return giaTri == null || giaTri.isBlank()
+                ? macDinh : giaTri.trim();
+    }
+
+    private static boolean laKhoaCauHinhBiMat(String khoa) {
+        if (khoa == null) {
+            return false;
+        }
+        String ten = khoa.toLowerCase(java.util.Locale.ROOT);
+        return ten.contains("password")
+                || ten.contains("secret")
+                || ten.contains("token")
+                || ten.contains("private-key")
+                || ten.contains("pepper");
+    }
+
     public static int getOnlineCount() {
         return numClients;
     }
@@ -421,27 +480,12 @@ public class ChickenQuanLyMayChu {
         return goLoi;
     }
 
-    private static void damBaoTaiKhoanTest() {
-        String sql = "INSERT INTO `accounts` (`id`, `username`, `password`, `is_banned`, `is_online`, `is_admin`) "
-                + "VALUES (?, ?, '1', 0, 0, 1) "
-                + "ON DUPLICATE KEY UPDATE `username` = VALUES(`username`), `password` = '1', "
-                + "`is_banned` = 0, `is_online` = 0, `is_admin` = 1";
-        try (java.sql.Connection conn = ChickenCoSoDuLieu.getConnection()) {
-            try (PreparedStatement reset = conn.prepareStatement("UPDATE `accounts` SET `is_online` = 0")) {
-                reset.executeUpdate();
-            }
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setInt(1, 1);
-                stmt.setString(2, "admin");
-                stmt.executeUpdate();
-                stmt.setInt(1, 2);
-                stmt.setString(2, "admin1");
-                stmt.executeUpdate();
-            }
-        }
-        catch (SQLException ex) {
-            Logger.getLogger(ChickenQuanLyMayChu.class.getName()).log(Level.SEVERE, "Khong the tao tai khoan test", ex);
-        }
+    public static boolean batBuocXacMinhEmail() {
+        return xacMinhEmailBatBuoc;
+    }
+
+    public static boolean batBuocMfaQuanTri() {
+        return mfaQuanTriBatBuoc;
     }
 
     public static void khoiTao() {
@@ -459,10 +503,13 @@ public class ChickenQuanLyMayChu {
         batDau = false;
         ChickenQuanLyMayChu.loadConfigFile();
         ChickenCoSoDuLieu.khoiTao(mysql_host, mysql_database, mysql_user, mysql_pass);
+        boolean otpBatBuoc = xacMinhEmailBatBuoc || mfaQuanTriBatBuoc;
+        ChickenGuiEmail.khoiTao(otpBatBuoc);
+        ChickenXacMinhTaiKhoan.khoiTao(otpBatBuoc);
+        ChickenBaoMatTaiKhoan.maHoaMatKhauCuTrongDatabase();
         ChickenQuanLyTiemNang.khoiTaoKhoaDaMayChu();
         ChickenKinhTeBoss.khoiTao();
         ChickenKinhTeLuyenTap.khoiTao();
-        ChickenQuanLyMayChu.damBaoTaiKhoanTest();
         ChickenQuanLyMayChu.loadDataItem();
         ChickenQuanLyMayChu.setDataItem();
         ChickenQuanLyMayChu.loadDataMap();
@@ -631,7 +678,8 @@ public class ChickenQuanLyMayChu {
             numClients = 0;
             batDau = true;
             nettyServer = new ChickenMayChuNetty();
-            nettyServer.batDau(mayChu, cong);
+            nettyServer.batDau(
+                    mayChu, cong, tlsBatBuoc, tlsChungChi, tlsKhoaRieng);
             ChickenQuanLyMayChu.log(GAME_NAME + " start OK!");
             Thread.currentThread().join();
         }

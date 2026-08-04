@@ -11,16 +11,22 @@ import com.chicken.mang.IChickenPhien;
 import com.chicken.mang.ChickenTinNhan;
 import com.chicken.mang.ChickenXuLyTin;
 import com.chicken.nhapvai.ChickenBanDoRPG;
+import com.chicken.taikhoan.ChickenBaoMatTaiKhoan;
+import com.chicken.taikhoan.ChickenXacMinhTaiKhoan;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.util.concurrent.ScheduledFuture;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Base64;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -46,9 +52,14 @@ implements IChickenPhien {
     protected int svSended_clReceived;
     protected List<ChickenTinNhan> vResendMessage = new ArrayList<ChickenTinNhan>();
     public long timeConnected;
-    public static final HashMap<String, Count> sessions = new HashMap();
+    private static final ConcurrentHashMap<String, Count> PHIEN_KHOI_PHUC =
+            new ConcurrentHashMap<>();
+    private static final SecureRandom BO_NGAU_NHIEN_PHAN_PHAM =
+            new SecureRandom();
+    private static final long THOI_HAN_KHOI_PHUC_MS = 120_000L;
     private String maPhien;
     private volatile boolean kichHoat = true;
+    private boolean choPhepKhoiPhuc = true;
     private ScheduledFuture<?> tacVuGiuKetNoi;
     private long batDauCuaSoTinMs;
     private int soTinTrongCuaSo;
@@ -61,16 +72,30 @@ implements IChickenPhien {
     private long mocGuiNguyenLieuBossTiepTheoMs;
     private int soNguyenLieuBossDangCho;
     private boolean choMoManHinhBossSauKhiTaiXong;
+    private final Set<Integer> lenhTaiDuLieuDaXuLy = new HashSet<>();
 
     private static final int GIOI_HAN_TIN_MOI_GIAY = 300;
     private static final int GIOI_HAN_TIN_MOI_TAI_KHOAN_MOI_GIAY = 450;
     private static final int GIOI_HAN_TIN_MOI_IP_MOI_GIAY = 2_000;
+    private static final int GIOI_HAN_DANG_NHAP_IP_MOI_PHUT = 10;
+    private static final int GIOI_HAN_DANG_KY_IP_MOI_GIO = 3;
+    private static final int GIOI_HAN_THU_OTP_IP_MOI_15_PHUT = 10;
     private static final int GIOI_HAN_LOI_TRONG_10_GIAY = 8;
     private static final int GIOI_HAN_HANG_DOI_NGUYEN_LIEU_BOSS = 64;
+    private static final int GIOI_HAN_TAI_LAI_MOI_LOAI_MOI_PHUT = 2;
     private static final ConcurrentHashMap<String, CuaSoTanSuat>
             TAN_SUAT_THEO_IP = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Integer, CuaSoTanSuat>
             TAN_SUAT_THEO_TAI_KHOAN = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Long, CuaSoTanSuat>
+            TAN_SUAT_TAI_DU_LIEU_THEO_TAI_KHOAN =
+                    new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, CuaSoTanSuat>
+            TAN_SUAT_DANG_NHAP_THEO_IP = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, CuaSoTanSuat>
+            TAN_SUAT_DANG_KY_THEO_IP = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, CuaSoTanSuat>
+            TAN_SUAT_THU_OTP_THEO_IP = new ConcurrentHashMap<>();
     private static final AtomicInteger DEM_DON_TAN_SUAT = new AtomicInteger();
 
     public ChickenPhien(Channel kenh, int ma) {
@@ -100,6 +125,37 @@ implements IChickenPhien {
             return false;
         }
         String ip = this.mayXa();
+        if (cmd == 1 && ip != null && !ip.isBlank()
+                && !choPhepTanSuatChiaSe(
+                        TAN_SUAT_DANG_NHAP_THEO_IP, ip, hienTaiMs,
+                        GIOI_HAN_DANG_NHAP_IP_MOI_PHUT, 60_000L)) {
+            ChickenQuanLyMayChu.log(
+                    "[BAO_MAT] Vuot tan suat dang nhap IP "
+                    + this.moTa());
+            this.dongTin();
+            return false;
+        }
+        if (cmd == -71 && ip != null && !ip.isBlank()
+                && !choPhepTanSuatChiaSe(
+                        TAN_SUAT_DANG_KY_THEO_IP, ip, hienTaiMs,
+                        GIOI_HAN_DANG_KY_IP_MOI_GIO, 3_600_000L)) {
+            ChickenQuanLyMayChu.log(
+                    "[BAO_MAT] Vuot tan suat dang ky IP "
+                    + this.moTa());
+            this.guiKetQuaDangKy(false,
+                    "Bạn đã thử đăng ký quá nhiều lần. "
+                    + "Vui lòng thử lại sau.", false);
+            return false;
+        }
+        if (cmd == -61 && ip != null && !ip.isBlank()
+                && !choPhepTanSuatChiaSe(
+                        TAN_SUAT_THU_OTP_THEO_IP, ip, hienTaiMs,
+                        GIOI_HAN_THU_OTP_IP_MOI_15_PHUT, 900_000L)) {
+            ChickenQuanLyMayChu.log(
+                    "[BAO_MAT] Vuot tan suat OTP IP " + this.moTa());
+            this.dongTin();
+            return false;
+        }
         if (ip != null && !ip.isBlank()
                 && !choPhepTanSuatChiaSe(
                         TAN_SUAT_THEO_IP, ip, hienTaiMs,
@@ -109,10 +165,12 @@ implements IChickenPhien {
             this.dongTin();
             return false;
         }
-        if (this.user != null && this.user.nguoiChoi != null
+        int maTaiKhoan = this.user == null
+                ? -1 : this.user.layMaTaiKhoan();
+        if (maTaiKhoan > 0
                 && !choPhepTanSuatChiaSe(
                         TAN_SUAT_THEO_TAI_KHOAN,
-                        this.user.nguoiChoi.ma,
+                        maTaiKhoan,
                         hienTaiMs,
                         GIOI_HAN_TIN_MOI_TAI_KHOAN_MOI_GIAY)) {
             ChickenQuanLyMayChu.log("[BAO_MAT] Vuot tan suat tai khoan "
@@ -145,17 +203,61 @@ implements IChickenPhien {
         return true;
     }
 
+    /**
+     * Moi goi tai du lieu khoi tao chi duoc xu ly mot lan trong mot phien.
+     * Cua so chia se theo accountId van chan viec reconnect lien tuc de tai
+     * lai cac blob lon; cho phep hai phien/phut de mot lan reconnect that
+     * khong lam ket tai khoan.
+     */
+    public synchronized boolean choPhepYeuCauTaiDuLieu(
+            int cmd,
+            long hienTaiMs
+    ) {
+        if (cmd != -31 && cmd != -32 && cmd != -37 && cmd != -38) {
+            return false;
+        }
+        if (this.user == null || this.user.layMaTaiKhoan() <= 0
+                || this.lenhTaiDuLieuDaXuLy.contains(cmd)) {
+            return false;
+        }
+        int maTaiKhoan = this.user.layMaTaiKhoan();
+        long khoa = ((long) maTaiKhoan << 32) ^ (cmd & 0xFFFF_FFFFL);
+        if (!choPhepTanSuatChiaSe(
+                TAN_SUAT_TAI_DU_LIEU_THEO_TAI_KHOAN,
+                khoa,
+                hienTaiMs,
+                GIOI_HAN_TAI_LAI_MOI_LOAI_MOI_PHUT,
+                60_000L)) {
+            return false;
+        }
+        this.lenhTaiDuLieuDaXuLy.add(cmd);
+        return true;
+    }
+
     private static <K> boolean choPhepTanSuatChiaSe(
             ConcurrentHashMap<K, CuaSoTanSuat> cacCuaSo,
             K khoa,
             long hienTaiMs,
             int gioiHan
     ) {
+        return choPhepTanSuatChiaSe(
+                cacCuaSo, khoa, hienTaiMs, gioiHan, 1_000L);
+    }
+
+    private static <K> boolean choPhepTanSuatChiaSe(
+            ConcurrentHashMap<K, CuaSoTanSuat> cacCuaSo,
+            K khoa,
+            long hienTaiMs,
+            int gioiHan,
+            long doDaiCuaSoMs
+    ) {
         CuaSoTanSuat cuaSo = cacCuaSo.computeIfAbsent(
                 khoa, boQua -> new CuaSoTanSuat(hienTaiMs));
-        boolean ketQua = cuaSo.choPhep(hienTaiMs, gioiHan);
+        boolean ketQua = cuaSo.choPhep(
+                hienTaiMs, gioiHan, doDaiCuaSoMs);
         if ((DEM_DON_TAN_SUAT.incrementAndGet() & 4095) == 0) {
-            long mocCu = hienTaiMs - 60_000L;
+            long mocCu = hienTaiMs
+                    - Math.max(60_000L, doDaiCuaSoMs);
             cacCuaSo.entrySet().removeIf(
                     entry -> entry.getValue().lanCuoiMs < mocCu);
         }
@@ -375,16 +477,32 @@ implements IChickenPhien {
             String oldSessionId = ms.boDoc().readUTF();
             int clSended = ms.boDoc().readInt();
             int clReceived = ms.boDoc().readInt();
-            Count c = sessions.get(oldSessionId);
-            if (c == null) {
+            if (ms.boDoc().available() != 0
+                    || oldSessionId.length() != 43
+                    || clSended < 0
+                    || clReceived < 0) {
+                this.ghiNhanPacketLoi(
+                        -127, new IllegalArgumentException(
+                                "Du lieu khoi phuc phien khong hop le"));
                 this.guiMaPhien(0);
                 return;
             }
-            System.out.println(c.svReceived_clSended);
+            Count c = PHIEN_KHOI_PHUC.remove(oldSessionId);
+            if (c == null
+                    || c.hetHan(System.currentTimeMillis())) {
+                this.guiMaPhien(0);
+                return;
+            }
             this.svReceived_clSended = c.svReceived_clSended;
             this.svSended_clReceived = c.svSended_clReceived;
             this.vResendMessage = new ArrayList<ChickenTinNhan>(c.vResendMessage);
-            sessions.remove(this.maPhien);
+            /*
+             * Client cu giu token ban dau qua cac lan reconnect. Gan lai token
+             * da duoc tieu thu de khi ket noi nay mat, server chi phat hanh lai
+             * no trong mot cua so moi. remove() o tren dam bao token khong the
+             * duoc dung dong thoi boi hai ket noi.
+             */
+            this.maPhien = oldSessionId;
             this.guiMaPhien(1);
             if (clReceived != this.svSended_clReceived) {
                 int num3 = this.vResendMessage.size() - (this.svReceived_clSended - clReceived);
@@ -394,6 +512,10 @@ implements IChickenPhien {
                 this.guiLaiTinTu(num3);
             }
         } else if (loai == 2) {
+            if (ms.boDoc().available() != 0) {
+                throw new IOException(
+                        "Du lieu hoan tat dong bo khong hop le");
+            }
             this.heThongXong = true;
             this.svSended_clReceived = 0;
             this.svReceived_clSended = 0;
@@ -410,7 +532,9 @@ implements IChickenPhien {
         this.mucPhong = mucPhongYeuCau;
         System.out.println(mucPhong);
         this.phienBan = mss.boDoc().readUTF();
-        ((ChickenDichVuGame)this.dichVu).hienTaiXuong();
+        ChickenDichVuGame dichVuGame = (ChickenDichVuGame)this.dichVu;
+        dichVuGame.guiPhienBanIcon();
+        dichVuGame.hienTaiXuong();
     }
 
     protected void guiVaChamBanDo() throws IOException {
@@ -518,8 +642,11 @@ implements IChickenPhien {
         c.svReceived_clSended = this.svReceived_clSended;
         c.svSended_clReceived = this.svSended_clReceived;
         c.vResendMessage = new ArrayList<ChickenTinNhan>(this.vResendMessage);
-        if (this.maPhien != null) {
-            sessions.put(this.maPhien, c);
+        c.hetHanLucMs = System.currentTimeMillis()
+                + THOI_HAN_KHOI_PHUC_MS;
+        if (this.choPhepKhoiPhuc && this.maPhien != null) {
+            PHIEN_KHOI_PHUC.put(this.maPhien, c);
+            donPhienKhoiPhucHetHan(System.currentTimeMillis());
         }
         try {
             if (this.user != null) {
@@ -589,7 +716,11 @@ implements IChickenPhien {
     }
 
     public void guiKhoa() throws IOException {
-        this.maPhien = "nvn_" + System.currentTimeMillis();
+        byte[] duLieuPhien = new byte[32];
+        BO_NGAU_NHIEN_PHAN_PHAM.nextBytes(duLieuPhien);
+        this.maPhien = Base64.getUrlEncoder()
+                .withoutPadding()
+                .encodeToString(duLieuPhien);
         ChickenTinNhan ms = new ChickenTinNhan(-27);
         DataOutputStream ds = ms.boGhi();
         ds.writeByte(this.khoa.length);
@@ -632,9 +763,21 @@ implements IChickenPhien {
     }
 
     public void taiDuLieuXong() throws IOException {
+        if (this.user == null) {
+            throw new IOException(
+                    "Tai khoan chua xac thuc khong duoc hoan tat tai du lieu");
+        }
         if (this.user.nguoiChoi != null) {
+            ChickenQuanLyMayChu.log(
+                    "[DANG_NHAP][TAI_XONG] accountId="
+                    + this.user.layMaTaiKhoan() + " playerId="
+                    + this.user.nguoiChoi.ma);
             this.guiThongTin();
         } else {
+            ChickenQuanLyMayChu.log(
+                    "[DANG_NHAP][TAI_XONG] accountId="
+                    + this.user.layMaTaiKhoan()
+                    + " chua-co-nhan-vat gui CMD -99");
             this.user.dichVu.taoNhanVat();
         }
     }
@@ -654,10 +797,59 @@ implements IChickenPhien {
     }
 
     public void dangKy(ChickenTinNhan ms) throws IOException {
-        String tenDangNhap = ms.boDoc().readUTF();
-        String matKhau = ms.boDoc().readUTF();
-        String usernameAo = ms.boDoc().readUTF();
-        System.out.println("Yeu cau dang ky: " + tenDangNhap + " usernameAo: " + usernameAo);
+        if (this.user != null || this.dangNhap) {
+            this.ghiNhanPacketLoi(
+                    -71, new IllegalStateException(
+                            "Phien da dang nhap khong duoc dang ky tiep"));
+            this.guiKetQuaDangKy(false,
+                    "Phiên hiện tại đã đăng nhập. "
+                    + "Vui lòng đăng xuất trước khi tạo tài khoản mới.",
+                    false);
+            return;
+        }
+        DataInputStream doc = ms.boDoc();
+        ChickenNguoiDung.DangKyKetQua ketQua;
+        try {
+            String tenDangNhap = doc.readUTF();
+            String matKhau = doc.readUTF();
+            String email = doc.readUTF();
+            String soDienThoai = doc.readUTF();
+            if (doc.available() != 0) {
+                throw new IOException("Dang ky co du lieu du");
+            }
+            ketQua = ChickenNguoiDung.dangKyTaiKhoan(
+                    tenDangNhap, matKhau, email, soDienThoai);
+        } catch (IOException | RuntimeException ex) {
+            this.ghiNhanPacketLoi(-71, ex);
+            ketQua = new ChickenNguoiDung.DangKyKetQua(
+                    false, "Dữ liệu đăng ký không hợp lệ.");
+        }
+        this.guiKetQuaDangKy(ketQua.thanhCong(), ketQua.thongBao(),
+                ketQua.canXacMinhEmail());
+    }
+
+    private void guiKetQuaDangKy(boolean thanhCong, String thongBao,
+            boolean canXacMinhEmail) {
+        try {
+            ChickenTinNhan phanHoi = new ChickenTinNhan(-71);
+            DataOutputStream ghi = phanHoi.boGhi();
+            ghi.writeBoolean(thanhCong);
+            if (thanhCong) {
+                ghi.writeBoolean(canXacMinhEmail);
+            } else {
+                ghi.writeUTF(thongBao == null || thongBao.isBlank()
+                        ? "Không thể đăng ký lúc này."
+                        : thongBao);
+            }
+            ghi.flush();
+            this.guiTin(phanHoi);
+        } catch (IOException ex) {
+            ChickenQuanLyMayChu.log(
+                    "[TAI_KHOAN] Khong gui duoc ket qua dang ky "
+                    + this.moTa() + " loi="
+                    + ex.getClass().getSimpleName());
+            this.dongTin();
+        }
     }
 
     public void guiLaiTinTu(int chiSo) {
@@ -696,14 +888,30 @@ implements IChickenPhien {
     }
 
     public void dangNhap(ChickenTinNhan ms) throws IOException {
-        byte loai;
-        String phienBan;
-        String matKhau;
-        if (this.dangNhap) {
+        if (this.dangNhap || this.user != null) {
             return;
         }
-        String tenDangNhap = ms.boDoc().readUTF();
-        ChickenNguoiDung us = ChickenNguoiDung.dangNhap(this, tenDangNhap, matKhau = ms.boDoc().readUTF(), phienBan = ms.boDoc().readUTF(), loai = ms.boDoc().readByte());
+        DataInputStream doc = ms.boDoc();
+        String tenDangNhap = doc.readUTF();
+        String matKhau = doc.readUTF();
+        String phienBan = doc.readUTF();
+        byte loai = doc.readByte();
+        String maMfa = doc.available() > 0 ? doc.readUTF() : "";
+        if (doc.available() != 0
+                || tenDangNhap.length() > 24
+                || matKhau.length() > 72
+                || phienBan.length() > 20
+                || (!maMfa.isEmpty() && !maMfa.matches("^[0-9]{6}$"))
+                || (loai != 0 && loai != 1)) {
+            this.ghiNhanPacketLoi(
+                    1, new IllegalArgumentException(
+                            "Payload dang nhap khong hop le"));
+            ((ChickenDichVuGame)this.dichVu).moHopThoaiOK(
+                    "Dữ liệu đăng nhập không hợp lệ.");
+            return;
+        }
+        ChickenNguoiDung us = ChickenNguoiDung.dangNhap(
+                this, tenDangNhap, matKhau, phienBan, loai, maMfa);
         if (us != null) {
             this.user = us;
             if (!this.user.taiDuLieuNguoiChoi()) {
@@ -711,7 +919,82 @@ implements IChickenPhien {
                 this.user = null;
                 return;
             }
+            this.dangNhap = true;
             this.user.dichVu.guiPhienBan();
+        }
+    }
+
+    public void guiYeuCauMfaAdmin() {
+        guiPhanHoiTaiKhoan(3, true,
+                "Nhap ma xac minh 6 so da gui den email quan tri.");
+    }
+
+    /**
+     * CMD -61 tuong thich client cu:
+     * 1 UTF = yeu cau reset, 2 UTF = xac minh email,
+     * 3 UTF = dat lai mat khau.
+     */
+    public void xuLyBaoMatTaiKhoan(ChickenTinNhan ms) {
+        try {
+            DataInputStream doc = ms.boDoc();
+            String danhTinh = doc.readUTF();
+            if (danhTinh.isBlank() || danhTinh.length() > 254) {
+                throw new IOException("Payload yeu cau reset khong hop le");
+            }
+            if (doc.available() == 0) {
+                ChickenXacMinhTaiKhoan.yeuCauDatLaiMatKhau(danhTinh);
+                guiPhanHoiTaiKhoan(0, true,
+                        "Neu tai khoan hop le va email da xac minh, ma dat lai mat khau se duoc gui.");
+                return;
+            }
+            String maOtp = doc.readUTF();
+            if (doc.available() == 0) {
+                boolean thanhCong = ChickenXacMinhTaiKhoan.xacMinhEmail(
+                        danhTinh, maOtp);
+                guiPhanHoiTaiKhoan(2, thanhCong,
+                        thanhCong
+                                ? "Xac minh email thanh cong."
+                                : "Ma xac minh khong hop le hoac da het han.");
+                return;
+            }
+            String matKhauMoi = doc.readUTF();
+            String loiMatKhau = ChickenBaoMatTaiKhoan.loiMatKhau(
+                    matKhauMoi);
+            if (doc.available() != 0 || loiMatKhau != null) {
+                guiPhanHoiTaiKhoan(1, false,
+                        loiMatKhau == null
+                                ? "Du lieu dat lai mat khau khong hop le."
+                                : loiMatKhau);
+                return;
+            }
+            boolean thanhCong = ChickenXacMinhTaiKhoan.datLaiMatKhau(
+                    danhTinh, maOtp, matKhauMoi);
+            guiPhanHoiTaiKhoan(1, thanhCong,
+                    thanhCong
+                            ? "Dat lai mat khau thanh cong."
+                            : "Ma xac minh khong hop le hoac da het han.");
+        } catch (IOException | RuntimeException ex) {
+            this.ghiNhanPacketLoi(-61, ex);
+            guiPhanHoiTaiKhoan(0, false,
+                    "Du lieu bao mat tai khoan khong hop le.");
+        }
+    }
+
+    private void guiPhanHoiTaiKhoan(
+            int loai,
+            boolean thanhCong,
+            String thongBao
+    ) {
+        try {
+            ChickenTinNhan phanHoi = new ChickenTinNhan(-61);
+            phanHoi.boGhi().writeByte(loai);
+            phanHoi.boGhi().writeBoolean(thanhCong);
+            phanHoi.boGhi().writeUTF(thongBao == null ? "" : thongBao);
+            this.dayTin(phanHoi);
+        } catch (IOException ex) {
+            ChickenQuanLyMayChu.log(
+                    "[BAO_MAT] Khong gui duoc phan hoi tai khoan loai="
+                    + loai);
         }
     }
 
@@ -721,8 +1004,16 @@ implements IChickenPhien {
     }
 
     public void dangXuat() {
+        this.choPhepKhoiPhuc = false;
         this.guiTin(new ChickenTinNhan(2));
         this.dongTin();
+    }
+
+    public synchronized void voHieuKhoiPhucSauDoiMatKhau() {
+        this.choPhepKhoiPhuc = false;
+        if (this.maPhien != null) {
+            PHIEN_KHOI_PHUC.remove(this.maPhien);
+        }
     }
 
     public void dongTin() {
@@ -738,9 +1029,22 @@ implements IChickenPhien {
         protected int svReceived_clSended;
         protected int svSended_clReceived;
         private List<ChickenTinNhan> vResendMessage = new ArrayList<ChickenTinNhan>();
+        private long hetHanLucMs;
+
+        private boolean hetHan(long hienTaiMs) {
+            return this.hetHanLucMs <= hienTaiMs;
+        }
 
         private Count() {
         }
+    }
+
+    private static void donPhienKhoiPhucHetHan(long hienTaiMs) {
+        if ((DEM_DON_TAN_SUAT.incrementAndGet() & 255) != 0) {
+            return;
+        }
+        PHIEN_KHOI_PHUC.entrySet().removeIf(
+                entry -> entry.getValue().hetHan(hienTaiMs));
     }
 
     private static final class CuaSoTanSuat {
@@ -754,8 +1058,16 @@ implements IChickenPhien {
         }
 
         private synchronized boolean choPhep(long hienTaiMs, int gioiHan) {
+            return this.choPhep(hienTaiMs, gioiHan, 1_000L);
+        }
+
+        private synchronized boolean choPhep(
+                long hienTaiMs,
+                int gioiHan,
+                long doDaiCuaSoMs
+        ) {
             this.lanCuoiMs = hienTaiMs;
-            if (hienTaiMs - this.batDauMs >= 1_000L
+            if (hienTaiMs - this.batDauMs >= doDaiCuaSoMs
                     || hienTaiMs < this.batDauMs) {
                 this.batDauMs = hienTaiMs;
                 this.soTin = 0;

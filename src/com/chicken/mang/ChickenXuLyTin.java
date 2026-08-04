@@ -46,6 +46,13 @@ implements IChickenXuLyTin {
                             cmd, new IllegalStateException("Chua dang nhap"));
                     return;
                 }
+                if (chiCanTaiKhoanDaXacThuc(cmd)
+                        && this.khach.user == null) {
+                    this.khach.ghiNhanPacketLoi(
+                            cmd, new IllegalStateException(
+                                    "Chua xac thuc tai khoan"));
+                    return;
+                }
                 if (this.chanLenhChuyenSceneTreTrongTranBoss(cmd)) {
                     return;
                 }
@@ -53,12 +60,18 @@ implements IChickenXuLyTin {
                     case 1:
                         this.khach.dangNhap(mss);
                         break;
+                    case -61:
+                        this.khach.xuLyBaoMatTaiKhoan(mss);
+                        break;
                     case 2:
                     case -4:
                         this.khach.dangXuat();
                         break;
                     case -58:
                         this.khach.dangNhap2(mss);
+                        break;
+                    case 81:
+                        this.khach.user.doiMatKhau(mss);
                         break;
                     case -98:
                         this.khach.user.nguoiChoi.banDoRPG(mss);
@@ -249,21 +262,39 @@ implements IChickenXuLyTin {
                         this.khach.user.dichVu.yeuCauIcon(mss);
                         break;
                     case -38:
+                        if (!this.choPhepTaiDuLieuRong(mss, cmd)) {
+                            break;
+                        }
                         this.khach.user.dichVu.guiBanDo();
                         break;
                     case -37:
+                        if (!this.choPhepTaiDuLieuRong(mss, cmd)) {
+                            break;
+                        }
                         this.khach.taiDuLieuXong();
                         break;
                     case -32:
+                        if (!this.choPhepTaiDuLieuRong(mss, cmd)) {
+                            break;
+                        }
                         this.khach.user.dichVu.guiVatPham();
                         break;
                     case -71:
                         this.khach.dangKy(mss);
                         break;
                     case -99:
+                        if (this.khach.user.nguoiChoi != null) {
+                            this.khach.ghiNhanPacketLoi(
+                                    cmd, new IllegalStateException(
+                                            "Tai khoan da co nhan vat"));
+                            break;
+                        }
                         this.khach.user.taoNhanVat(mss);
                         break;
                     case -31:
+                        if (!this.choPhepTaiDuLieuRong(mss, cmd)) {
+                            break;
+                        }
                         this.khach.user.dichVu.guiDuLieu();
                         break;
                     case 103:
@@ -586,14 +617,49 @@ implements IChickenXuLyTin {
         return cmd == 49 && soBytePayload == 0;
     }
 
+    private boolean choPhepTaiDuLieuRong(
+            ChickenTinNhan tin,
+            int cmd
+    ) {
+        if (tin.layDuLieu().length != 0) {
+            this.khach.ghiNhanPacketLoi(
+                    cmd, new IllegalArgumentException(
+                            "Lenh tai du lieu phai co payload rong"));
+            return false;
+        }
+        if (!this.khach.choPhepYeuCauTaiDuLieu(
+                cmd, System.currentTimeMillis())) {
+            this.khach.ghiNhanPacketLoi(
+                    cmd, new IllegalStateException(
+                            "Lenh tai du lieu bi lap hoac vuot tan suat"));
+            return false;
+        }
+        return true;
+    }
+
     private static boolean canNguoiChoiDaDangNhap(int cmd) {
         return cmd != 1
                 && cmd != -58
                 && cmd != -71
+                && cmd != -61
+                && !chiCanTaiKhoanDaXacThuc(cmd)
                 && cmd != 58
                 && cmd != 114
                 && cmd != -102
                 && cmd != -60;
+    }
+
+    /**
+     * Cac lenh tai du lieu va tao nhan vat chi can tai khoan da xac thuc.
+     * Tai khoan moi chua co ChickenNguoiChoi nen khong duoc dua cac lenh nay
+     * qua guard gameplay. Neu khong, client se khong tai duoc sprite man tao
+     * nhan vat va cung khong the gui xong buoc khoi tao.
+     */
+    static boolean chiCanTaiKhoanDaXacThuc(int cmd) {
+        return switch (cmd) {
+            case -99, -41, -38, -37, -32, -31 -> true;
+            default -> false;
+        };
     }
 
     @Override

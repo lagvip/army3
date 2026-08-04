@@ -296,6 +296,11 @@ public final class ChickenPhatBanServer {
             public boolean coVaCham(short x, short y) {
                 return false;
             }
+
+            @Override
+            public short[][] layCacVoiRong() {
+                return banDo.layCacVoiRong();
+            }
         };
     }
 

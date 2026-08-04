@@ -30,19 +30,42 @@ SET time_zone = "+00:00";
 CREATE TABLE `accounts` (
   `id` int(11) NOT NULL,
   `username` varchar(100) NOT NULL,
-  `password` varchar(20) NOT NULL,
+  `password_hash` varchar(255) NOT NULL,
+  `email` varchar(254) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `email_verified` tinyint(1) NOT NULL DEFAULT 0,
+  `phone_verified` tinyint(1) NOT NULL DEFAULT 0,
   `is_banned` int(1) NOT NULL,
   `is_online` int(1) NOT NULL,
-  `is_admin` tinyint(1) NOT NULL DEFAULT 0
+  `is_admin` tinyint(1) NOT NULL DEFAULT 0,
+  `failed_login_attempts` int(11) NOT NULL DEFAULT 0,
+  `locked_until` datetime DEFAULT NULL,
+  `last_login_at` datetime DEFAULT NULL,
+  `password_changed_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Cau truc bang cho OTP bao mat (chi luu HMAC, khong luu ma ro)
+--
+
+CREATE TABLE `account_security_tokens` (
+  `id` bigint(20) NOT NULL,
+  `account_id` int(11) NOT NULL,
+  `purpose` varchar(32) NOT NULL,
+  `token_hash` binary(32) NOT NULL,
+  `attempts_left` tinyint(3) UNSIGNED NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `consumed_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Đang đổ dữ liệu cho bảng `accounts`
 --
-
-INSERT INTO `accounts` (`id`, `username`, `password`, `is_banned`, `is_online`, `is_admin`) VALUES
-(1, 'admin', '1', 0, 0, 1),
-(2, 'admin1', '1', 0, 0, 1);
 
 -- --------------------------------------------------------
 
@@ -3292,7 +3315,15 @@ INSERT INTO `sprite_images` (`id`, `image_id`, `x`, `y`, `width`, `height`) VALU
 -- Chỉ mục cho bảng `accounts`
 --
 ALTER TABLE `accounts`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_accounts_username` (`username`),
+  ADD UNIQUE KEY `uk_accounts_email` (`email`),
+  ADD UNIQUE KEY `uk_accounts_phone` (`phone`);
+
+ALTER TABLE `account_security_tokens`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_security_token_active`
+    (`account_id`,`purpose`,`consumed_at`,`expires_at`);
 
 --
 -- Chỉ mục cho bảng `avatar_parts`
@@ -3361,7 +3392,9 @@ ALTER TABLE `item_options`
 -- Chỉ mục cho bảng `players`
 --
 ALTER TABLE `players`
-  ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_players_account_id` (`account_id`),
+  ADD UNIQUE KEY `uk_players_name` (`name`);
 
 --
 -- Chỉ mục cho bảng `player_friends`
@@ -3391,6 +3424,9 @@ ALTER TABLE `sprite_images`
 --
 ALTER TABLE `accounts`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+ALTER TABLE `account_security_tokens`
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT cho bảng `avatar_parts`
@@ -3439,6 +3475,16 @@ ALTER TABLE `item_options`
 --
 ALTER TABLE `players`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+ALTER TABLE `players`
+  ADD CONSTRAINT `fk_players_account`
+  FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`)
+  ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE `account_security_tokens`
+  ADD CONSTRAINT `fk_security_token_account`
+  FOREIGN KEY (`account_id`) REFERENCES `accounts` (`id`)
+  ON UPDATE RESTRICT ON DELETE CASCADE;
 
 --
 -- AUTO_INCREMENT cho bảng `player_mails`

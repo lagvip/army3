@@ -37,7 +37,9 @@ public final class ChickenCoCheBayAVG {
         }
         ChickenVatPham trangBi = nguoiChoi.itemBody[5];
         if (trangBi == null || trangBi.mau == null || trangBi.mau.loai != 5
-                || trangBi.ma < VAT_PHAM_IRON_MAN || trangBi.ma > VAT_PHAM_ULTRON) {
+                || trangBi.ma < VAT_PHAM_IRON_MAN
+                || trangBi.ma > VAT_PHAM_ULTRON
+                || !nguoiChoi.datCapSuDungVatPham(trangBi)) {
             return 0;
         }
         return (byte) (trangBi.ma - 390);
@@ -50,7 +52,7 @@ public final class ChickenCoCheBayAVG {
      */
     public static boolean coTrangBiBayHopLe(ChickenNguoiChoi nguoiChoi) {
         return nguoiChoi != null
-                && laIdBayDuocPhep(nguoiChoi.avenger);
+                && laIdBayDuocPhep(layAvengerTuTrangBi(nguoiChoi));
     }
 
     /** Quyền đã được server chốt khi tạo chiến binh; Loki sao chép cùng quyền này. */

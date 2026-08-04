@@ -18,6 +18,12 @@ public final class ChickenThoiGianHoatAnhDan {
      * quy dao cuoi. Khong co dem nay, CMD24 cua luot moi co the ghi de VFX cu.
      */
     public static final long DEM_KET_THUC_MS = 300L;
+    /** Du phong thoi gian may bay B52 bay tu mep man hinh den diem tha. */
+    public static final long B52_TRE_MAY_BAY_MS = 500L;
+    /** Bullet 14 cho 20 frame truoc khi client kich hoat tia type 15. */
+    public static final long LAZER_TRE_KICH_HOAT_MS = 20L * MOI_DIEM_MS;
+    /** Bullet 15 giu hieu ung tia laser native trong 26 frame. */
+    public static final long LAZER_HIEU_UNG_MS = 26L * MOI_DIEM_MS;
 
     private ChickenThoiGianHoatAnhDan() {
     }
@@ -27,6 +33,12 @@ public final class ChickenThoiGianHoatAnhDan {
             return HIEU_UNG_KHONG_CO_QUY_DAO_MS;
         }
         int loaiDan = ketQua.loaiDan & 0xFF;
+        if (loaiDan == 4) {
+            return tinhBomB52(ketQua.cacDuongX, ketQua.cacDuongY);
+        }
+        if (loaiDan == 14) {
+            return tinhDanLazer(ketQua.cacDuongX, ketQua.cacDuongY);
+        }
         if (loaiDan == 17) {
             return tinhDanRiu(ketQua.cacDuongX, ketQua.cacDuongY);
         }
@@ -37,6 +49,45 @@ public final class ChickenThoiGianHoatAnhDan {
                     ketQua.lucPhu & 0xFF);
         }
         return tinh(ketQua.cacDuongX, ketQua.cacDuongY);
+    }
+
+    /**
+     * Type 4 chay duong danh dau, cho may bay toi, sau do moi chay duong bom.
+     * Hai duong noi tiep nhau nen khong duoc lay max nhu loat dan song song.
+     */
+    private static long tinhBomB52(
+            short[][] cacDuongX,
+            short[][] cacDuongY
+    ) {
+        int soDuong = soDuong(cacDuongX, cacDuongY);
+        if (soDuong < 2) {
+            return HIEU_UNG_KHONG_CO_QUY_DAO_MS;
+        }
+        int tongDiem = soDiem(cacDuongX, cacDuongY, 0)
+                + soDiem(cacDuongX, cacDuongY, 1);
+        return kepThoiGian(
+                (long) Math.max(1, tongDiem) * MOI_DIEM_MS
+                + B52_TRE_MAY_BAY_MS
+                + DEM_KET_THUC_MS);
+    }
+
+    /**
+     * Type 14 chay duong danh dau, cho 20 frame roi moi ve tia type 15.
+     * Path 1 la diem neo cua tia, khong phai mot quy dao chay song song.
+     */
+    private static long tinhDanLazer(
+            short[][] cacDuongX,
+            short[][] cacDuongY
+    ) {
+        if (soDuong(cacDuongX, cacDuongY) < 2) {
+            return HIEU_UNG_KHONG_CO_QUY_DAO_MS;
+        }
+        int soDiemDanhDau = soDiem(cacDuongX, cacDuongY, 0);
+        return kepThoiGian(
+                (long) Math.max(1, soDiemDanhDau) * MOI_DIEM_MS
+                + LAZER_TRE_KICH_HOAT_MS
+                + LAZER_HIEU_UNG_MS
+                + DEM_KET_THUC_MS);
     }
 
     /**

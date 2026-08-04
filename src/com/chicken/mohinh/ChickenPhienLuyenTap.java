@@ -34,6 +34,12 @@ final class ChickenPhienLuyenTap {
 
     int trainingBotTurn = -1;
     boolean trainingWaitingShotEnd;
+    /**
+     * Co Y authoritative da thay doi sau khi pha dia hinh nhung chua gui cho
+     * client. Phai cho packet hoat anh ban dung toa do cu duoc xu ly xong,
+     * neu gui CMD 53 som packet ban se keo nhan vat nguoc len vi tri cu.
+     */
+    boolean trainingTerrainPositionSyncPending;
     int trainingPendingSelfHitCount;
     int trainingPendingSelfDamage;
     /** Lần quay May mắn đã chốt trước packet đạn của phát hiện tại. */
@@ -60,6 +66,8 @@ final class ChickenPhienLuyenTap {
     /** Quãng đường chủ động còn lại của người chơi trong lượt. */
     int trainingMoveRemaining;
     int trainingBossReloadTime;
+    /** -1 dung nap dan sung; item tao dan co the ghi de cho mot luot. */
+    int trainingBossPendingReloadAfterAction = -1;
     /** ID súng shop được server chốt một lần khi bắt đầu phiên. */
     int trainingBossWeaponId = -1;
     /** Part hiển thị tương ứng đúng với ID súng đã chốt. */
@@ -72,7 +80,11 @@ final class ChickenPhienLuyenTap {
     ScheduledFuture<?> trainingBotTask;
     ScheduledFuture<?> trainingBotReturnTask;
     ScheduledFuture<?> trainingPlayerResolveTask;
+    /** Đồng hồ 25 giây authoritative cho lượt người chơi. */
+    ScheduledFuture<?> trainingPlayerTurnTimeoutTask;
     ScheduledFuture<?> trainingGravityTask;
+    /** Cho client ve het hoat anh roi xuong vuc truoc khi server chot HP=0. */
+    ScheduledFuture<?> trainingFallDeathTask;
     /** CMD79 X3 den som duoc hen xu ly, khong bi bo mat. */
     ScheduledFuture<?> trainingUltronX3XacNhanTask;
 

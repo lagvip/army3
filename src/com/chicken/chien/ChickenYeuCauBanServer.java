@@ -53,6 +53,11 @@ public final class ChickenYeuCauBanServer {
             goc = chuanHoaGoc(goc);
         }
 
+        if (!ChickenQuanLyCongThucSung.laGocBanHopLeChoSung(
+                goc, sung.getIdSung())) {
+            return null;
+        }
+
         return new KetQua(
                 sung.getLoaiDan(),
                 sung.getSoVienMoiLoat(),
@@ -91,13 +96,33 @@ public final class ChickenYeuCauBanServer {
         if (viTri != duLieu.length) {
             return null;
         }
+        short gocChuan = chuanHoaGoc(goc);
+        if (!laGocVatPhamHopLe(cauHinh, gocChuan)) {
+            return null;
+        }
         return new KetQua(
                 cauHinh.getLoaiDan(),
                 (byte) 1,
-                chuanHoaGoc(goc),
+                gocChuan,
                 (byte) kep(luc, 1, 30),
                 (byte) kep(luc, 1, 30)
         );
+    }
+
+    private static boolean laGocVatPhamHopLe(
+            ChickenCongThucVatPhamChien.CauHinh cauHinh,
+            short goc
+    ) {
+        if (cauHinh.getKieuGoc()
+                != ChickenCongThucVatPhamChien.KieuGoc.XUYEN_DAT) {
+            return true;
+        }
+        int value = goc & 0xFFFF;
+        // Nut aim cam (moveAngle) cua client goc tao 0..225 khi keo qua
+        // nua tren va -45..-1 (315..359) khi keo nua duoi ben phai.
+        // Ban phim co mien hep hon, nhung server phai nhan du ca hai cach
+        // dieu khien goc, van tu tinh quy dao va va cham nhu cu.
+        return value <= 225 || value >= 315;
     }
 
     private static short docShort(byte[] duLieu, int viTri) {

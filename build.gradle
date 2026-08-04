@@ -21,6 +21,8 @@ dependencies {
     implementation 'com.mysql:mysql-connector-j:9.3.0'
     implementation 'com.zaxxer:HikariCP:6.3.0'
     implementation 'com.alibaba.fastjson2:fastjson2:2.0.57'
+    implementation 'org.mindrot:jbcrypt:0.4'
+    implementation 'org.eclipse.angus:jakarta.mail:2.0.5'
 }
 
 application {
@@ -59,6 +61,15 @@ tasks.register('combatTest', JavaExec) {
     dependsOn tasks.named('combatTestClasses')
     classpath = sourceSets.combatTest.runtimeClasspath
     mainClass = 'com.chicken.kiemthu.ChickenKiemThuToanGame'
+    jvmArgs '-Dfile.encoding=UTF-8'
+}
+
+tasks.register('accountIntegrationTest', JavaExec) {
+    group = 'verification'
+    description = 'Kiem thu DB tam cho dang ky, login, OTP va tao nhan vat.'
+    dependsOn tasks.named('combatTestClasses')
+    classpath = sourceSets.combatTest.runtimeClasspath
+    mainClass = 'com.chicken.taikhoan.ChickenVongDoiTaiKhoanIntegrationTest'
     jvmArgs '-Dfile.encoding=UTF-8'
 }
 

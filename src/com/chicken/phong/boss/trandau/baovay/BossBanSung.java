@@ -101,14 +101,24 @@ public final class BossBanSung {
             byte windY,
             boolean aimChuan
     ) {
-        ChickenQuanLyCongThucSung.KiemTraBanDo kiemTra =
+        ChickenQuanLyCongThucSung.KiemTraBanDo kiemTraPhatDan =
                 taoKiemTraBanDo(banDo);
+        /*
+         * AI chi duoc chon y dinh ban tu dia hinh va gio co ban. Voi rong la
+         * hieu ung xuat hien sau khi da ngam, vi vay khong cho bo giai AI doc
+         * danh sach cot loc va tu bu goc/luc. Phat dan that van dung map goc
+         * authoritative ben duoi, nen cot loc van lam lech quy dao, va cham
+         * va damage ma khong phu thuoc client.
+         */
+        ChickenQuanLyCongThucSung.KiemTraBanDo kiemTraNgam =
+                taoKiemTraBanDoNgamKhongVoiRong(kiemTraPhatDan);
         NgamBan ngam = aimChuan
                 ? timNgamTheoCongThuc(
-                        boss, mucTieu, duLieu, kiemTra, windX, windY)
-                : taoNgamNgauNhien();
+                        boss, mucTieu, duLieu, kiemTraNgam, windX, windY)
+                : taoNgamNgauNhien(duLieu);
+        ngam = chuanHoaNgamTheoSung(ngam, duLieu);
         short[] dauNong = ChickenToaDoDauNong.layChoBoss(
-                boss.x, boss.y, ngam.goc, kiemTra);
+                boss.x, boss.y, ngam.goc, kiemTraPhatDan);
         return ChickenPhatBanServer.tao(
                 boss,
                 dauNong[0],
@@ -119,7 +129,7 @@ public final class BossBanSung {
                 duLieu,
                 windX,
                 windY,
-                kiemTra,
+                kiemTraPhatDan,
                 cacMucTieu,
                 new ChickenPhatBanServer.BoLocMucTieu() {
                     @Override
@@ -191,14 +201,7 @@ public final class BossBanSung {
         byte loaiDan = duLieu == null ? (byte) 1 : duLieu.getLoaiDan();
         int mucTieuY = ChickenKichThuocNhanVat.layTamThanNguoiChoiY(mucTieu.y);
         short goc = gocToiMucTieu(boss.x, boss.y - 18, mucTieu.x, mucTieuY);
-        ChickenQuanLyCongThucSung.KiemTraBanDo kiemTra = new ChickenQuanLyCongThucSung.KiemTraBanDo() {
-            @Override
-            public int getWidth() { return banDo.getWidth(); }
-            @Override
-            public int getHeight() { return banDo.getHeight(); }
-            @Override
-            public boolean coVaCham(short x, short y) { return banDo.coVaCham(x, y); }
-        };
+        ChickenQuanLyCongThucSung.KiemTraBanDo kiemTra = banDo;
         short[] dauNong = ChickenToaDoDauNong.layChoBoss(boss.x, boss.y, goc, kiemTra);
         goc = gocToiMucTieu(dauNong[0], dauNong[1], mucTieu.x, mucTieuY);
         dauNong = ChickenToaDoDauNong.layChoBoss(boss.x, boss.y, goc, kiemTra);
@@ -267,13 +270,18 @@ public final class BossBanSung {
                 mucTieu.x,
                 tamMucTieuY
         );
-        NgamBan totNhat = new NgamBan(gocTrucTiep, (byte) 18, (byte) 18);
+        NgamBan totNhat = chuanHoaNgamTheoSung(
+                new NgamBan(gocTrucTiep, (byte) 18, (byte) 18), duLieu);
         double diemTotNhat = chamDiemNgam(
                 boss, mucTieu, duLieu, banDo, windX, windY, totNhat);
 
         // Quet tho tren toan bo vong tron de xu ly ca muc tieu o tren/cao hon
         // va cac cong thuc boomerang/lazer co huong bay khac dan thuong.
-        for (int goc = 0; goc < 360; goc += 6) {
+        int gocBatDau = laSungLazer(duLieu)
+                ? ChickenQuanLyCongThucSung.GOC_LAZER_TOI_THIEU : 0;
+        int gocKetThuc = laSungLazer(duLieu)
+                ? ChickenQuanLyCongThucSung.GOC_LAZER_TOI_DA : 359;
+        for (int goc = gocBatDau; goc <= gocKetThuc; goc += 6) {
             for (int luc = 3; luc <= 30; luc += 3) {
                 NgamBan ungVien = new NgamBan(
                         (short) goc, (byte) luc, (byte) luc);
@@ -290,6 +298,11 @@ public final class BossBanSung {
         int lucTho = totNhat.luc & 0xFF;
         for (int lechGoc = -6; lechGoc <= 6; lechGoc++) {
             short goc = chuanHoaGoc((short) (gocTho + lechGoc));
+            if (laSungLazer(duLieu)
+                    && !ChickenQuanLyCongThucSung.laGocBanHopLeChoSung(
+                            goc, duLieu.getIdSung())) {
+                continue;
+            }
             for (int luc = Math.max(1, lucTho - 3);
                     luc <= Math.min(30, lucTho + 3); luc++) {
                 NgamBan ungVien = new NgamBan(
@@ -305,13 +318,38 @@ public final class BossBanSung {
         return totNhat;
     }
 
-    private static NgamBan taoNgamNgauNhien() {
+    private static NgamBan taoNgamNgauNhien(
+            ChickenQuanLyDanSung.DuLieuSung duLieu) {
         ThreadLocalRandom random = ThreadLocalRandom.current();
+        int goc = laSungLazer(duLieu)
+                ? random.nextInt(
+                        ChickenQuanLyCongThucSung.GOC_LAZER_TOI_THIEU,
+                        ChickenQuanLyCongThucSung.GOC_LAZER_TOI_DA + 1)
+                : random.nextInt(360);
         return new NgamBan(
-                (short) random.nextInt(360),
+                (short) goc,
                 (byte) random.nextInt(1, 31),
                 (byte) random.nextInt(1, 31)
         );
+    }
+
+    private static boolean laSungLazer(
+            ChickenQuanLyDanSung.DuLieuSung duLieu) {
+        return duLieu != null
+                && ChickenQuanLyCongThucSung.laSungLazer(duLieu.getIdSung());
+    }
+
+    private static NgamBan chuanHoaNgamTheoSung(
+            NgamBan ngam,
+            ChickenQuanLyDanSung.DuLieuSung duLieu
+    ) {
+        if (ngam == null || duLieu == null) {
+            return ngam;
+        }
+        short goc = ChickenQuanLyCongThucSung.chuanHoaGocTheoIdSung(
+                ngam.goc, duLieu.getIdSung());
+        return goc == ngam.goc
+                ? ngam : new NgamBan(goc, ngam.luc, ngam.lucPhu);
     }
 
     private static double chamDiemNgam(
@@ -323,6 +361,7 @@ public final class BossBanSung {
             byte windY,
             NgamBan ngam
     ) {
+        ngam = chuanHoaNgamTheoSung(ngam, duLieu);
         short[] dauNong = ChickenToaDoDauNong.layChoBoss(
                 boss.x, boss.y, ngam.goc, banDo);
         ChickenLoatDanServer.KetQua loat = ChickenLoatDanServer.tao(
@@ -370,6 +409,17 @@ public final class BossBanSung {
     private static ChickenQuanLyCongThucSung.KiemTraBanDo taoKiemTraBanDo(
             ChickenQuanLyBanDo banDo
     ) {
+        return banDo;
+    }
+
+    /**
+     * Anh map chi dung trong buoc chon goc/luc cua AI. Moi du lieu dia hinh
+     * van duoc giu nguyen, rieng danh sach voi rong bi an de AI khong the
+     * ngam bu mot hieu ung can dan dang hoat dong.
+     */
+    private static ChickenQuanLyCongThucSung.KiemTraBanDo
+            taoKiemTraBanDoNgamKhongVoiRong(
+                    ChickenQuanLyCongThucSung.KiemTraBanDo banDo) {
         return new ChickenQuanLyCongThucSung.KiemTraBanDo() {
             @Override
             public int getWidth() {
@@ -384,6 +434,11 @@ public final class BossBanSung {
             @Override
             public boolean coVaCham(short x, short y) {
                 return banDo.coVaCham(x, y);
+            }
+
+            @Override
+            public boolean coThePhaDiaHinh(short x, short y) {
+                return banDo.coThePhaDiaHinh(x, y);
             }
         };
     }
@@ -413,6 +468,7 @@ public final class BossBanSung {
         short[] xs = new short[SO_DIEM_TOI_DA];
         short[] ys = new short[SO_DIEM_TOI_DA];
         int doDai = 1;
+        int lechVoiRong = 0;
         xs[0] = dauX;
         ys[0] = dauY;
         int truocX = dauX;
@@ -429,7 +485,13 @@ public final class BossBanSung {
                     + windX * lechGio);
             int rawY = (int) Math.round(motTruT * motTruT * dauY
                     + 2.0D * motTruT * t * dieuKhienY + t * t * dichY
-                    + windY * lechGio);
+                    + windY * lechGio) + lechVoiRong;
+            int soCotLoc = banDo.demVoiRongCatDoan(
+                    truocX, truocY, rawX, rawY);
+            if (soCotLoc > 0) {
+                lechVoiRong -= 4 * soCotLoc;
+                rawY -= 4 * soCotLoc;
+            }
             short[] vaCham = timVaChamBanDo(truocX, truocY, rawX, rawY, banDo);
             if (vaCham != null) {
                 xs[doDai] = vaCham[0];
@@ -458,6 +520,11 @@ public final class BossBanSung {
         while (doDai < SO_DIEM_TOI_DA) {
             int rawX = (int) Math.round(hienTaiX + buocX);
             int rawY = (int) Math.round(hienTaiY + buocY);
+            int soCotLoc = banDo.demVoiRongCatDoan(
+                    truocX, truocY, rawX, rawY);
+            if (soCotLoc > 0) {
+                rawY -= 4 * soCotLoc;
+            }
             short[] vaCham = timVaChamBanDo(truocX, truocY, rawX, rawY, banDo);
             if (vaCham != null) {
                 xs[doDai] = vaCham[0];

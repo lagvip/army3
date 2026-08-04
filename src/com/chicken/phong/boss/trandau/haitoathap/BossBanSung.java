@@ -71,14 +71,7 @@ public final class BossBanSung {
         byte loaiDan = duLieu == null ? (byte) 1 : duLieu.getLoaiDan();
         int mucTieuY = ChickenKichThuocNhanVat.layTamThanNguoiChoiY(mucTieu.y);
         short goc = gocToiMucTieu(boss.x, boss.y - 18, mucTieu.x, mucTieuY);
-        ChickenQuanLyCongThucSung.KiemTraBanDo kiemTra = new ChickenQuanLyCongThucSung.KiemTraBanDo() {
-            @Override
-            public int getWidth() { return banDo.getWidth(); }
-            @Override
-            public int getHeight() { return banDo.getHeight(); }
-            @Override
-            public boolean coVaCham(short x, short y) { return banDo.coVaCham(x, y); }
-        };
+        ChickenQuanLyCongThucSung.KiemTraBanDo kiemTra = banDo;
         short[] dauNong = ChickenToaDoDauNong.layChoBoss(boss.x, boss.y, goc, kiemTra);
         goc = gocToiMucTieu(dauNong[0], dauNong[1], mucTieu.x, mucTieuY);
         dauNong = ChickenToaDoDauNong.layChoBoss(boss.x, boss.y, goc, kiemTra);
@@ -139,6 +132,7 @@ public final class BossBanSung {
         short[] xs = new short[SO_DIEM_TOI_DA];
         short[] ys = new short[SO_DIEM_TOI_DA];
         int doDai = 1;
+        int lechVoiRong = 0;
         xs[0] = dauX;
         ys[0] = dauY;
         int truocX = dauX;
@@ -155,7 +149,13 @@ public final class BossBanSung {
                     + windX * lechGio);
             int rawY = (int) Math.round(motTruT * motTruT * dauY
                     + 2.0D * motTruT * t * dieuKhienY + t * t * dichY
-                    + windY * lechGio);
+                    + windY * lechGio) + lechVoiRong;
+            int soCotLoc = banDo.demVoiRongCatDoan(
+                    truocX, truocY, rawX, rawY);
+            if (soCotLoc > 0) {
+                lechVoiRong -= 4 * soCotLoc;
+                rawY -= 4 * soCotLoc;
+            }
             short[] vaCham = timVaChamBanDo(truocX, truocY, rawX, rawY, banDo);
             if (vaCham != null) {
                 xs[doDai] = vaCham[0];
@@ -184,6 +184,11 @@ public final class BossBanSung {
         while (doDai < SO_DIEM_TOI_DA) {
             int rawX = (int) Math.round(hienTaiX + buocX);
             int rawY = (int) Math.round(hienTaiY + buocY);
+            int soCotLoc = banDo.demVoiRongCatDoan(
+                    truocX, truocY, rawX, rawY);
+            if (soCotLoc > 0) {
+                rawY -= 4 * soCotLoc;
+            }
             short[] vaCham = timVaChamBanDo(truocX, truocY, rawX, rawY, banDo);
             if (vaCham != null) {
                 xs[doDai] = vaCham[0];

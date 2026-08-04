@@ -136,6 +136,17 @@ public final class DiChuyenBossRua {
             return new short[]{boss == null ? 0 : boss.x, boss == null ? 0 : boss.y};
         }
 
+        // Rua dang bi luoi phu thi dung tai cho va van tung chieu. Khong gui
+        // dich CMD21 ma BigBoss client khong the toi, neu khong isMove cua
+        // client se bi giu va packet ban tiep theo khong chay.
+        if (banDo.coMangNhenTrongVung(
+                boss.x - NUA_RONG_HITBOX,
+                boss.y - CHIEU_CAO_HITBOX,
+                boss.x + NUA_RONG_HITBOX,
+                boss.y)) {
+            return new short[]{boss.x, boss.y};
+        }
+
         int huong = huongXKhoa;
         if (huong == 0 && mucTieu != null) {
             huong = layHuongX(boss, mucTieu);

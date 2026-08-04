@@ -25,6 +25,14 @@ public final class ChickenNapDanServer {
     private ChickenNapDanServer() {
     }
 
+    /**
+     * Nạp đạn cho một lượt không tạo ra phát đạn authoritative: người chơi tự
+     * bỏ lượt hoặc hết giờ khi mới ngắm/dùng item buff.
+     */
+    public static int layKhiKhongTaoPhatDan() {
+        return TOI_THIEU;
+    }
+
     public static int layChoChienBinh(ChickenChienBinh chienBinh) {
         if (chienBinh == null || chienBinh.nguoiChoi == null) {
             return MAC_DINH;

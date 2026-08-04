@@ -188,7 +188,8 @@ public final class DiChuyenBossRong {
                 px <= x + CauHinhBossRong.HITBOX_LECH_PHAI; px++) {
             for (int py = y - CauHinhBossRong.HITBOX_LECH_TREN;
                     py <= y + CauHinhBossRong.HITBOX_LECH_DUOI; py++) {
-                if (banDo.coVaCham((short) px, (short) py)) {
+                if (banDo.coVaChamKhongTinhMangNhen(
+                        (short) px, (short) py)) {
                     return false;
                 }
             }

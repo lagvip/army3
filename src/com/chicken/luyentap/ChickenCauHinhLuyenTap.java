@@ -33,17 +33,15 @@ public final class ChickenCauHinhLuyenTap {
 
     // Thời gian và chuyển trạng thái
     public static final long TRAINING_RETURN_LOBBY_DELAY_MS = 1800L;
-    public static final long TRAINING_BOSS_RETREAT_DELAY_MS = 120L;
     public static final long TRAINING_BOSS_AIM_DELAY_MS = 280L;
     public static final long TRAINING_BOSS_FALLBACK_SHOT_DELAY_MS = 1300L;
 
     // Di chuyển boss và rơi bản đồ
     public static final int TRAINING_FALL_DISTANCE = 140;
     public static final int TRAINING_BOSS_DANGER_DISTANCE = 150;
-    public static final int TRAINING_BOSS_SAFE_DISTANCE = 240;
-    public static final int TRAINING_BOSS_RETREAT_STEP = 18;
+    public static final int TRAINING_BOSS_TELEPORT_RELOAD = 300;
+    public static final int TRAINING_BOSS_TELEPORT_ICON = 970;
     public static final int TRAINING_BOSS_MAX_GROUND_STEP = 28;
-    public static final int TRAINING_BOSS_MAX_RETREAT_STEPS = 40;
 
     // Điểm xoay và chiều dài nòng súng
     // Khớp công thức CPlayer của client: sourceY - 12, đầu nòng cách 40 px.

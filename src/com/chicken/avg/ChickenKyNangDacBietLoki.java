@@ -1,6 +1,7 @@
 package com.chicken.avg;
 
 import com.chicken.chien.ChickenChienBinh;
+import com.chicken.chien.ChickenTrangThaiHanhDongLuot;
 import com.chicken.mang.ChickenTinNhan;
 import java.io.IOException;
 
@@ -63,6 +64,10 @@ public final class ChickenKyNangDacBietLoki {
     ) throws IOException {
         if (loki == null || ms == null) {
             System.out.println("[LOKI] KHONG_TIM_THAY_LOKI");
+            return;
+        }
+        if (!ChickenTrangThaiHanhDongLuot
+                .coTheKichHoatKyNang(loki)) {
             return;
         }
         if (loki.avenger != AVG_LOKI
